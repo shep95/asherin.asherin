@@ -1,4 +1,6 @@
 import { Component, ReactNode } from "react";
+import { claimStaleReload } from "@/lib/bootLoopGuard";
+import { runningEntryFingerprint, servedEntryFingerprint } from "@/lib/lazyWithRetry";
 
 /**
  * Last-resort boundary. Without a boundary above the router, any throw during
@@ -34,25 +36,20 @@ function isChunkLoadError(error: Error): boolean {
   );
 }
 
-const RELOAD_FLAG = "aureon_chunk_reload_at";
-
 /**
  * A stale index.html pointing at hashed chunks that no longer exist is the
  * most common cause of a post-deploy blank screen. One hard reload fixes it —
- * but only one, guarded by a timestamp, so a genuinely broken build can never
- * put the tab into a reload loop.
+ * but only when the server really is serving a different build than the one
+ * running, and only once per served build, so a chunk that fails for any
+ * other reason (offline, blocked, a broken build) surfaces instead of looping.
  */
 export function attemptChunkRecovery(error: Error): boolean {
   if (!isChunkLoadError(error)) return false;
-  try {
-    const last = Number(sessionStorage.getItem(RELOAD_FLAG) || 0);
-    if (Date.now() - last < 30_000) return false;
-    sessionStorage.setItem(RELOAD_FLAG, String(Date.now()));
-  } catch {
-    return false;
-  }
-  // Drop caches that could re-serve the same stale asset graph.
   void (async () => {
+    const served = await servedEntryFingerprint();
+    if (served === null || served === runningEntryFingerprint()) return;
+    if (!claimStaleReload(served)) return;
+    // Drop caches that could re-serve the same stale asset graph.
     try {
       if ("caches" in window) {
         const keys = await caches.keys();

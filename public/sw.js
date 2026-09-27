@@ -1,5 +1,7 @@
-// Aureon Service Worker — PWA + Background Sync + Message Queue
-const CACHE_NAME = "aureon-v3";
+// asherin service worker — offline wasm + message queue
+// The cache name is versioned: activating this worker deletes every cache an
+// earlier worker left on the origin, so no stale shell can be served.
+const CACHE_NAME = "asherin-v4";
 // Pre-cache the Swiss Ephemeris WASM so Vedic chart calculations work offline
 // after first load (previously the 2-3MB file silently 504'd offline).
 const PRECACHE_URLS = ["/wasm/swisseph.wasm"];

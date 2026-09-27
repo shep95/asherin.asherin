@@ -78,6 +78,15 @@ per the shepherd doctrine ("dark. cold. cinematic. one accent only at trust stat
 - **reading rooms redesigned** (`/blog`, every `/blog/<slug>`, the landing overlay): the cream "journal" paper, the serif masthead, the tag chips, the search pill, the refine drawer, the glass cards, the aurora glow, the shimmer headline and the click ripple are gone. what replaced them: layered blacks over the wallpaper, thin lowercase Work Sans at weight 200, hairlines instead of boxes, negative space as the layout, a staggered `arrive` on each masthead line on the one house easing, and the accent shown in exactly one place on the landing page — the rule beside an answer that has arrived. verified in headless chromium at 1440 and 390 wide.
 - **anti-pattern audit on those pages**: generic SaaS overlay (chips, pills, cards, drawers) → corrected; consumer glass and glow → corrected; uppercase tracking labels everywhere → lowercase; accent used for decoration (progress bar) → reserved for the trust state; decorative margin glyph and "field notes" stamp → removed; magazine serif costume → removed.
 
+## if the site reloads itself in a loop
+
+three things can make a browser tab reload or redirect on its own, and each is now fenced:
+
+- **host redirects** are no longer done in javascript. the old build redirected `www.asherin.com` to `asherin.com` from inside the page; if the host is configured to redirect the other way, that is an endless loop. set the canonical host once in the hosting dashboard (vercel → domains → make one of the two the redirect) and nothing in the app will fight it.
+- **post-deploy chunk recovery** reloads only when the server is serving a different build than the one running, once per served build, and never without a working storage guard.
+- **a reload-storm breaker** (`src/lib/bootLoopGuard.ts`) counts boots per tab: more than three inside a minute switches every automatic reload off for the session and lets the error show instead.
+- the service worker cache is versioned (`asherin-v4`); activating the new worker deletes every cache an earlier worker left on the origin, so a stale shell from the previous deployment cannot be served. a visitor who still sees the old site should hard-refresh once (or clear site data) so the old worker is replaced.
+
 ## honest limits
 
 - rooms that leaned on server-side organs (paid indexes like shodan/virustotal/firecrawl, e-mail, team invitations by e-mail) now report **kernel offline** for that tool. the rest of each room works.

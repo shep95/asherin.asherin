@@ -3,7 +3,7 @@ import App from "./App.tsx";
 import RootErrorBoundary, { attemptChunkRecovery } from "./components/RootErrorBoundary";
 import "./index.css";
 import { initDorkGuard } from "./lib/dorkGuard";
-import { enforceCanonicalHost } from "./lib/canonicalHost";
+import { bootLoopGuard } from "./lib/bootLoopGuard";
 import { migrateLegacyStorageKeys } from "./lib/storageKeyMigration";
 import { initScrollPerf } from "./lib/perf/scrollPerf";
 import { installConsoleGuard } from "./lib/consoleGuard";
@@ -11,8 +11,9 @@ import { installConsoleGuard } from "./lib/consoleGuard";
 // Production console goes quiet before anything else can speak into it.
 installConsoleGuard();
 
-// www. → bare host, only when already on asherin.com over https.
-enforceCanonicalHost();
+// If this tab has reloaded itself several times in a row, stop every automatic
+// reload for the rest of the session and let the page show its error instead.
+bootLoopGuard();
 
 // Carry pre-rename `asherin_*` localStorage values over to `aureon_*` before
 // anything reads them, so personas/preferences survive the rename.
