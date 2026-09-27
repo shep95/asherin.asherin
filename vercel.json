@@ -1,0 +1,79 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "redirects": [
+    { "source": "/pricing", "destination": "/software", "permanent": true },
+    { "source": "/features", "destination": "/software", "permanent": true },
+    { "source": "/benchmark", "destination": "/software", "permanent": true },
+    { "source": "/investors", "destination": "/software", "permanent": true },
+    { "source": "/valuation", "destination": "/software", "permanent": true },
+    { "source": "/updates", "destination": "/blog", "permanent": true },
+    { "source": "/sources", "destination": "/blog", "permanent": true },
+    { "source": "/asher", "destination": "/", "permanent": true },
+    { "source": "/asher-dashboard", "destination": "/dashboard", "permanent": true },
+    { "source": "/auth", "destination": "/dashboard", "permanent": false },
+    { "source": "/glossary", "destination": "/blog", "permanent": true },
+    { "source": "/glossary/:slug", "destination": "/blog", "permanent": true },
+    { "source": "/feature/:slug", "destination": "/software", "permanent": true },
+    { "source": "/blog/comparison", "destination": "/software", "permanent": true },
+    { "source": "/blog/paid-seat-free-door", "destination": "/blog", "permanent": true },
+    { "source": "/blog/aureon-pricing-explained", "destination": "/blog", "permanent": true },
+    { "source": "/blog/asherin-pricing-explained", "destination": "/blog", "permanent": true },
+    { "source": "/blog/predictions/:slug", "destination": "/blog", "permanent": true },
+    { "source": "/security.txt", "destination": "/.well-known/security.txt", "permanent": true }
+  ],
+  "rewrites": [
+    { "source": "/dashboard", "destination": "/index.html" },
+    { "source": "/dashboard/:path*", "destination": "/index.html" },
+    { "source": "/whiteboard", "destination": "/index.html" },
+    { "source": "/for/:slug", "destination": "/index.html" },
+    { "source": "/asherin.acatalepsy", "destination": "/index.html" },
+    { "source": "/asherin.analytics", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' blob: data: https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.x.ai https://api.mistral.ai https://api.deepseek.com https://openrouter.ai https://api.venice.ai https://api.perplexity.ai https://api.groq.com https://integrate.api.nvidia.com https://api.cohere.com https://api.sarvam.ai https://cloud.olakrutrim.com https://dashscope-intl.aliyuncs.com https://open.bigmodel.cn https://api.moonshot.ai https://qianfan.baidubce.com https://api.minimax.io https://chat.maritaca.ai http://localhost:11434 http://127.0.0.1:11434 http://localhost:1234 http://127.0.0.1:1234 http://127.0.0.1:8768 http://localhost:8768 ws://127.0.0.1:8769 https://web.archive.org https://en.wikipedia.org https://*.wikipedia.org https://nominatim.openstreetmap.org https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://services3.arcgis.com https://api.open-meteo.com https://air-quality-api.open-meteo.com https://overpass-api.de https://overpass.kumi.systems https://router.project-osrm.org https://api.weather.gov https://earthquake.usgs.gov https://waterservices.usgs.gov https://hazards.fema.gov https://aviationweather.gov https://opensky-network.org https://api.panoramax.xyz https://storage.googleapis.com https://vpic.nhtsa.dot.gov https://api.nhtsa.gov https://opendata.rdw.nl https://geocoding.geo.census.gov https://api.tidesandcurrents.noaa.gov https://geo.txdps.state.tx.us https://gis.fdle.state.fl.us https://*.skyvdn.com https://*.dot.ca.gov https://s3-eu-west-1.amazonaws.com https://crt.sh https://cloudflare-dns.com https://api.pwnedpasswords.com https://haveibeenpwned.com https://power.larc.nasa.gov https://cdn.jsdelivr.net; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+        },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(self), geolocation=(self), usb=(), serial=(), midi=(), magnetometer=(self), gyroscope=(self), accelerometer=(self), interest-cohort=(), payment=()"
+        },
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" },
+        { "key": "Cross-Origin-Resource-Policy", "value": "same-origin" },
+        { "key": "X-DNS-Prefetch-Control", "value": "off" },
+        { "key": "X-Permitted-Cross-Domain-Policies", "value": "none" }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/(wallpapers|models|wasm|sentinel|fonts)/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000" }]
+    },
+    {
+      "source": "/(dashboard|whiteboard|auth)(.*)",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" },
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
+    },
+    {
+      "source": "/(sw|sw-sentinel|aureon-killswitch-sw)\\.js",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    }
+  ]
+}

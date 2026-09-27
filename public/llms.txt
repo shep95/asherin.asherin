@@ -1,0 +1,25 @@
+# asherin
+
+> asherin is a sourced research workspace. speaker: asherin. one account opens the chat and every room behind it. bring your own model key and asherin runs on it; you pay that vendor for inference.
+
+what a signed-in account can open today: chat (the mouth), asherin.search (public-index search — not a wiretap), asherin.eye (satellite globe, public flights, quakes and public-agency layers), asherin.defender (owned-device defence), asherin.arvision (camera intelligence HUD on this device), asherin.sentinel, asherin.health, asherin.data, asherin.cyber, asherin.knowledge, library, projects, memory, guardian vault, whiteboard, connect, team.
+
+## honest limits
+
+- asherin reads live public sources and cites them. when it does not find one, it says so.
+- asherin.search queries public indexes (wayback, nvd, github, wiki, and the rest of the public stack). it does not intercept login IPs, SMS, DMs, or private mail.
+- asherin.eye uses public agency stills and public registers. it does not hijack doorbell or flock cameras, and satellite tiles are near-daily mosaics, not live seconds.
+- forecasts are probabilistic. they are not predictions of record.
+- nothing here is legal, medical or financial advice.
+
+## pages
+
+- [Home](/): asherin — look a little closer.
+- [Software](/software): the rooms behind the chat.
+- [For](/for): who asherin is for.
+- [Forums](/forums): notes from the work line.
+- [Founder](/founder): asher newton.
+- [Blog](/blog)
+- [Privacy](/privacy)
+- [Terms](/terms)
+- [Security policy](/security-policy)

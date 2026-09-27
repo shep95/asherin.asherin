@@ -1,0 +1,21 @@
+// Shared IDE upgrade components — used by both Asherin IDE and Asher IDE.
+export { default as IdeValidatorBadge } from "./IdeValidatorBadge";
+export { default as IdeHistoryPanel } from "./IdeHistoryPanel";
+export { default as IdeErrorExplainer } from "./IdeErrorExplainer";
+export { default as IdeTemplateLauncher } from "./IdeTemplateLauncher";
+export { default as IdeFuzzyFinder } from "./IdeFuzzyFinder";
+export { default as IdeApprovalGate } from "./IdeApprovalGate";
+export { default as IdeModelRouterBadge } from "./IdeModelRouterBadge";
+export { default as AnimatedOrbBackground } from "./AnimatedOrbBackground";
+export { default as IdeSemanticSearch } from "./IdeSemanticSearch";
+export { default as IdeProjectGuide } from "./IdeProjectGuide";
+export { default as IdeCommandPalette } from "./IdeCommandPalette";
+export { default as IdeRecoveryDialog } from "./IdeRecoveryDialog";
+export { default as IdeCheckpointPanel } from "./IdeCheckpointPanel";
+export { default as IdeFastApplyPreview } from "./IdeFastApplyPreview";
+export { default as IdeModeToggle, readIdeMode, type IdeMode } from "./IdeModeToggle";
+export { default as IdeChangedFilesPanel } from "./IdeChangedFilesPanel";
+export { default as IdeBuildStatusPanel } from "./IdeBuildStatusPanel";
+export type { PlannedChange } from "./IdeApprovalGate";
+export type { FuzzyFile } from "./IdeFuzzyFinder";
+export type { IdeCommand } from "./IdeCommandPalette";

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <!--
+      Content-Security-Policy, meta layer. The served header (vercel.json) is
+      the enforced copy; this one covers any host that serves the folder as
+      plain static files. No inline scripts exist, so script-src is 'self'.
+      connect-src lists only the model providers a device key can be pointed
+      at, the public data sources the maps and feeds read, and the two local
+      model runtimes (ollama, lm studio).
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' blob: data: https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.x.ai https://api.mistral.ai https://api.deepseek.com https://openrouter.ai https://api.venice.ai https://api.perplexity.ai https://api.groq.com https://integrate.api.nvidia.com https://api.cohere.com https://api.sarvam.ai https://cloud.olakrutrim.com https://dashscope-intl.aliyuncs.com https://open.bigmodel.cn https://api.moonshot.ai https://qianfan.baidubce.com https://api.minimax.io https://chat.maritaca.ai http://localhost:11434 http://127.0.0.1:11434 http://localhost:1234 http://127.0.0.1:1234 http://127.0.0.1:8768 http://localhost:8768 ws://127.0.0.1:8769 https://web.archive.org https://en.wikipedia.org https://*.wikipedia.org https://nominatim.openstreetmap.org https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://services3.arcgis.com https://api.open-meteo.com https://air-quality-api.open-meteo.com https://overpass-api.de https://overpass.kumi.systems https://router.project-osrm.org https://api.weather.gov https://earthquake.usgs.gov https://waterservices.usgs.gov https://hazards.fema.gov https://aviationweather.gov https://opensky-network.org https://api.panoramax.xyz https://storage.googleapis.com https://vpic.nhtsa.dot.gov https://api.nhtsa.gov https://opendata.rdw.nl https://geocoding.geo.census.gov https://api.tidesandcurrents.noaa.gov https://geo.txdps.state.tx.us https://gis.fdle.state.fl.us https://*.skyvdn.com https://*.dot.ca.gov https://s3-eu-west-1.amazonaws.com https://crt.sh https://cloudflare-dns.com https://api.pwnedpasswords.com https://haveibeenpwned.com https://power.larc.nasa.gov https://cdn.jsdelivr.net; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com; object-src 'none'; base-uri 'self'; form-action 'self';"
+    />
+    <meta
+      http-equiv="Permissions-Policy"
+      content="camera=(self), microphone=(self), geolocation=(self), usb=(), serial=(), midi=(), magnetometer=(self), gyroscope=(self), accelerometer=(self), interest-cohort=()"
+    />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <title>asherin, look a little closer.</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <!-- Landing wallpaper first; menu wallpaper next, so the shell paints from local files only. -->
+    <link rel="preload" as="image" href="/wallpapers/wallpaper-aureon.webp" fetchpriority="high" />
+    <link rel="prefetch" as="image" href="/wallpapers/menu-abyss.webp" />
+    <link rel="preload" as="image" href="/wallpapers/menu-abyss.thumb.webp" />
+    <meta name="theme-color" content="#050505" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta
+      name="description"
+      content="asherin is a sourced research workspace that runs on your own device: chat, asherin.search, asherin.eye, asherin.defender, asherin.arvision. no account, no server, your model key stays with you."
+    />
+    <meta name="author" content="Asherin" />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+    <meta name="googlebot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+    <meta name="google-site-verification" content="dIBlH44r5qF6aNg7k-zX-uVPlKEYhvA2BeT598YiE7w" />
+    <meta name="google-site-verification" content="slmfQVf3ZU84wV3QOl2VUT1oZQNfiReRGtUfQlDerng" />
+    <link rel="canonical" href="https://asherin.com/" />
+    <script type="application/ld+json">
+      {"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://asherin.com/#organization","name":"Asherin","url":"https://asherin.com","logo":{"@type":"ImageObject","url":"https://asherin.com/favicon.png"},"founder":{"@type":"Person","name":"Asher Newton"},"sameAs":["https://www.asherin.com","https://x.com/shep_newton","https://www.instagram.com/asher_united","https://www.linkedin.com/in/asher-newton"],"description":"asherin is a sourced research workspace that runs on your own device: chat, asherin.search, asherin.eye, asherin.defender, asherin.arvision, notes, files and an encrypted vault, with your own model key."},{"@type":"WebSite","@id":"https://asherin.com/#website","name":"Asherin","url":"https://asherin.com","publisher":{"@id":"https://asherin.com/#organization"},"inLanguage":"en-US"},{"@type":"SoftwareApplication","@id":"https://asherin.com/#software","name":"Asherin","applicationCategory":"BusinessApplication","operatingSystem":"Web browser","url":"https://asherin.com","publisher":{"@id":"https://asherin.com/#organization"},"featureList":["Chat","asherin.search","asherin.eye","asherin.defender","asherin.arvision","Library","Projects","Memory","Guardian Vault","Whiteboard","Connect","Team"]}]}
+    </script>
+
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://asherin.com/" />
+    <meta property="og:site_name" content="Asherin" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content="https://asherin.com/asherin-share.jpg?v=20260927" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1734" />
+    <meta property="og:image:height" content="907" />
+    <meta property="og:image:alt" content="asherin, look a little closer" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://asherin.com/asherin-share.jpg?v=20260927" />
+    <meta property="og:title" content="asherin, look a little closer." />
+    <meta name="twitter:title" content="asherin, look a little closer." />
+    <meta
+      property="og:description"
+      content="asherin is a sourced research workspace that runs on your own device: chat, asherin.search, asherin.eye, asherin.defender, asherin.arvision. no account, no server, your model key stays with you."
+    />
+    <meta
+      name="twitter:description"
+      content="asherin is a sourced research workspace that runs on your own device: chat, asherin.search, asherin.eye, asherin.defender, asherin.arvision. no account, no server, your model key stays with you."
+    />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

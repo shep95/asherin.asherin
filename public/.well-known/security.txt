@@ -1,0 +1,6 @@
+Contact: mailto:security@asherin.com
+Expires: 2027-08-11T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://asherin.com/.well-known/security.txt
+Policy: https://asherin.com/security-policy
+Acknowledgments: https://asherin.com/security-policy#acknowledgments
