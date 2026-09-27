@@ -13,7 +13,7 @@
 //  - descriptions state what the page is, in one plain line.
 
 export const ORIGIN = "https://asherin.com";
-export const DEFAULT_OG_IMAGE = "https://asherin.com/asherin-share.jpg?v=20260905";
+export const DEFAULT_OG_IMAGE = "https://asherin.com/asherin-share.jpg?v=20260927b";
 
 export type SeoEntry = {
   title: string;
