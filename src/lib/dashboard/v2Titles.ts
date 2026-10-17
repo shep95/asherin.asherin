@@ -13,9 +13,9 @@ export interface V2Title {
 }
 
 const TITLES: Partial<Record<string, V2Title>> = {
-  library: { title: "library", subtitle: "files asherin can search." },
+  library: { title: "library", subtitle: "files shepherd can search." },
   projects: { title: "projects", subtitle: "a room that scopes chat, files and memory." },
-  memory: { title: "memory", subtitle: "rules asherin carries. credentials are refused." },
+  memory: { title: "memory", subtitle: "rules shepherd carries. credentials are refused." },
   "guardian-vault": { title: "vault", subtitle: "locked storage, sessions and factors." },
   whiteboard: { title: "whiteboard", canvas: true },
   settings: { title: "settings", subtitle: "account, appearance, security." },

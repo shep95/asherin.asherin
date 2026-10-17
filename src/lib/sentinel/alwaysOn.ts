@@ -115,10 +115,13 @@ let onDeckAlerts = 0;
 
 function readArmed(): boolean {
   try {
-    // Absence means "never disarmed" — the protective default is armed.
-    return localStorage.getItem(ARM_KEY) !== "0";
+    // Local edition: the watch runs only when the operator armed it. A device
+    // that never chose the sentinel room must not be asked for location,
+    // notifications or a wake lock, and must not carry heartbeat loops on
+    // every page.
+    return localStorage.getItem(ARM_KEY) === "1";
   } catch {
-    return true;
+    return false;
   }
 }
 

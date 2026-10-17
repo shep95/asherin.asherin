@@ -388,9 +388,9 @@ const SettingsView = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!user || deleteConfirmText !== "DELETE MY ACCOUNT") return;
+    if (!user || deleteConfirmText !== "WIPE THIS DEVICE") return;
     // Irreversible. The typed phrase proves intent; step-up proves identity.
-    if (!(await stepUp("delete this account"))) return;
+    if (!(await stepUp("wipe this device"))) return;
     setDeleting(true);
 
     try {
@@ -398,7 +398,7 @@ const SettingsView = () => {
       await wipeEverything();
       window.location.href = "/";
     } catch {
-      toast({ title: "Deletion failed", description: "Please try again.", variant: "destructive" });
+      toast({ title: "Wipe failed", description: "Please try again.", variant: "destructive" });
       setDeleting(false);
     }
   };
@@ -896,30 +896,30 @@ const SettingsView = () => {
           <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 space-y-3">
             <div className="flex items-center gap-2">
               <Trash2 className="h-4 w-4 text-destructive" />
-              <span className="text-xs font-light text-destructive">Delete My Account</span>
+              <span className="text-xs font-light text-destructive">Wipe this device</span>
             </div>
             <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
-              Permanently delete your account and ALL associated data. This action is irreversible.
+              Erase everything asherin holds on this device — conversations, files, memory, keys and settings. Irreversible.
             </p>
 
             {!showDeleteConfirm ? (
               <button onClick={() => setShowDeleteConfirm(true)} className="inline-flex items-center gap-2 rounded-lg border border-destructive/30 px-4 py-2 text-xs font-light text-destructive hover:bg-destructive/10 transition-colors">
                 <Trash2 className="h-3.5 w-3.5" />
-                Delete Account
+                Wipe device
               </button>
             ) : (
               <div className="space-y-3 pt-1">
                 <div className="flex items-start gap-2 rounded-lg bg-destructive/10 p-3">
                   <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
                   <p className="text-[10px] text-destructive leading-relaxed">
-                    Type <strong>DELETE MY ACCOUNT</strong> below to confirm.
+                    Type <strong>WIPE THIS DEVICE</strong> below to confirm.
                   </p>
                 </div>
-                <input value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder="Type DELETE MY ACCOUNT" className="w-full bg-background/50 border border-destructive/30 rounded-lg px-3 py-2 text-xs text-foreground outline-none placeholder:text-muted-foreground/40" />
+                <input value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder="Type WIPE THIS DEVICE" className="w-full bg-background/50 border border-destructive/30 rounded-lg px-3 py-2 text-xs text-foreground outline-none placeholder:text-muted-foreground/40" />
                 <div className="flex gap-2">
-                  <button onClick={handleDeleteAccount} disabled={deleteConfirmText !== "DELETE MY ACCOUNT" || deleting} className="inline-flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-xs font-light text-destructive-foreground hover:bg-destructive/90 transition-colors disabled:opacity-50">
+                  <button onClick={handleDeleteAccount} disabled={deleteConfirmText !== "WIPE THIS DEVICE" || deleting} className="inline-flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-xs font-light text-destructive-foreground hover:bg-destructive/90 transition-colors disabled:opacity-50">
                     {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                    {deleting ? "Deleting…" : "Permanently Delete"}
+                    {deleting ? "Wiping…" : "Wipe everything"}
                   </button>
                   <button onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(""); }} className="rounded-lg border border-border/20 px-4 py-2 text-xs font-light text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
                 </div>

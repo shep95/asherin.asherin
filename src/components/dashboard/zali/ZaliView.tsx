@@ -25,7 +25,6 @@ import EncryptionBadge from "../EncryptionBadge";
 import React from "react";
 import { isOwnerEmail } from "@/lib/adminEmail";
 import { redact } from "@/lib/zanoem/redact";
-import { readOpenAiSseStream } from "@/lib/zanoem/sseParse";
 import { extractDesignOutput } from "@/lib/zanoem/designOutputSchema";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -412,42 +411,13 @@ const ZaliView = () => {
         } catch (e) { console.error("Failed to load ZANOEM brain context:", e); }
       }
 
-      const resp = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/zali-chat`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({
-            messages: history,
-            mode: chatMode,
-            depth: chatDepth,
-            projectContext: {
-              name: activeProject.name,
-              description: activeProject.description,
-              phase: activeProject.phase,
-              designType: activeProject.designType,
-            },
-            brainContext,
-          }),
-          signal: controller.signal,
-        }
-      );
-
-      if (!resp.ok) {
-        // Enumerate the failure classes so users see a useful message,
-        // and honour Retry-After when the edge function is rate-limited.
-        if (resp.status === 429) {
-          const wait = Number(resp.headers.get("Retry-After") || "0");
-          throw new Error(wait > 0 ? `Rate limited — try again in ${wait}s` : "Rate limited — try again shortly");
-        }
-        if (resp.status === 401 || resp.status === 403) throw new Error("Auth expired — please refresh and sign in again.");
-        throw new Error(`Chat backend error (HTTP ${resp.status})`);
-      }
-      if (!resp.body) throw new Error("No response body");
+      // local edition: zali answers on the model the operator connected, from
+      // this device. project and brain context ride in front of the history.
+      const { streamChat } = await import("@/lib/ai");
+      const contextLines = [
+        `[ZALI PROJECT] ${activeProject.name} — ${activeProject.description ?? ""} · phase ${activeProject.phase ?? "?"} · design ${activeProject.designType ?? "?"}`,
+        brainContext ? `[ZANOEM BRAIN]\n${brainContext.prompt}\n${brainContext.fileContents.map((f) => `--- ${f.name}\n${f.content}`).join("\n")}` : "",
+      ].filter(Boolean).join("\n\n");
 
       // Batch token appends into one setState per animation frame — the
       // previous per-token setState caused thousands of O(N) reconciliations
@@ -468,9 +438,17 @@ const ZaliView = () => {
         rafId = window.requestAnimationFrame(flushToState);
       };
 
-      await readOpenAiSseStream(resp.body, {
+      await streamChat({
+        messages: [
+          { role: "user", content: contextLines || "[ZALI PROJECT]" },
+          { role: "assistant", content: "understood." },
+          ...(history as { role: "user" | "assistant"; content: string }[]),
+        ],
+        mode: chatMode as never,
+        depth: chatDepth as never,
         signal: controller.signal,
-        onToken: (delta) => { pending += delta; scheduleFlush(); },
+        onDelta: (delta: string) => { pending += delta; scheduleFlush(); },
+        onDone: () => undefined,
       });
       if (rafId) { window.cancelAnimationFrame(rafId); flushToState(); }
       else if (pending) flushToState();

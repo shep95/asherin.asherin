@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import JSZip from "jszip";
 import { supabase } from "@/integrations/supabase/client";
-import { getActiveIntelMapByok } from "@/lib/intelMapByok";
 import { routeBrainsForPrompt } from "@/lib/asherBrainRouter";
 import { toast } from "sonner";
 import { isOwnerEmail } from "@/lib/adminEmail";
@@ -403,105 +402,35 @@ const AsherZahtenModule = () => {
   };
 
   const callAsherAi = async (history: { role: "user" | "assistant"; content: string }[], signal: AbortSignal): Promise<string> => {
-    const byok = getActiveIntelMapByok();
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/asher-ai`;
+    // local edition: the orchestrator runs on the model the operator connected,
+    // from this device, streaming each pass into the console as it arrives.
     const lastUser = [...history].reverse().find(m => m.role === "user")?.content || objective;
     const brainCtx = await buildBrainContext(lastUser);
-    const resp = await fetch(url, {
-      method: "POST",
-      signal,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        ...(byok ? { "x-byok-gemini-key": byok.apiKey } : {}),
-      },
-      body: JSON.stringify({
-        messages: [
-          { role: "user", content: `[ZAHTEN ORCHESTRATOR DOCTRINE]\n${ORCHESTRATOR_SYSTEM}\n\n[CLASSIFICATION] ${classification}${brainCtx}` },
-          ...history,
-        ],
-        mapContext: { surface: "zahten_mission_console" },
-      }),
-    });
-
-    if (resp.status === 429) throw new Error("Rate limit — wait and retry");
-    if (resp.status === 401) throw new Error("AI key invalid. Add a BYOK key in Settings.");
-    if (resp.status === 402) throw new Error("AI credits exhausted");
-    if (!resp.ok || !resp.body) throw new Error(`Stream failed (${resp.status})`);
-
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = "";
-    let text = "";
-    let done = false;
+    const { streamChat } = await import("@/lib/ai");
     const passIdx = passes.length; // current in-progress pass
-    while (!done) {
-      const { value, done: d } = await reader.read();
-      if (d) break;
-      buf += decoder.decode(value, { stream: true });
-      let idx;
-      while ((idx = buf.indexOf("\n")) !== -1) {
-        let line = buf.slice(0, idx); buf = buf.slice(idx + 1);
-        if (line.endsWith("\r")) line = line.slice(0, -1);
-        if (!line.startsWith("data: ")) continue;
-        const json = line.slice(6).trim();
-        if (json === "[DONE]") { done = true; break; }
-        try {
-          const parsed = JSON.parse(json);
-          const delta = parsed.choices?.[0]?.delta;
-          if (delta?.content) {
-            text += delta.content;
-            setPasses((p) => p.map((pp, i) => i === passIdx ? { ...pp, text } : pp));
-          }
-        } catch { buf = line + "\n" + buf; break; }
-      }
-    }
+    let text = "";
+    await streamChat({
+      messages: [
+        { role: "user", content: `[ZAHTEN ORCHESTRATOR DOCTRINE]\n${ORCHESTRATOR_SYSTEM}\n\n[CLASSIFICATION] ${classification}${brainCtx}` },
+        { role: "assistant", content: "understood." },
+        ...history,
+      ],
+      mode: "code",
+      depth: "deep",
+      signal,
+      onDelta: (d: string) => {
+        text += d;
+        setPasses((p) => p.map((pp, i) => i === passIdx ? { ...pp, text } : pp));
+      },
+      onDone: () => undefined,
+    });
     return text;
   };
 
   // Plain (non-streaming-into-passes) call for the scope assessor.
   const callAsherAiPlain = async (system: string, user: string, signal: AbortSignal): Promise<string> => {
-    const byok = getActiveIntelMapByok();
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/asher-ai`;
-    const resp = await fetch(url, {
-      method: "POST",
-      signal,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        ...(byok ? { "x-byok-gemini-key": byok.apiKey } : {}),
-      },
-      body: JSON.stringify({
-        messages: [
-          { role: "user", content: system },
-          { role: "user", content: user },
-        ],
-        mapContext: { surface: "zahten_scope_assessor" },
-      }),
-    });
-    if (!resp.ok || !resp.body) throw new Error(`Assessor failed (${resp.status})`);
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = "", text = "", done = false;
-    while (!done) {
-      const { value, done: d } = await reader.read();
-      if (d) break;
-      buf += decoder.decode(value, { stream: true });
-      let idx;
-      while ((idx = buf.indexOf("\n")) !== -1) {
-        let line = buf.slice(0, idx); buf = buf.slice(idx + 1);
-        if (line.endsWith("\r")) line = line.slice(0, -1);
-        if (!line.startsWith("data: ")) continue;
-        const json = line.slice(6).trim();
-        if (json === "[DONE]") { done = true; break; }
-        try {
-          const parsed = JSON.parse(json);
-          const delta = parsed.choices?.[0]?.delta;
-          if (delta?.content) text += delta.content;
-        } catch { buf = line + "\n" + buf; break; }
-      }
-    }
-    return text.trim();
+    const { askModel } = await import("@/lib/ai");
+    return askModel(user, { system, signal });
   };
 
   const parseAssessor = (text: string): { ready: boolean; restated?: string; questions?: string[] } => {

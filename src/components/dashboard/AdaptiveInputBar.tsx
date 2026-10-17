@@ -550,7 +550,7 @@ const AdaptiveInputBar = forwardRef<AdaptiveInputBarHandle, AdaptiveInputBarProp
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
-              placeholder={online ? "Message asherin…" : "Offline — messages will queue…"}
+              placeholder={online ? "Message shepherd…" : "Offline — messages will queue…"}
               rows={1}
               className="w-full resize-none bg-transparent text-sm font-light text-foreground placeholder:text-muted-foreground/50 outline-none max-h-32"
             />
@@ -584,7 +584,7 @@ const AdaptiveInputBar = forwardRef<AdaptiveInputBarHandle, AdaptiveInputBarProp
           {!online && <WifiOff className="h-3 w-3 text-amber-400/70" />}
           <Lock className="h-3 w-3 text-emerald-500/50" />
           <p className="text-xs font-extralight text-muted-foreground/50">
-            {!online ? "Offline · messages queued" : "Account-synced encryption"}{draftSaved ? ` · ${draftSaved}` : ""} · asherin may make mistakes
+            {!online ? "Offline · messages queued" : "encrypted on this device"}{draftSaved ? ` · ${draftSaved}` : ""} · shepherd may make mistakes
           </p>
         </div>
       </div>

@@ -99,11 +99,7 @@ export async function ingestFile(
   // Extraction is a follow-on pass — a failure here never fails the upload.
   void (async () => {
     try {
-      const { data, error } = await supabase.functions.invoke("library-extract", {
-        body: { fileId: created.id },
-      });
-      const status = (error ? "failed" : (data?.status as TextStatus)) ?? "failed";
-      const chars = Number(data?.chars ?? 0);
+      const { status, chars } = await extractLocally(created, file);
       onUpdate?.({ ...created, text_status: status, text_chars: chars });
       void emitPull({
         organ: "file-scrapper", capability: "extract", fromSurface: "library",
@@ -184,17 +180,83 @@ export async function deleteLibraryFile(file: LibraryFile): Promise<void> {
 
 export async function retryExtract(file: LibraryFile): Promise<TextStatus> {
   try {
-    const { data, error } = await supabase.functions.invoke("library-extract", {
-      body: { fileId: file.id },
-    });
-    const status = (error ? "failed" : (data?.status as TextStatus)) ?? "failed";
+    const { data: blob, error } = await supabase.storage.from("library").download(file.storage_path);
+    if (error || !blob) return "failed";
+    const { status, chars } = await extractLocally(file, new File([blob], file.file_name, { type: file.file_type }));
     void emitPull({
       organ: "file-scrapper", capability: "extract", fromSurface: "library",
       status: status === "ok" ? "ok" : "skip", quote: file.file_name,
-      meta: { chars: Number(data?.chars ?? 0), text_status: status },
+      meta: { chars, text_status: status },
     });
     return status;
   } catch {
     return "failed";
   }
+}
+
+/* ───────────────────────── on-device text extraction ───────────────────────── */
+
+const TEXT_EXT = new Set([
+  "txt", "md", "markdown", "csv", "tsv", "json", "jsonl", "yaml", "yml", "xml", "html", "htm", "svg", "log",
+  "js", "mjs", "cjs", "ts", "tsx", "jsx", "py", "rb", "go", "rs", "java", "kt", "c", "h", "cpp", "hpp", "cs",
+  "sh", "bash", "zsh", "ps1", "sql", "toml", "ini", "cfg", "conf", "env", "properties", "rtf", "srt", "vtt", "ics",
+]);
+const MAX_TEXT_CHARS = 400_000;
+
+/** credential-shaped runs are masked before anything is indexed, so a pasted key never becomes searchable. */
+export function maskCredentials(text: string): string {
+  return text
+    .replace(/\b(sk|rk|pk|gsk|xai|ghp|gho|glpat|xoxb|xoxp|AKIA)[-_][A-Za-z0-9_-]{16,}\b/g, "[masked key]")
+    .replace(/\bAIza[0-9A-Za-z_-]{30,}\b/g, "[masked key]")
+    .replace(/\b(bearer|token|api[_-]?key|secret|password|passwd)\s*[:=]\s*["']?[^\s"']{8,}/gi, "$1: [masked]")
+    .replace(/\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g, "[masked token]")
+    .replace(/-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g, "[masked private key]");
+}
+
+async function pdfText(file: File): Promise<string> {
+  const pdfjs = await import("pdfjs-dist");
+  const workerUrl = (await import("pdfjs-dist/build/pdf.worker.mjs?url")).default;
+  pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+  const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+  const pages: string[] = [];
+  for (let i = 1; i <= doc.numPages && pages.join("").length < MAX_TEXT_CHARS; i++) {
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    pages.push(content.items.map((it) => ("str" in it ? it.str : "")).join(" "));
+  }
+  return pages.join("\n\n");
+}
+
+/**
+ * Read the file's text on this device and store it on the row so the library
+ * can find it by content. Text-like files and pdfs are read; images, audio,
+ * video and binary formats are marked unsupported rather than guessed at.
+ */
+async function extractLocally(row: LibraryFile, file: File): Promise<{ status: TextStatus; chars: number }> {
+  const ext = (row.file_name.split(".").pop() ?? "").toLowerCase();
+  const mime = (file.type || row.file_type || "").toLowerCase();
+  let status: TextStatus = "unsupported";
+  let text = "";
+  try {
+    if (mime === "application/pdf" || ext === "pdf") {
+      text = await pdfText(file);
+      status = "ok";
+    } else if (mime.startsWith("text/") || TEXT_EXT.has(ext) || mime === "application/json" || mime.endsWith("+json") || mime.endsWith("+xml")) {
+      text = await file.text();
+      status = "ok";
+    }
+  } catch {
+    status = "failed";
+    text = "";
+  }
+  if (status === "ok") {
+    text = maskCredentials(text).split("\u0000").join("").slice(0, MAX_TEXT_CHARS);
+    if (!text.trim()) status = "empty";
+  }
+  const chars = status === "ok" ? text.length : 0;
+  await supabase
+    .from("library_files")
+    .update({ extracted_text: status === "ok" ? text : null, text_status: status, text_chars: chars } as never)
+    .eq("id", row.id);
+  return { status, chars };
 }

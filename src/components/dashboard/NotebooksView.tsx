@@ -136,7 +136,7 @@ const NotebooksView = () => {
 
   const createNotebook = async () => {
     if (!user) return;
-    const { data, error } = await (supabase.from as any)("notebooks").insert({ title: newTitle.trim() || "Untitled Notebook", description: newDesc.trim(), owner_id: user.id }).select().single();
+    const { data, error } = await (supabase.from as any)("notebooks").insert({ title: newTitle.trim() || "Untitled Notebook", description: newDesc.trim(), owner_id: user.id, tags: [], status: "draft", version: 1, team_id: null, schedule: null, last_run_at: null }).select().single();
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     if (data) {
       await (supabase.from as any)("notebook_cells").insert({ notebook_id: data.id, cell_type: "text", content: "# Analysis Notes\n\nStart documenting your findings here.", position: 0 });
@@ -150,7 +150,7 @@ const NotebooksView = () => {
 
   const cloneNotebook = async (nb: Notebook) => {
     if (!user) return;
-    const { data: clone } = await (supabase.from as any)("notebooks").insert({ title: `${nb.title} (Clone)`, description: nb.description, owner_id: user.id, tags: nb.tags }).select().single();
+    const { data: clone } = await (supabase.from as any)("notebooks").insert({ title: `${nb.title} (Clone)`, description: nb.description, owner_id: user.id, tags: nb.tags ?? [], status: "draft", version: 1, team_id: null, schedule: null, last_run_at: null }).select().single();
     if (clone) {
       const { data: srcCells } = await (supabase.from as any)("notebook_cells").select("*").eq("notebook_id", nb.id).order("position");
       if (srcCells) {
@@ -224,26 +224,13 @@ const NotebooksView = () => {
     const timer = setTimeout(() => ctrl.abort(), CLIENT_TIMEOUT_MS);
     setRunningCell(cell.id);
     try {
-      const { data: session } = await supabase.auth.getSession();
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notebook-execute`, {
-        method: "POST",
-        signal: ctrl.signal,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.session?.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
-        body: JSON.stringify({
-          cellId: cell.id,
-          cellType: cell.cell_type,
-          content: localContent[cell.id] ?? cell.content,
-          source,
-        }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      const output: string = typeof payload.output === "string"
-        ? payload.output
-        : JSON.stringify(payload.result ?? { kind: "error", text: payload.error ?? `Runner returned ${res.status}`, columns: [], rows: [], rowCount: 0, scanned: 0, truncated: false, elapsedMs: 0, source: null });
+      // local edition: a text cell renders on the device; sql and chart cells ran on
+      // the asherin kernel's runner, which is not here, and say so honestly.
+      const content = localContent[cell.id] ?? cell.content;
+      const payload: { output?: string; result?: unknown } = cell.cell_type === "text"
+        ? { output: content }
+        : { result: { kind: "error", text: "kernel offline: the notebook runner (sql, charts) ran on the asherin kernel and is not part of the local edition. text cells still render.", columns: [], rows: [], rowCount: 0, scanned: 0, truncated: false, elapsedMs: 0, source: null } };
+      const output: string = typeof payload.output === "string" ? payload.output : JSON.stringify(payload.result);
       setCells(prev => prev.map(c => c.id === cell.id ? { ...c, output } : c));
       const envelope = parseOutput(output);
       void emitPull({
@@ -449,9 +436,9 @@ const NotebooksView = () => {
               </div>
 
               {/* Tags */}
-              {selectedNb.tags.length > 0 && (
+              {(selectedNb.tags ?? []).length > 0 && (
                 <div className="flex gap-1.5">
-                  {selectedNb.tags.map(tag => (
+                  {(selectedNb.tags ?? []).map(tag => (
                     <span key={tag} className="text-[9px] px-2 py-0.5 rounded-full bg-accent/10 text-accent"><Tag className="h-2.5 w-2.5 inline mr-1" />{tag}</span>
                   ))}
                 </div>

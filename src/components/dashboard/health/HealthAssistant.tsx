@@ -76,7 +76,7 @@ export default function HealthAssistant({ context, trigger, onTriggerHandled, re
     <div className="flex h-full min-h-0 flex-col rounded-2xl border border-[#e78a2e]/25 bg-[#e78a2e]/[0.04]">
       <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2">
         <MessageCircle className="h-3.5 w-3.5 text-[#e78a2e]/80" />
-        <p className="text-[11px] font-light tracking-wide text-foreground/75">asherin, in this room</p>
+        <p className="text-[11px] font-light tracking-wide text-foreground/75">shepherd, in this room</p>
       </div>
 
       <div ref={scroller} className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3">

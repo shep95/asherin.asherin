@@ -161,33 +161,11 @@ export const useRunScan = () => {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState<ScanProgress | null>(null);
 
-  const callPhase = async (body: Record<string, unknown>, timeoutMs = 90_000) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) throw new Error("Not authenticated");
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    const controller = new AbortController();
-    const to = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      const resp = await fetch(`${supabaseUrl}/functions/v1/zerlal-scan`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`,
-          "apikey": anonKey,
-        },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-      const raw = await resp.text();
-      let parsed: any = {};
-      try { parsed = raw ? JSON.parse(raw) : {}; } catch { parsed = { error: raw }; }
-      if (!resp.ok) throw new Error(parsed?.error || parsed?.message || `Status ${resp.status}`);
-      if (parsed?.error) throw new Error(parsed.error);
-      return parsed;
-    } finally {
-      clearTimeout(to);
-    }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const callPhase = async (_body: Record<string, unknown>, _timeoutMs = 90_000): Promise<any> => {
+    // local edition: the scanner ran as a server organ. a browser cannot probe
+    // another host, so the room says so instead of pretending to scan.
+    throw new Error("kernel offline: the zerlal scanner ran on the asherin kernel and is not part of the local edition. nothing was scanned.");
   };
 
   const sleepWithCountdown = async (seconds: number, onTick: (remaining: number) => void) => {

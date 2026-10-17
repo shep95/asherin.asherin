@@ -3,7 +3,6 @@ import { Wand2, ChevronRight, Loader2, Copy, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import type { Conversation } from "./types";
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const STORAGE_WIDTH = "asherin.enhancer.width";
 const STORAGE_OPEN = "asherin.enhancer.open";
 
@@ -71,57 +70,26 @@ function isTrivialTurn(raw: string): boolean {
 }
 
 
-function getAuthPromise() {
-  return (async () => {
-    try {
-      const { supabase } = await import("@/integrations/supabase/client");
-      const { data: { session } } = await supabase.auth.getSession();
-      return session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    } catch {
-      return import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    }
-  })();
-}
-
+/**
+ * The enhancer runs on the same path as the chat: the model the operator
+ * connected on this device, called from this device. Messages are handed
+ * over as-is; the chat path adds shepherd's own system prompt.
+ */
 async function streamChat(
   messages: { role: string; content: string }[],
   onDelta: (chunk: string) => void,
   signal: AbortSignal,
 ) {
-  const token = await getAuthPromise();
-  const resp = await fetch(CHAT_URL, {
-    method: "POST",
-    signal,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ messages, mode: "chat" }),
-  });
-  if (!resp.ok || !resp.body) throw new Error(`chat http ${resp.status}`);
-  const reader = resp.body.getReader();
-  const decoder = new TextDecoder();
-  let buf = "";
+  const { streamChat: run } = await import("@/lib/ai");
   let full = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += decoder.decode(value, { stream: true });
-    let nl: number;
-    while ((nl = buf.indexOf("\n")) !== -1) {
-      let line = buf.slice(0, nl);
-      buf = buf.slice(nl + 1);
-      if (line.endsWith("\r")) line = line.slice(0, -1);
-      if (!line.startsWith("data: ")) continue;
-      const json = line.slice(6).trim();
-      if (json === "[DONE]") return full;
-      try {
-        const parsed = JSON.parse(json);
-        const delta = parsed.choices?.[0]?.delta?.content;
-        if (delta) { full += delta; onDelta(delta); }
-      } catch { /* skip */ }
-    }
-  }
+  await run({
+    messages: messages.map((m) => ({ role: (m.role === "assistant" ? "assistant" : "user") as "user" | "assistant", content: m.content })),
+    mode: "chat",
+    depth: "standard",
+    signal,
+    onDelta: (d: string) => { full += d; onDelta(d); },
+    onDone: () => undefined,
+  });
   return full;
 }
 

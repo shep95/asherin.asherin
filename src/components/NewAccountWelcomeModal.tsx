@@ -110,8 +110,8 @@ function WelcomePanel({ onBegin }: { onBegin: () => void }) {
       </div>
 
       <p className="text-sm font-extralight leading-relaxed text-muted-foreground">
-        bring your own api key and asherin runs on it — you pay that vendor for inference. every room below is open
-        to your account.
+        connect a model key under settings → intelligence and shepherd, the ai in asherin, runs on it from this
+        device — you pay that vendor for inference, nothing leaves this browser otherwise. every room below is open.
       </p>
 
       <CapabilityGrid />

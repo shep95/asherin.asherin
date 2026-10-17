@@ -55,7 +55,7 @@ const ThinkingPanel = ({
           className={`h-3 w-3 text-muted-foreground/50 transition-transform duration-200 motion-reduce:transition-none ${open ? "rotate-90" : ""}`}
         />
         <span className="text-[11px] font-light tracking-wide text-muted-foreground/75">
-          asherin
+          shepherd
         </span>
         <span className="ml-auto text-[10px] font-mono text-muted-foreground/40">
           {live ? (
@@ -115,7 +115,7 @@ export const ThinkingPanelOrDots = ({ messageId }: { messageId: string }) => {
   if (!text && steps.length === 0) {
     return (
       <span
-        aria-label="asherin is working"
+        aria-label="shepherd is working"
         className="inline-block h-4 w-0.5 bg-foreground/50 animate-pulse motion-reduce:animate-none align-text-bottom"
       />
     );

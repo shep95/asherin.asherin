@@ -673,6 +673,9 @@ function loadCss(href) {
 }
 
 async function authedJson(path, body, ms = 20000) {
+  // local edition: these layers were served by the asherin kernel. without it
+  // the layer reports offline rather than spinning.
+  if (!import.meta.env.VITE_SUPABASE_URL) throw new Error(`kernel offline: the ${path} layer is not in the local edition yet`);
   const { data: sess } = await supabase.auth.getSession();
   const token = sess?.session?.access_token;
   if (!token) throw new Error("sign in to load live layers");

@@ -63,13 +63,30 @@ function getPath(row: Row, col: string): unknown {
   return row[col];
 }
 
+/**
+ * The hosted schema filled these columns with defaults; the local store has no
+ * schema, so the same defaults are applied at insert time for the tables whose
+ * readers rely on them (a flag they filter by, an array they take .length of).
+ */
+const COLUMN_DEFAULTS: Record<string, Row> = {
+  conversations: { archived: false, pinned: false, branches: [] },
+  messages: { sources: [] },
+  notebooks: { tags: [], status: "draft", version: 1 },
+  library_files: { text_status: "pending", text_chars: 0, folder: null },
+  projects: { archived: false },
+};
+
 function likeToRegex(pattern: string, flags = ""): RegExp {
   const esc = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*").replace(/_/g, ".");
-  return new RegExp(`^${esc}$`, flags);
+  // dotAll: a like pattern spans the whole value, newlines included, as it does in postgres
+  return new RegExp(`^${esc}$`, flags.includes("s") ? flags : flags + "s");
 }
 
 function loose(a: unknown, b: unknown): boolean {
   if (a === b) return true;
+  // a column the row never received reads as its default: false for a flag,
+  // so `.eq("archived", false)` keeps rows written before the flag existed.
+  if (a == null && b === false) return true;
   if (a == null || b == null) return a == null && b == null;
   if (typeof a === "object" || typeof b === "object") return JSON.stringify(a) === JSON.stringify(b);
   return String(a) === String(b);
@@ -411,7 +428,7 @@ export class LocalQuery<T = any> implements PromiseLike<PgResponse<T>> {
           const now = new Date().toISOString();
           const inserted = await mutateTable(this.table, (rows) => {
             const added: Row[] = this.values.map((v) => {
-              const r: Row = { ...v };
+              const r: Row = { ...(COLUMN_DEFAULTS[this.table] ?? {}), ...v };
               if (r.id == null) r.id = uuid();
               if (r.created_at == null) r.created_at = now;
               if (r.user_id === undefined) r.user_id = user.id;

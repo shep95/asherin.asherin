@@ -353,34 +353,12 @@ const DomainReconScreen = ({ onSelectFinding }: DomainReconScreenProps) => {
     setActiveTab("findings");
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error("Not authenticated");
-
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 300000);
-
-      const resp = await fetch(`${supabaseUrl}/functions/v1/zerlal-domain-recon`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`,
-          "apikey": anonKey,
-        },
-        body: JSON.stringify({ domain: domain.trim() }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-
-      if (!resp.ok) {
-        throw new Error(await getResponseErrorMessage(resp));
-      }
-
-      const data = await resp.json();
-      if (data.error) throw new Error(data.error);
+      // local edition: domain recon ran as a server organ (dns, certificate and
+      // port legs a browser cannot perform). the room says so instead of
+      // presenting a result it did not gather.
+      throw new Error(`kernel offline: domain recon for ${domain.trim()} ran on the asherin kernel and is not part of the local edition. nothing was probed.`);
+      // eslint-disable-next-line no-unreachable, @typescript-eslint/no-explicit-any
+      const data: any = {};
 
       setResult(data);
       setProjectId(data.project_id);

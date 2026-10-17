@@ -84,6 +84,12 @@ const TABS: { id: VaultTab; label: string; icon: React.ElementType }[] = [
   { id: "alerts", label: "Notifications", icon: Bell },
 ];
 
+// local edition: there is no account to hold sessions, factors or a password;
+// the device is the operator. those tabs stay out of the way rather than
+// offering controls that would have nothing to act on.
+const LOCAL_HIDDEN: ReadonlySet<VaultTab> = new Set<VaultTab>(["sessions", "mfa", "password"]);
+const VISIBLE_TABS = TABS.filter((t) => !LOCAL_HIDDEN.has(t.id));
+
 const deviceIcon = (type: string) => {
   if (type.toLowerCase().includes("mobile") || type.toLowerCase().includes("phone")) return Smartphone;
   if (type.toLowerCase().includes("tablet")) return Tablet;
@@ -484,7 +490,7 @@ const GuardianVaultView = () => {
               <Shield className="h-5 w-5 text-foreground/70" />
               <div>
                 <h1 className="text-base font-extralight tracking-[0.15em] text-foreground">GUARDIAN VAULT</h1>
-                <p className="text-[10px] font-extralight tracking-wider text-muted-foreground/50 mt-0.5">Account Security Command Center</p>
+                <p className="text-[10px] font-extralight tracking-wider text-muted-foreground/50 mt-0.5">device security, held on this device</p>
               </div>
             </div>
             <button onClick={loadData} className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-colors" title="Refresh">
@@ -494,7 +500,7 @@ const GuardianVaultView = () => {
         )}
 
         <div className={`flex gap-1 overflow-x-auto scrollbar-hide ${v2 ? "" : "mt-4"}`}>
-          {TABS.map(t => {
+          {VISIBLE_TABS.map(t => {
             const Icon = t.icon;
             return (
               <button

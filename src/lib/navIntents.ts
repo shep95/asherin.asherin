@@ -38,8 +38,8 @@ export const NAV_INTENTS: NavIntent[] = [
   {
     view: "chat",
     label: "Chat",
-    codename: "Asherin",
-    blurb: "Ask for anything — search, maps, code, data, cyber all run from here",
+    codename: "shepherd",
+    blurb: "Ask shepherd for anything — search, maps, code, data, cyber all run from here",
     keywords: ["chat", "ask", "talk", "conversation", "prompt", "assistant"],
     group: "talk",
   },
@@ -363,7 +363,7 @@ export const INTENT_GROUP_BLURB: Record<IntentGroup, string> = {
   understand: "data, knowledge, body, timing",
   make: "documents, design, agents, canvas",
   keep: "library, projects, vault, team",
-  account: "settings, billing, keys, activity",
+  account: "settings, keys, activity, device",
 };
 
 /* ───────────────────────── Recents ───────────────────────── */

@@ -1006,11 +1006,9 @@ export default function AsherinDataView() {
                 <span className="text-[11px] text-white/40">{activeWorkspace?.api_key_hash ? "a key is active on this workspace" : "no key yet"}</span>
               </div>
               <pre className="mt-3 overflow-auto rounded-xl border border-white/8 bg-black/40 p-3 text-[10px] text-white/55">
-{`POST https://xpgxgzqbtrrrbtjcemci.supabase.co/functions/v1/asherin-data-api
-x-asherin-data-key: <your key>
-content-type: application/json
-
-{ "source_name": "orders", "rows": [ { "id": 1, "amount": 42.5 } ] }`}
+{`local edition: there is no hosted ingest endpoint. rows arrive through the
+import panel in this room (csv, json, xlsx, pdf) and stay on this device.
+the key above is kept for a future self-hosted kernel; nothing listens for it yet.`}
               </pre>
             </section>
           </div>

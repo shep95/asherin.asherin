@@ -1,5 +1,7 @@
 # asherin
 
+the ai in the room is **shepherd**. its mind is the shepherd doctrine in `src/lib/local/prompt/shepherd.txt`; see `docs/IMPROVEMENTS.md` for how it is assembled per turn.
+
 asherin is a sourced research workspace that runs on your own device.
 
 there is no account, no sign-in, no server and no subscription. the dashboard opens directly. every conversation, file, note and vault entry is kept in this browser's own store (IndexedDB), and the model that answers you is the one you connect: the key is encrypted on the device and used only for requests you start.

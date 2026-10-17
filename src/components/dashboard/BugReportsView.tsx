@@ -101,26 +101,40 @@ const BugReportsView = () => {
   const handleSummarize = async () => {
     setSummarizing(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/summarize-bug-reports`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({}),
-      });
-      const result = await resp.json();
-      if (result.error) {
-        toast({ title: "Summarization failed", description: result.error, variant: "destructive" });
+      // local edition: the summary is written by the model the operator connected,
+      // from this device, over the reports held on this device.
+      if (reports.length === 0) {
+        toast({ title: "Nothing to summarize", description: "File a report first." });
+        return;
+      }
+      const { askModel } = await import("@/lib/ai");
+      const digest = reports
+        .slice(0, 60)
+        .map((r) => `- [${r.type} · ${r.severity} · ${r.status}] ${r.title}: ${r.description.slice(0, 400)}`)
+        .join("\n");
+      const summary = await askModel(
+        `summarize these product reports for the person who filed them. group by theme, name the most severe bug first, then feature asks. plain lowercase prose, under 200 words.\n\n${digest}`,
+      );
+      const bugCount = reports.filter((r) => r.type === "bug").length;
+      const featureCount = reports.filter((r) => r.type === "feature").length;
+      const { error } = await supabase.from("bug_report_summaries").insert({
+        user_id: user?.id,
+        summary,
+        report_ids: reports.map((r) => r.id),
+        bug_count: bugCount,
+        feature_count: featureCount,
+      } as never);
+      if (error) {
+        toast({ title: "Summarization failed", description: error.message, variant: "destructive" });
       } else {
-        toast({ title: "Summary generated", description: `${result.bugCount || 0} bugs, ${result.featureCount || 0} features summarized.` });
+        toast({ title: "Summary generated", description: `${bugCount} bugs, ${featureCount} features summarized.` });
         loadData();
       }
     } catch (e) {
-      toast({ title: "Error", description: "Failed to summarize reports", variant: "destructive" });
+      toast({ title: "Summarization failed", description: e instanceof Error ? e.message : "the model did not answer", variant: "destructive" });
+    } finally {
+      setSummarizing(false);
     }
-    setSummarizing(false);
   };
 
   const updateStatus = async (id: string, status: string) => {

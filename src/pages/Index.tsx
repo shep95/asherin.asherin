@@ -57,7 +57,7 @@ const Index = () => {
     const faqs = [
       {
         q: "what does an asherin account include?",
-        a: "Chat with sources beside the answer, asherin.cyber, asherin.eye, asherin.defender, asherin.arvision, asherin.pages, a private vault, and memory that persists between sessions.",
+        a: "Shepherd, the ai, with sources beside the answer, asherin.cyber, asherin.eye, asherin.defender, asherin.arvision, asherin.pages, a private vault, and memory that persists between sessions.",
       },
       {
         q: "can i leave?",
@@ -78,7 +78,7 @@ const Index = () => {
           name: "Asherin",
           url: "https://asherin.com",
            description:
-             "asherin is a sourced research workspace: chat, asherin.cyber, asherin.eye, asherin.defender, asherin.arvision, asherin.pages. honest about what it does not know.",
+             "asherin is a sourced research workspace with shepherd, its ai: chat, asherin.cyber, asherin.eye, asherin.defender, asherin.arvision, asherin.pages. honest about what it does not know.",
         },
       },
       {
@@ -206,6 +206,17 @@ const Index = () => {
                 </p>
                 <p className="mt-4 text-[11px] font-light lowercase text-foreground/40">no login · no ai · local only</p>
               </Link>
+              <a href="https://noah.asherin.com" className="group mt-2 block border-t border-foreground/10 pt-6">
+                <p className="text-[11px] font-light lowercase text-foreground/40">free ide</p>
+                <p className="mt-2 text-xl font-extralight lowercase text-foreground transition-colors duration-[var(--dur-settle)] ease-quiet group-hover:text-foreground/65">
+                  noah.asherin.com
+                </p>
+                <p className="mt-3 max-w-md text-sm font-light leading-[1.8] text-foreground/55">
+                  a free code editor in the browser, from asherin. open it, write, and keep going; nothing to install and
+                  nothing to pay for.
+                </p>
+                <p className="mt-4 text-[11px] font-light lowercase text-foreground/40">free · in the browser · noah.asherin.com →</p>
+              </a>
             </div>
           </div>
         </div>
@@ -219,8 +230,8 @@ const Index = () => {
             <div className="max-w-2xl">
               <h2 className="text-2xl font-extralight lowercase leading-tight text-foreground sm:text-3xl">ask one question.</h2>
               <p className="mt-4 max-w-xl text-sm font-light leading-[1.8] text-foreground/55">
-                this field runs the same answering path the workspace uses, with the model key you connected on this
-                device. no key yet? open the workspace and add one under settings → ai keys.
+                shepherd, the ai inside asherin, answers here on the same path the workspace uses, with the model key
+                you connected on this device. no key yet? open the workspace and add one under settings → ai keys.
               </p>
 
               <form onSubmit={handleAsk} className="mt-10 flex items-end gap-4 border-b border-foreground/20 pb-3 transition-colors duration-[var(--dur-settle)] ease-quiet focus-within:border-foreground/60">

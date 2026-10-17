@@ -336,7 +336,7 @@ export default function KnowledgeVaultView() {
                   <div className="mb-3 max-h-72 space-y-2 overflow-y-auto rounded-xl border border-border/20 bg-background/30 p-3">
                     {agentLog.map((t, i) => (
                       <div key={i} className="text-xs font-light text-muted-foreground/85">
-                        <span className="text-foreground/90">{t.role === "user" ? "you" : "asherin"}</span>
+                        <span className="text-foreground/90">{t.role === "user" ? "you" : "shepherd"}</span>
                         {t.intent && <span className="ml-2 rounded border border-border/30 px-1 py-0.5 text-[9px] uppercase">{t.intent}</span>}
                         <div className="mt-1 whitespace-pre-wrap">{t.text}</div>
                         {t.matches && t.matches.length > 0 && (

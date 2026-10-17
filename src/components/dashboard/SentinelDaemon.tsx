@@ -11,14 +11,17 @@ import { bootSentinelFabric } from "@/lib/fabric/bridges/sentinelFabric";
  * exists: protection must not depend on which page is open, which tab is
  * selected, or on the user remembering to press anything.
  *
- * Gated on an authenticated session so an anonymous visitor on the marketing
- * site is never asked for location or notification permission.
+ * Gated to the workspace routes so a visitor on the public pages
+ * is never asked for location or notification permission.
  */
 const SentinelDaemon = () => {
   const { user } = useAuth();
   const { pathname } = useLocation();
+  const inWorkspace = pathname.startsWith("/dashboard");
   useEffect(() => {
-    if (!user || pathname === "/asherin.acatalepsy") return;
+    // The device is the operator, so a user object always exists here; the
+    // daemons belong to the workspace, never to the public pages.
+    if (!user || !inWorkspace) return;
     bootSentinel();
     // Normalizing sentinel's own lanes into the shared fabric costs nothing
     // when nothing is capturing, and means eagle.eye can name this account's
@@ -28,7 +31,7 @@ const SentinelDaemon = () => {
     // protection is scoped to the account, so it must not wait for the
     // operator to open the panel that reports it.
     bootOpLayer();
-  }, [user]);
+  }, [user, inWorkspace]);
   return null;
 };
 

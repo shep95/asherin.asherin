@@ -17,11 +17,11 @@ interface Props {
  * the collection layer surfaced. A null return degrades the tile to blank
  * rather than falling back to a direct fetch.
  */
-function proxied(url: string): string | null {
-  if (!url || !url.startsWith("https://")) return null;
-  const base = import.meta.env.VITE_SUPABASE_URL;
-  if (!base) return null;
-  return `${base}/functions/v1/intel-avatar?u=${encodeURIComponent(url)}`;
+function proxied(_url: string): string | null {
+  // local edition: the ssrf-guarded image proxy ran on the server. hot-linking a
+  // third-party host from the operator's own browser would hand it their ip,
+  // so the report lists the image urls and renders none of them.
+  return null;
 }
 
 

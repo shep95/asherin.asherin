@@ -217,7 +217,7 @@ const AIKeysSettings = () => {
         <Key className="h-5 w-5 text-muted-foreground" />
         <div>
           <h3 className="text-sm font-light text-foreground">AI Model Keys</h3>
-          <p className="text-[10px] text-muted-foreground/50 mt-0.5">Bring your own API keys. Aureon never lends out a shared key — every request runs on the keys you add here.</p>
+          <p className="text-[10px] text-muted-foreground/50 mt-0.5">Bring your own API keys. asherin never lends out a shared key — every request runs on the keys you add here, from this device.</p>
         </div>
       </div>
 
@@ -276,7 +276,7 @@ const AIKeysSettings = () => {
 
         <div className="mt-3 pt-3 border-t border-border/10 flex items-start gap-2 text-[10px] text-muted-foreground/60">
           <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5 text-amber-400/60" />
-          <span>You can enable multiple providers at once and toggle them per-conversation from the chat header. Aureon does not provide a shared/default key.</span>
+          <span>You can enable multiple providers at once and toggle them per-conversation from the chat header. asherin does not provide a shared/default key.</span>
         </div>
       </div>
 

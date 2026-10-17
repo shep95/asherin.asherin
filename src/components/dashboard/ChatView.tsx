@@ -103,7 +103,7 @@ function SendToBoardButton({ content }: { content: string }) {
     queueBoardDrop({
       kind: bullets.length ? "brief" : "note",
       source: "chat",
-      title: heading || "asherin answer",
+      title: heading || "shepherd answer",
       text: bullets.length ? undefined : content.slice(0, 1200),
       bullets: bullets.length ? bullets : undefined,
     });
@@ -619,7 +619,7 @@ const ChatView = ({
     const lines = branchMessages.map(
       (m) =>
         // Speaker label is the product name the operator sees: asherin.
-        `**${m.role === "user" ? "You" : "asherin"}** (${m.timestamp ? new Date(m.timestamp).toLocaleString() : ""}):\n${m.content}`,
+        `**${m.role === "user" ? "You" : "shepherd"}** (${m.timestamp ? new Date(m.timestamp).toLocaleString() : ""}):\n${m.content}`,
     );
     const md = `# ${conversation.title}\n\n${lines.join("\n\n---\n\n")}`;
     const blob = new Blob([md], { type: "text/markdown" });
@@ -739,11 +739,11 @@ const ChatView = ({
 
                 <div className="flex items-center justify-center gap-1.5 mb-1">
                   <Lock className="h-3 w-3 text-emerald-500/70" />
-                  <span className="text-xs font-extralight text-emerald-500/70">Account-synced encryption</span>
+                  <span className="text-xs font-extralight text-emerald-500/70">encrypted on this device</span>
                 </div>
                 <p className="text-sm font-extralight text-muted-foreground">
-                  Conversations are stored encrypted at rest under a key bound to your account, so they open on every
-                  device you sign in from.
+                  conversations are stored encrypted at rest under a key that lives on this device. nothing leaves
+                  the browser unless you send it to the model you connected.
                 </p>
               </div>
             </div>

@@ -43,10 +43,9 @@ interface Session {
   artifacts: Artifact[];
 }
 
-const FN_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/meet-vault`;
-
-const streamUrl = (token: string, mode: "stream" | "download") =>
-  `${FN_BASE}?t=${encodeURIComponent(token)}&mode=${mode}`;
+// local edition: recordings used to stream from the asherin kernel. there is no
+// kernel here, so a playback token resolves to nothing rather than to a dead host.
+const streamUrl = (_token: string, _mode: "stream" | "download") => "";
 
 function bytes(n: number | null): string {
   if (!n) return "—";

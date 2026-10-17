@@ -1,10 +1,12 @@
 /**
- * The system prompt, assembled on the device. Ported from the hosted chat
- * function: the Shepherd architecture is the behavioural foundation, then
- * task shape (mode), depth, operator context, and the closing contracts.
+ * The system prompt, assembled on the device. shepherd is the mind: its
+ * identity, the doctrine's core (verbatim), the doctrine sections this turn
+ * calls for, then task shape (mode), depth, operator context, and the closing
+ * contracts.
  */
 
-import { SHEPHERD_ARCHITECTURE, SHEPHERD_ANCHOR } from "./prompt/shepherdArchitecture";
+import { SHEPHERD_IDENTITY, SHEPHERD_ANCHOR } from "./prompt/shepherdArchitecture";
+import { retrievedDoctrineBlock, shepherdCore } from "./prompt/shepherdBrain";
 import { ASHERIN_IDENTITY, buildAsherinProcedures } from "./prompt/asherinPatternIndex";
 
 export type ChatModeKey = "research" | "chat" | "code" | "truth";
@@ -12,6 +14,7 @@ export type DepthKey = "shallow" | "standard" | "deep" | "expert";
 
 const PRODUCT_NOTES = `
 ## ASHERIN, LOCAL EDITION (public facts — use freely)
+- you are shepherd, the ai inside asherin. if asked your name, it is shepherd.
 - asherin runs on this device. there is no account, no server between the operator and the model, and no subscription. the operator connected their own model key; it stays on this device.
 - rooms behind the chat: asherin.search, asherin.eye, asherin.arvision, asherin.defender, asherin.sentinel, asherin.health, asherin.data, asherin.cyber, asherin.knowledge, library, projects, memory, guardian vault, whiteboard, pages, agents, team.
 - some rooms used to lean on a server-side organ (live public-index sweeps, third-party scanners). when a tool did not actually run this turn, say kernel offline for that tool. never invent results, urls, or citations.
@@ -69,14 +72,14 @@ const SPEAKER_BOUNDARY = `
 
 const VOICE = `
 ## VOICE (binding on every turn)
-- everything lowercase, including names of people, products, places, asherin.
+- everything lowercase, including names of people, products, places, asherin, shepherd.
 - God always uppercase. He / His / Father uppercase only when they name God.
 - do not capitalize the first word of a sentence.
 - dash-led. no unasked opinions. no mental-safety pivot.
 - adopt prefer / never / process / output-shape from their prompts without asking.`;
 
 const FACE = `
-## FACE (binding on every turn — asherin's own face)
+## FACE (binding on every turn — shepherd's own face)
 - simple question → short plain answer. everyday words. no heavy wording.
 - if you do not know, hold. do not turn a maybe into a sure plan.
 - a hold is still words. never a zero-character reply.
@@ -97,7 +100,7 @@ const IMAGE_BRAIN = `
 an image is attached. answer from what is observable in it: cite the concrete visual detail behind each claim. never identify a private person by face. if the image does not show what was asked, say so.`;
 
 const GREETING_WORDS = new Set([
-  "hey", "hi", "hello", "yo", "sup", "asherin", "you", "u", "there", "bud", "man", "up", "good", "morning",
+  "hey", "hi", "hello", "yo", "sup", "asherin", "shepherd", "you", "u", "there", "bud", "man", "up", "good", "morning",
   "evening", "afternoon", "night", "thanks", "thank", "ok", "okay", "test", "whats", "how", "are", "doing", "r",
   "yeah", "still", "awake", "around", "here", "ya",
 ]);
@@ -141,12 +144,14 @@ export function buildSystemPrompt(input: SystemPromptInput): string {
   const mode = (input.mode && input.mode in MODE_PROMPTS ? input.mode : "chat") as ChatModeKey;
   const depth = (input.depth && input.depth in DEPTH_PROMPTS ? input.depth : "standard") as DepthKey;
   const parts = [
-    SHEPHERD_ARCHITECTURE,
+    SHEPHERD_IDENTITY,
+    shepherdCore(),
     ASHERIN_IDENTITY,
     temporalContext(),
     input.taskDirective ? `## TASK DIRECTIVE (a task shape, not a character)\n${input.taskDirective.slice(0, 12000)}` : "",
     OPERATING_NOTES,
     PRODUCT_NOTES,
+    trivial ? "" : retrievedDoctrineBlock(input.lastUserText),
     trivial ? "" : buildAsherinProcedures(input.lastUserText),
     input.hasImage ? IMAGE_BRAIN : "",
     MODE_PROMPTS[mode],

@@ -926,7 +926,7 @@ const LogoutBtn = () => {
       className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-light text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
     >
       <LogOut className="h-4 w-4" />
-      Log out
+      leave the workspace
     </button>
   );
 };
