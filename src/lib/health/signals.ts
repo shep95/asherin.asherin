@@ -105,6 +105,8 @@ export async function connectHeartRate(
   onSample: (sample: HeartSample) => void,
   onDisconnect: () => void,
 ): Promise<BleConnection> {
+  // web bluetooth has no lib.dom typing in this build; the shape used here is the standard one.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const bluetooth = (navigator as Navigator & { bluetooth?: any }).bluetooth;
   if (!bluetooth) throw new Error("web bluetooth is not available in this browser.");
   const device = await bluetooth.requestDevice({ filters: [{ services: ["heart_rate"] }], optionalServices: ["battery_service"] });

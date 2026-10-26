@@ -1,13 +1,15 @@
-// Watchtower — exposure checks that never transmit a secret.
+// watchtower — exposure checks that never transmit a secret.
 //
-// Password exposure uses the Pwned Passwords range API (k-anonymity): the
-// browser computes SHA-1 locally and sends only the FIRST FIVE hex characters.
-// The remaining 35 characters are compared in-page. The password, the label,
-// the domain and the account it belongs to are never sent anywhere.
+// password exposure uses the Pwned Passwords range api (k-anonymity): the
+// browser computes sha-1 locally and sends only the FIRST FIVE hex characters
+// to api.pwnedpasswords.com. the remaining 35 are compared in-page. the
+// password, the label, the domain and the device it belongs to are never
+// sent. the call is opt-in (the operator presses the button), bounded by an
+// 8-second abort, and skipped outright when the browser reports it is offline.
 //
-// Honest gap: per-account breach lookup (which sites leaked this email) needs
-// an authenticated HaveIBeenPwned subscription key. Asherin does not hold one,
-// so that check is reported as unavailable rather than faked.
+// honest gap: which sites leaked a given email address needs an authenticated
+// Have I Been Pwned subscription key. asherin does not hold one, so that check
+// is reported as unavailable rather than faked.
 
 const RANGE_ENDPOINT = "https://api.pwnedpasswords.com/range/";
 const REQUEST_TIMEOUT_MS = 8000;
@@ -43,7 +45,10 @@ export function matchSuffix(body: string, suffix: string): number {
 }
 
 export async function checkPasswordExposure(password: string): Promise<ExposureResult> {
-  if (!password) return { state: "error", count: 0, reason: "No password stored on this item" };
+  if (!password) return { state: "error", count: 0, reason: "no password stored on this item" };
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return { state: "error", count: 0, reason: "offline — the range service was not contacted" };
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -53,7 +58,7 @@ export async function checkPasswordExposure(password: string): Promise<ExposureR
       signal: controller.signal,
       headers: { "Add-Padding": "true" },
     });
-    if (!res.ok) return { state: "error", count: 0, reason: `Range service returned ${res.status}` };
+    if (!res.ok) return { state: "error", count: 0, reason: `range service answered ${res.status}` };
     const count = matchSuffix(await res.text(), hash.slice(5));
     return count > 0 ? { state: "exposed", count } : { state: "clear", count: 0 };
   } catch (err) {
@@ -61,7 +66,7 @@ export async function checkPasswordExposure(password: string): Promise<ExposureR
     return {
       state: "error",
       count: 0,
-      reason: aborted ? "Exposure service timed out" : "Exposure service unreachable",
+      reason: aborted ? "range service timed out" : "range service unreachable",
     };
   } finally {
     clearTimeout(timer);

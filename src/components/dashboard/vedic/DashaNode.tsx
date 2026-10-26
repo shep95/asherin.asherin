@@ -20,11 +20,11 @@ const fmtDuration = (years: number) => {
 };
 
 const FLAG_ICON: Record<LifeFlag, { Icon: typeof Heart; title: string }> = {
-  soulmate:        { Icon: Heart,      title: "Soulmate window" },
-  millionaire:     { Icon: DollarSign, title: "Millionaire-grade wealth window" },
-  billionaire:     { Icon: Crown,      title: "Billionaire-grade wealth window" },
-  power_peak:      { Icon: Flame,      title: "Power peak" },
-  viral_influence: { Icon: Megaphone,  title: "Viral influence — mass public attention / going viral" },
+  soulmate:        { Icon: Heart,      title: "soulmate window" },
+  millionaire:     { Icon: DollarSign, title: "millionaire-grade wealth window" },
+  billionaire:     { Icon: Crown,      title: "billionaire-grade wealth window" },
+  power_peak:      { Icon: Flame,      title: "power peak" },
+  viral_influence: { Icon: Megaphone,  title: "viral influence — mass public attention" },
 };
 
 interface Props {
@@ -41,7 +41,7 @@ interface Props {
 function ScoreBar({ label, value, Icon }: { label: string; value: number; Icon: typeof Activity }) {
   return (
     <div>
-      <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.18em] text-muted-foreground/70">
+      <div className="flex items-center justify-between text-[9px] tracking-[0.18em] text-muted-foreground/70">
         <span className="flex items-center gap-1"><Icon className="h-2.5 w-2.5" />{label}</span>
         <span className="tabular-nums">{value}</span>
       </div>
@@ -82,6 +82,7 @@ export default function DashaNode({
           type="button"
           onClick={toggle}
           disabled={!canExpand}
+          aria-expanded={canExpand ? isOpen : undefined}
           className="flex items-center gap-2 text-left disabled:cursor-default min-w-0 flex-1"
         >
           {canExpand ? (
@@ -91,7 +92,7 @@ export default function DashaNode({
           ) : <span className="w-3" />}
           <span className={labelClass}>
             {period.lord}
-            <span className="text-muted-foreground/60 text-[10px] uppercase tracking-wider ml-1.5">
+            <span className="text-muted-foreground/60 text-[10px] tracking-wider ml-1.5">
               {DASHA_LEVEL_LABEL[period.level]}
             </span>
           </span>
@@ -127,10 +128,11 @@ export default function DashaNode({
           <button
             type="button"
             onClick={() => setShowHoroscope((v) => !v)}
-            className="inline-flex items-center gap-1 rounded border border-border/30 bg-background/40 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-foreground/80 hover:bg-foreground/[0.06]"
-            title="Read this period's horoscope"
+            aria-expanded={showHoroscope}
+            className="inline-flex items-center gap-1 rounded border border-border/30 bg-background/40 px-1.5 py-0.5 text-[9px] tracking-wider text-foreground/80 hover:bg-foreground/[0.06]"
+            title="read this period"
           >
-            <Sparkles className="h-2.5 w-2.5" /> Read
+            <Sparkles className="h-2.5 w-2.5" /> read
           </button>
         </div>
       </div>
@@ -143,13 +145,13 @@ export default function DashaNode({
           </div>
 
           <div className="grid grid-cols-3 gap-2">
-            <ScoreBar label="Power" value={insight.power} Icon={Flame} />
-            <ScoreBar label="Wealth" value={insight.wealth} Icon={TrendingUp} />
-            <ScoreBar label="Bonds" value={insight.relationship} Icon={Users} />
+            <ScoreBar label="power" value={insight.power} Icon={Flame} />
+            <ScoreBar label="wealth" value={insight.wealth} Icon={TrendingUp} />
+            <ScoreBar label="bonds" value={insight.relationship} Icon={Users} />
           </div>
 
           <div>
-            <div className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/70 mb-1">Mechanics</div>
+            <div className="text-[9px] tracking-[0.2em] text-muted-foreground/70 mb-1">mechanics</div>
             <ul className="space-y-1 text-[11px] text-foreground/80 font-light leading-snug">
               {insight.mechanics.map((m, i) => (
                 <li key={i} className="flex gap-1.5"><span className="text-muted-foreground/50">·</span>{m}</li>
@@ -159,7 +161,7 @@ export default function DashaNode({
 
           <div className="flex flex-wrap gap-1">
             {insight.themes.map((t) => (
-              <span key={t} className="rounded border border-border/25 bg-foreground/[0.03] px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-muted-foreground/80">
+              <span key={t} className="rounded border border-border/25 bg-foreground/[0.03] px-1.5 py-0.5 text-[9px] tracking-wider text-muted-foreground/80">
                 {t}
               </span>
             ))}

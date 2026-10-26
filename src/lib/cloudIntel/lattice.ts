@@ -23,10 +23,10 @@ export interface LatticeInput {
 export function latticeFindings({ dossiers, summary, connected }: LatticeInput): Finding[] {
   if (!connected) {
     return [silenceFinding({
-      module: "Lattice", id: "lattice-unlinked", subject: "Identity ledger",
-      expected: "A linked account typically fuses 100–3,000 identities",
-      cause: ["No account is linked, so neither the address book nor the traffic corpus can be read."],
-      action: "Link an account under Account Mesh to build the identity ledger.",
+      module: "lattice", id: "lattice-unlinked", subject: "identity ledger",
+      expected: "a linked account typically fuses 100–3,000 identities",
+      cause: ["no google account is connected, so neither the address book nor the traffic corpus can be read."],
+      action: "no connect path exists on this device yet — see the station overview for what it would take.",
       connected: false,
     })];
   }

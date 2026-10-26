@@ -36,7 +36,7 @@ const HowAiPredictiveForecastingWorks = () => (
       id="how-ai-predictive-forecasting-works"
       items={[
         { name: "Asherin", url: "/" },
-        { name: "Blog", url: "/blog" },
+        { name: "blog", url: "/blog" },
         { name: "How AI Predictive Forecasting Works", url: "/blog/how-ai-predictive-forecasting-works" },
       ]}
     />
@@ -188,19 +188,14 @@ const HowAiPredictiveForecastingWorks = () => (
           description: "the current public catalogue and availability.",
         },
         {
-          to: "/blog/predictions/world-cup-2026-group-matches-0622",
-          label: "Archived World Cup forecast",
-          description: "A dated worked example preserved for later verification.",
+          to: "/blog/elite-corporations-algorithms-vs-axrlen",
+          label: "archived forecasting method, symbolism and probability",
+          description: "the retired method note: a probability, a window, a check.",
         },
         {
-          to: "/glossary/predictive-intelligence-ai",
-          label: "Predictive intelligence AI, definition",
-          description: "The category, written for citation.",
-        },
-        {
-          to: "/dashboard/asherin.search",
+          to: "/dashboard/search",
           label: "asherin.search",
-          description: "current public-source research with evidence and degraded states.",
+          description: "public-source research with evidence and degraded states, on this device.",
         },
       ]}
     />

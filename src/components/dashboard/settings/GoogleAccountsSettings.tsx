@@ -8,7 +8,13 @@ import { useGoogleApi } from "@/hooks/useGoogleApi";
 import { useGoogleOAuthCallback } from "@/hooks/useGoogleOAuthCallback";
 
 /**
- * CLOUD INTELLIGENCE — multi-account Google management inside Settings.
+ * google accounts inside settings → connections.
+ *
+ * local edition: the oauth exchange ran in the google-oauth edge function and
+ * the device has no handler for it, so `connectGoogle` answers with the shim's
+ * "kernel offline" error and the list is always empty. the oauth logic below
+ * belongs to the asherin.google room and is left as is; only the copy and the
+ * error wording are this room's.
  *
  * Design constraints that shaped this surface:
  *  - Connecting a *second* account only works if Google is told to show the
@@ -24,51 +30,62 @@ const TIERS: Array<{ tier: number; label: string; grants: string[] }> = [
     tier: 1,
     label: "Identity",
     grants: [
-      "Name, email, profile only.",
+      "name, email, profile only.",
     ],
   },
   {
     tier: 2,
     label: "Read",
     grants: [
-      "Name, email, profile.",
-      "Mail, calendar, contacts, tasks and Drive file list — read-only.",
+      "name, email, profile.",
+      "mail, calendar, contacts, tasks and drive file list — read-only.",
     ],
   },
   {
     tier: 3,
     label: "Comprehension",
     grants: [
-      "Name, email, profile.",
-      "Mail, calendar, contacts, tasks and Drive file list — read-only.",
-      "Activity, sleep and heart-rate signals for pattern analysis.",
+      "name, email, profile.",
+      "mail, calendar, contacts, tasks and drive file list — read-only.",
+      "activity, sleep and heart-rate signals for pattern analysis.",
     ],
   },
   {
     tier: 4,
     label: "Agency",
     grants: [
-      "Name, email, profile.",
-      "Mail, calendar, contacts, tasks and Drive file list — read-only.",
-      "Activity, sleep and heart-rate signals for pattern analysis.",
-      "Draft into Gmail Drafts. Never sends.",
+      "name, email, profile.",
+      "mail, calendar, contacts, tasks and drive file list — read-only.",
+      "activity, sleep and heart-rate signals for pattern analysis.",
+      "draft into gmail drafts. never sends.",
     ],
   },
   {
     tier: 5,
     label: "Delegated Send",
     grants: [
-      "Name, email, profile.",
-      "Mail, calendar, contacts, tasks and Drive file list — read-only.",
-      "Activity, sleep and heart-rate signals for pattern analysis.",
-      "Draft into Gmail Drafts.",
-      "Approve a specific draft for sending. One draft at a time.",
+      "name, email, profile.",
+      "mail, calendar, contacts, tasks and drive file list — read-only.",
+      "activity, sleep and heart-rate signals for pattern analysis.",
+      "draft into gmail drafts.",
+      "approve a specific draft for sending. one draft at a time.",
     ],
   },
 ];
 
 const TIER_LABEL: Record<number, string> = {
   1: "Identity", 2: "Read", 3: "Comprehension", 4: "Agency", 5: "Delegated Send",
+};
+
+/** the shim's "no device handler" answer, in one sentence the operator can act on. */
+const describe = (e: unknown): string => {
+  const msg = e instanceof Error ? e.message : String(e ?? "");
+  if (/kernel offline|needs a server-side organ|LOCAL_ONLY/i.test(msg)) {
+    return "the authorization exchange ran on a server asherin no longer has; no browser-only path is wired yet, so no account can be connected from this device.";
+  }
+  const m = msg.trim();
+  if (!m) return "google did not answer.";
+  return (m.length > 180 ? `${m.slice(0, 179)}…` : m).replace(/^./, (c) => c.toLowerCase());
 };
 
 const GoogleAccountsSettings = () => {
@@ -87,7 +104,7 @@ const GoogleAccountsSettings = () => {
   const add = async () => {
     setBusy("add"); setErr(null);
     try { await connectGoogle(tier); }
-    catch (e) { setErr((e as Error).message); toast.error((e as Error).message.slice(0, 180)); }
+    catch (e) { setErr(describe(e)); }
     finally { setBusy(null); }
   };
 
@@ -95,9 +112,9 @@ const GoogleAccountsSettings = () => {
     setBusy(id);
     try {
       await disconnectAccount(id);
-      toast.success(`Disconnected ${email}.`);
+      toast.success(`disconnected ${email}.`);
       setConfirmId(null);
-    } catch (e) { toast.error((e as Error).message.slice(0, 180)); }
+    } catch (e) { toast.error(describe(e)); }
     finally { setBusy(null); }
   };
 
@@ -107,10 +124,10 @@ const GoogleAccountsSettings = () => {
     <section className="rounded-2xl border border-border/30 bg-card/20 p-5 space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-sm font-light tracking-wide text-foreground">Cloud Intelligence</h3>
+          <h3 className="text-sm font-light tracking-wide text-foreground">google accounts</h3>
           <p className="text-xs font-extralight text-muted-foreground/70 mt-1 max-w-xl">
-            Connect as many Google accounts as you use. Asherin merges them into one
-            ledger — a person who mails two of your addresses stays one person.
+            the accounts asherin.google reads on request. on a device the authorization exchange has no
+            server to run on yet, so connecting answers with a plain refusal rather than a chooser.
           </p>
         </div>
         <Button
@@ -118,20 +135,20 @@ const GoogleAccountsSettings = () => {
           onClick={() => void fetchAccounts()}
           className="text-xs font-extralight shrink-0"
         >
-          <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> refresh
         </Button>
       </div>
 
       {err && (
-        <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs font-extralight text-destructive">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {err}
+        <div role="alert" className="flex items-start gap-2 rounded-xl border border-border/30 bg-card/20 px-3 py-2 text-xs font-extralight text-muted-foreground">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px" /> <span className="min-w-0 break-words">{err}</span>
         </div>
       )}
 
       {/* Access ladder selector */}
       <div>
         <div className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-extralight mb-2">
-          Access level for the next account
+          access level for the next account
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           {TIERS.map((t) => (
@@ -146,7 +163,7 @@ const GoogleAccountsSettings = () => {
                   : "border-border/20 bg-background/30 hover:border-border/40"
               }`}
             >
-              <div className="text-xs font-light text-foreground">Tier {t.tier} · {t.label}</div>
+              <div className="text-xs font-light text-foreground">tier {t.tier} · {t.label.toLowerCase()}</div>
               <ul className="mt-1 space-y-0.5">
                 {t.grants.map((g, i) => (
                   <li key={i} className="text-[10px] font-extralight text-muted-foreground/60">
@@ -168,13 +185,13 @@ const GoogleAccountsSettings = () => {
         {busy === "add"
           ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
           : <Plus className="h-3.5 w-3.5 mr-1.5" />}
-        Add Google account
+        add a google account
       </Button>
 
       {/* Connected accounts */}
       {live.length === 0 ? (
         <p className="text-xs font-extralight text-muted-foreground/60">
-          No Google account connected yet.
+          no google account is connected on this device.
         </p>
       ) : (
         <div className="space-y-2">
@@ -190,10 +207,10 @@ const GoogleAccountsSettings = () => {
                 <div className="min-w-0">
                   <div className="text-xs font-light text-foreground truncate flex items-center gap-1.5">
                     {a.google_email}
-                    {a.is_primary && <Star className="h-3 w-3 text-foreground/50 shrink-0" aria-label="Primary account" />}
+                    {a.is_primary && <Star className="h-3 w-3 text-foreground/50 shrink-0" aria-label="primary account" />}
                   </div>
                   <div className="text-[10px] font-extralight text-muted-foreground/60">
-                    Tier {a.consent_tier ?? 1} · {TIER_LABEL[a.consent_tier ?? 1] ?? "Identity"}
+                    tier {a.consent_tier ?? 1} · {(TIER_LABEL[a.consent_tier ?? 1] ?? "Identity").toLowerCase()}
                     {a.last_sync_at ? ` · synced ${new Date(a.last_sync_at).toLocaleDateString()}` : ""}
                   </div>
                 </div>
@@ -206,10 +223,10 @@ const GoogleAccountsSettings = () => {
                     disabled={busy === a.id}
                     onClick={() => void remove(a.id, a.google_email)}
                   >
-                    {busy === a.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Confirm"}
+                    {busy === a.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "confirm"}
                   </Button>
                   <Button size="sm" variant="ghost" className="text-[11px] font-extralight h-7" onClick={() => setConfirmId(null)}>
-                    Cancel
+                    cancel
                   </Button>
                 </div>
               ) : (
@@ -217,7 +234,7 @@ const GoogleAccountsSettings = () => {
                   size="sm" variant="ghost"
                   className="text-[11px] font-extralight h-7 shrink-0"
                   onClick={() => setConfirmId(a.id)}
-                  aria-label={`Disconnect ${a.google_email}`}
+                  aria-label={`disconnect ${a.google_email}`}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
@@ -229,8 +246,8 @@ const GoogleAccountsSettings = () => {
 
       <div className="flex items-start gap-2 text-[10px] font-extralight text-muted-foreground/50 leading-relaxed">
         <ShieldCheck className="h-3.5 w-3.5 shrink-0 mt-px" />
-        Tokens are stored encrypted and scoped to your account only. Disconnecting removes
-        them immediately; nothing is ever sent without your explicit approval of a specific draft.
+        tokens, when there are any, are held on this device only. disconnecting removes them at once;
+        nothing is ever sent without your explicit approval of a specific draft.
       </div>
     </section>
   );

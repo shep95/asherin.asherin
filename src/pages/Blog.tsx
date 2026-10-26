@@ -72,11 +72,10 @@ const Blog = () => {
   }, [tagFilter, sort, query]);
 
   const pinnedPosts = BLOG_POSTS.filter((p) => p.pinned);
-  const heroPinned = pinnedPosts.filter((p) => p.tag !== "Live Prediction");
   // one record carries the top of the page. the rest of the pinned set sits
   // under it at a lower weight, so the eye has one place to land.
-  const lead = heroPinned[0] ?? null;
-  const secondaryPinned = heroPinned.slice(1);
+  const lead = pinnedPosts[0] ?? null;
+  const secondaryPinned = pinnedPosts.slice(1);
 
   const isFiltering = tagFilter !== "all" || sort !== "newest" || !!query.trim();
   const pinnedSlugs = new Set(pinnedPosts.map((p) => p.slug));
@@ -99,6 +98,11 @@ const Blog = () => {
     setQuery("");
   };
 
+  // whole-block links: the hover only dims the title, so keyboard focus needs
+  // its own mark. one hairline outline, offset, nothing louder.
+  const blockLink =
+    "group block focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-foreground/40";
+
   const meta = (p: BlogPost, extra?: string) => (
     <p className="journal-muted flex flex-wrap items-center gap-x-3 text-[11px] font-light lowercase tracking-[0.04em]">
       {extra && <span className="text-foreground/80">{extra}</span>}
@@ -120,8 +124,8 @@ const Blog = () => {
         <main className="mx-auto max-w-5xl px-5 pb-28 pt-32 sm:px-8 sm:pt-40">
           {/* masthead — three lines, each arriving a beat after the last */}
           <header className="border-b journal-rule pb-12">
-            <p className="arrive arrive-1 journal-muted text-[11px] font-light lowercase tracking-[0.18em]">asherin · notes</p>
-            <h1 className="arrive arrive-2 mt-6 max-w-3xl text-4xl font-extralight lowercase leading-[1.05] tracking-[-0.02em] sm:text-6xl">
+            <p className="arrive arrive-1 journal-muted text-[11px] font-light lowercase tracking-[0.18em]">asherin · blog</p>
+            <h1 className="arrive arrive-2 mt-6 max-w-3xl text-4xl font-extralight lowercase leading-[1.05] tracking-[-0.02em] sm:text-5xl">
               public notes.
               <span className="block text-foreground/45">with boundaries.</span>
             </h1>
@@ -136,12 +140,12 @@ const Blog = () => {
           {/* lead record */}
           {lead && !isFiltering && (
             <section aria-label="Lead article" className="arrive arrive-4 arrive-slow border-b journal-rule py-12">
-              <Link to={lead.slug} className="group block focus-visible:outline-none">
+              <Link to={lead.slug} className={blockLink}>
                 {meta(lead, "lead record")}
-                <h2 className="mt-5 max-w-3xl text-3xl font-extralight lowercase leading-[1.1] tracking-[-0.015em] text-foreground transition-colors duration-[var(--dur-settle)] ease-quiet group-hover:text-foreground/70 sm:text-5xl">
+                <h2 className="mt-5 max-w-3xl text-3xl font-extralight lowercase leading-[1.1] tracking-[-0.015em] text-foreground transition-colors duration-[var(--dur-settle)] ease-quiet group-hover:text-foreground/70 sm:text-4xl">
                   {lead.title}
                 </h2>
-                <p className="journal-muted mt-5 max-w-2xl text-base font-light leading-[1.8]">{lead.dek}</p>
+                <p className="journal-muted mt-5 max-w-xl text-base font-light leading-[1.8]">{lead.dek}</p>
                 <span className="mt-7 inline-block text-[12px] font-light lowercase text-foreground/70 transition-colors duration-[var(--dur-quick)] ease-quiet group-hover:text-foreground">
                   read the record →
                 </span>
@@ -156,13 +160,13 @@ const Blog = () => {
                 <Link
                   key={p.slug}
                   to={p.slug}
-                  className={`group block py-9 focus-visible:outline-none ${i % 2 === 1 ? "sm:border-l sm:pl-8 journal-rule" : "sm:pr-8"} ${i > 1 ? "border-t journal-rule" : ""}`}
+                  className={`${blockLink} py-9 journal-rule ${i % 2 === 1 ? "sm:border-l sm:pl-8" : "sm:pr-8"} ${i > 0 ? "border-t" : ""} ${i === 1 ? "sm:border-t-0" : ""}`}
                 >
                   {meta(p, "pinned")}
                   <h3 className="mt-4 text-xl font-extralight lowercase leading-snug text-foreground transition-colors duration-[var(--dur-settle)] ease-quiet group-hover:text-foreground/70">
                     {p.title}
                   </h3>
-                  <p className="journal-muted mt-3 text-sm font-light leading-relaxed line-clamp-2">{p.dek}</p>
+                  <p className="journal-muted mt-3 max-w-lg text-sm font-light leading-relaxed line-clamp-2">{p.dek}</p>
                 </Link>
               ))}
             </section>
@@ -180,7 +184,7 @@ const Blog = () => {
                       type="button"
                       onClick={() => setTagFilter(t)}
                       aria-pressed={active}
-                      className={`text-[12px] font-light lowercase transition-colors duration-[var(--dur-quick)] ease-quiet ${
+                      className={`text-[12px] font-light lowercase transition-colors duration-[var(--dur-quick)] ease-quiet focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-foreground/40 ${
                         active ? "text-foreground underline decoration-foreground/40 underline-offset-[6px]" : "text-foreground/45 hover:text-foreground"
                       }`}
                     >
@@ -193,7 +197,7 @@ const Blog = () => {
                 <button
                   type="button"
                   onClick={() => setSort((s) => (s === "newest" ? "oldest" : "newest"))}
-                  className="text-[12px] font-light lowercase text-foreground/45 transition-colors duration-[var(--dur-quick)] ease-quiet hover:text-foreground"
+                  className="text-[12px] font-light lowercase text-foreground/45 transition-colors duration-[var(--dur-quick)] ease-quiet hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-foreground/40"
                 >
                   {sort === "newest" ? "newest first" : "oldest first"}
                 </button>
@@ -228,7 +232,7 @@ const Blog = () => {
                   <ul className="border-t journal-rule">
                     {posts.map((p) => (
                       <li key={p.slug} className="border-b journal-rule">
-                        <Link to={p.slug} className="group grid gap-2 py-7 focus-visible:outline-none sm:grid-cols-[7rem_1fr] sm:gap-8">
+                        <Link to={p.slug} className={`${blockLink} grid gap-2 py-7 sm:grid-cols-[7rem_1fr] sm:gap-8`}>
                           <time
                             dateTime={toIso(p.published)}
                             className="journal-muted pt-1 text-[11px] font-light lowercase tabular-nums"
@@ -236,10 +240,10 @@ const Blog = () => {
                             {fmtDate(p.published)}
                           </time>
                           <div className="min-w-0">
-                            <h3 className="text-xl font-extralight lowercase leading-snug text-foreground transition-colors duration-[var(--dur-settle)] ease-quiet group-hover:text-foreground/65 sm:text-2xl">
+                            <h3 className="text-lg font-extralight lowercase leading-snug text-foreground transition-colors duration-[var(--dur-settle)] ease-quiet group-hover:text-foreground/65 sm:text-xl">
                               {p.title}
                             </h3>
-                            <p className="journal-muted mt-2 max-w-2xl text-sm font-light leading-relaxed line-clamp-2">{p.dek}</p>
+                            <p className="journal-muted mt-2 max-w-lg text-sm font-light leading-relaxed line-clamp-2">{p.dek}</p>
                             <p className="journal-muted mt-3 flex flex-wrap items-center gap-x-3 text-[11px] font-light lowercase">
                               <span>{p.tag}</span>
                               <span aria-hidden className="text-foreground/20">·</span>

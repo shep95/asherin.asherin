@@ -1,46 +1,10 @@
 import { Sparkles, Check } from "lucide-react";
 
-interface QuestionOption {
-  text: string;
-  description: string;
-  isRecommended: boolean;
-}
+import type { QuestionOption } from "./zaliPrompt";
 
 interface ZaliQuestionOptionsProps {
   options: QuestionOption[];
   onSelect: (option: string) => void;
-}
-
-/** Parse ```options blocks from assistant messages */
-export function parseQuestionOptions(content: string): { cleanContent: string; options: QuestionOption[] } {
-  // Remove design_output blocks from display
-  let cleaned = content.replace(/```design_output\n[\s\S]*?```/g, "").trim();
-
-  const optionsRegex = /```options\n([\s\S]*?)```/;
-  const match = cleaned.match(optionsRegex);
-  if (!match) return { cleanContent: cleaned, options: [] };
-
-  const cleanContent = cleaned.replace(optionsRegex, "").trim();
-  const lines = match[1].trim().split("\n").filter(Boolean);
-
-  const options: QuestionOption[] = lines.map((line) => {
-    const isRecommended = line.startsWith("[RECOMMENDED]");
-    const raw = isRecommended ? line.replace("[RECOMMENDED]", "").trim() : line.trim();
-    const dashIdx = raw.indexOf("—");
-    const emIdx = raw.indexOf(" — ");
-    const splitIdx = emIdx !== -1 ? emIdx : dashIdx;
-
-    if (splitIdx > 0) {
-      return {
-        text: raw.slice(0, splitIdx).trim(),
-        description: raw.slice(splitIdx + (emIdx !== -1 ? 3 : 1)).trim(),
-        isRecommended,
-      };
-    }
-    return { text: raw, description: "", isRecommended };
-  });
-
-  return { cleanContent, options };
 }
 
 const ZaliQuestionOptions = ({ options, onSelect }: ZaliQuestionOptionsProps) => {
@@ -70,7 +34,7 @@ const ZaliQuestionOptions = ({ options, onSelect }: ZaliQuestionOptionsProps) =>
                 {opt.isRecommended && (
                   <span className="flex items-center gap-0.5 text-[9px] font-light text-accent bg-accent/10 rounded-full px-1.5 py-0.5">
                     <Sparkles className="h-2.5 w-2.5" />
-                    Recommended
+                    recommended
                   </span>
                 )}
               </div>
@@ -81,7 +45,7 @@ const ZaliQuestionOptions = ({ options, onSelect }: ZaliQuestionOptionsProps) =>
           </div>
         </button>
       ))}
-      <p className="text-[9px] text-muted-foreground/40 text-center pt-1">Or type your own answer below</p>
+      <p className="text-[9px] text-muted-foreground/40 text-center pt-1">or type your own answer below</p>
     </div>
   );
 };

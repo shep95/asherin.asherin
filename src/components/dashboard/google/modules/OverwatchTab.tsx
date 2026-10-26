@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ShieldCheck, RefreshCw, Radar, Laptop, Smartphone, Tablet, Monitor, HelpCircle,
-  AlertTriangle, CheckCircle2, EyeOff, Trash2, Gauge, Activity, History,
+  CheckCircle2, EyeOff, Trash2, Gauge, Activity, History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,8 @@ import {
   setOpConsent, type ConsentLevel,
 } from "@/lib/op/opClient";
 import { opReport } from "@/lib/op/opClient";
+import OrganOffline from "../OrganOffline";
+import { offlineNote } from "../offline";
 
 /**
  * OVERWATCH — the account's posture, not a device's.
@@ -74,9 +76,12 @@ const OverwatchTab = () => {
   const [error, setError] = useState<string | null>(null);
   const thisDevice = opCurrentDeviceId();
 
+  // opClient.call swallows the shim's error and returns null, so a null here
+  // is the organ saying it has no device answer. the panel states that and
+  // renders no posture number: a score over an unread ledger is a claim.
   const load = useCallback(async (sweep = false) => {
     const res: any = await opState(sweep);
-    if (!res?.ok) { setError("The OP ledger could not be read. This is a failure to look, not an all-clear."); setLoading(false); return; }
+    if (!res?.ok) { setError(`${offlineNote("op layer")} a failure to look is not an all-clear.`); setLoading(false); return; }
     setError(null);
     setDevices(res.devices ?? []);
     setFindings((res.findings ?? []).filter((f: OpFindingRow) => f.status !== "expired"));
@@ -92,9 +97,9 @@ const OverwatchTab = () => {
   const sweepNow = async () => {
     setSweeping(true);
     try {
-      await opReport("foreground");
+      const reported = await opReport("foreground");
       await load(true);
-      toast.success("Overwatch re-scored the account from every device on the roster.");
+      if (reported) toast.success("overwatch re-scored the account from every device on the roster.");
     } finally {
       setSweeping(false);
     }
@@ -113,22 +118,27 @@ const OverwatchTab = () => {
     const live = devices.filter((d) => !d.revoked).length;
     return {
       score,
-      label: score >= 85 ? "NOMINAL" : score >= 65 ? "WATCH" : score >= 40 ? "PRESSURED" : "COMPROMISED",
+      label: score >= 85 ? "nominal" : score >= 65 ? "watch" : score >= 40 ? "pressured" : "compromised",
       covered: Math.max(0, live - silent),
       live,
       silent,
     };
   }, [findings, devices]);
 
-  const applyConsent = (level: ConsentLevel) => {
+  // the consent level is kept on this device either way; the roster only
+  // learns of it when the report lands, so the success line waits for that.
+  const applyConsent = async (level: ConsentLevel) => {
     setOpConsent(level);
     setConsent(level);
-    toast.success(
-      level === "identity" ? "This device is presence-only. It will be counted, not sensed."
-        : level === "read" ? "This device now reports network and radio findings."
-        : "This device now reports position as well, so the roster can catch impossible-location claims.",
-    );
-    void opReport("foreground").then(() => load(false));
+    const reported = await opReport("foreground");
+    await load(false);
+    if (reported || level === "identity") {
+      toast.success(
+        level === "identity" ? "this device is presence-only. it will be counted, not sensed."
+          : level === "read" ? "this device now reports network and radio findings."
+          : "this device now reports position as well, so the roster can catch impossible-location claims.",
+      );
+    }
   };
 
   if (loading) {
@@ -142,37 +152,48 @@ const OverwatchTab = () => {
   }
 
   const open = findings.filter((f) => f.status === "open");
+  const unreadable = error !== null;
 
   return (
     <div className="space-y-5">
       {/* POSTURE ─────────────────────────────────────────────────────────── */}
       <Card className="border-border/60 bg-background/40 p-5 backdrop-blur">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
-              <ShieldCheck className="h-3.5 w-3.5" /> Overwatch · account posture
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-2 text-[10px] tracking-[0.28em] text-muted-foreground">
+              <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> overwatch · account posture
             </div>
-            <div className="flex items-baseline gap-3">
-              <span className="text-4xl font-light tabular-nums">{posture.score}</span>
-              <Badge variant="outline" className="border-foreground/30 text-[10px] tracking-[0.2em]">{posture.label}</Badge>
-            </div>
+            {unreadable ? (
+              <div className="flex items-baseline gap-3">
+                <span className="text-4xl font-light tabular-nums text-muted-foreground/60">—</span>
+                <Badge variant="outline" className="border-foreground/30 text-[10px] tracking-[0.2em]">unread</Badge>
+              </div>
+            ) : (
+              <div className="flex items-baseline gap-3">
+                <span className="text-4xl font-light tabular-nums">{posture.score}</span>
+                <Badge variant="outline" className="border-foreground/30 text-[10px] tracking-[0.2em]">{posture.label}</Badge>
+              </div>
+            )}
             <p className="max-w-2xl text-sm text-muted-foreground">
-              This is the posture of the <span className="text-foreground">account</span>, not of any one device. {posture.covered} of {posture.live} enrolled device{posture.live === 1 ? "" : "s"} reporting
-              {posture.silent > 0 && <> · <span className="text-foreground">{posture.silent} silent and not assumed safe</span></>}.
+              {unreadable
+                ? "no posture is shown because the ledger could not be read. a number here would be a claim, not a reading."
+                : <>this is the posture of the <span className="text-foreground">account</span>, not of any one device. {posture.covered} of {posture.live} enrolled device{posture.live === 1 ? "" : "s"} reporting
+              {posture.silent > 0 && <> · <span className="text-foreground">{posture.silent} silent and not assumed safe</span></>}.</>}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2 rounded-md border border-border/60 px-3 py-2">
-              <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Auto response</span>
+              <span className="text-[10px] tracking-[0.2em] text-muted-foreground">auto response</span>
               <Switch
                 checked={autoResponse}
+                disabled={unreadable}
                 onCheckedChange={async (v) => { setAutoResponse(v); await opSettings({ autoResponse: v }); }}
-                aria-label="Allow corroborated findings to act automatically"
+                aria-label="allow corroborated findings to act automatically"
               />
             </div>
-            <Button variant="outline" size="sm" onClick={sweepNow} disabled={sweeping}>
-              <RefreshCw className={`mr-2 h-3.5 w-3.5 ${sweeping ? "animate-spin" : ""}`} />
-              {sweeping ? "Sweeping" : "Sweep now"}
+            <Button variant="outline" size="sm" onClick={sweepNow} disabled={sweeping || unreadable}>
+              <RefreshCw className={`mr-2 h-3.5 w-3.5 ${sweeping ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden />
+              {sweeping ? "sweeping" : "sweep now"}
             </Button>
           </div>
         </div>
@@ -181,36 +202,39 @@ const OverwatchTab = () => {
           {(["identity", "read", "comprehension"] as ConsentLevel[]).map((lvl) => (
             <button
               key={lvl}
-              onClick={() => applyConsent(lvl)}
-              className={`rounded-md border p-3 text-left transition-colors ${consent === lvl ? "border-foreground/40 bg-foreground/[0.06]" : "border-border/60 hover:bg-muted/40"}`}
+              type="button"
+              disabled={unreadable}
+              onClick={() => void applyConsent(lvl)}
+              className={`rounded-md border p-3 text-left transition-colors disabled:opacity-50 ${consent === lvl ? "border-foreground/40 bg-foreground/[0.06]" : "border-border/60 hover:bg-muted/40"}`}
             >
-              <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{lvl}</div>
+              <div className="text-[10px] tracking-[0.22em] text-muted-foreground">{lvl}</div>
               <div className="mt-1 text-xs text-foreground/80">
-                {lvl === "identity" && "Presence only. Counted on the roster, sensed nowhere."}
-                {lvl === "read" && "Network and radio findings from this device."}
-                {lvl === "comprehension" && "Adds position, enabling impossible-location detection."}
+                {lvl === "identity" && "presence only. counted on the roster, sensed nowhere."}
+                {lvl === "read" && "network and radio findings from this device."}
+                {lvl === "comprehension" && "adds position, enabling impossible-location detection."}
               </div>
             </button>
           ))}
         </div>
       </Card>
 
-      {error && (
-        <Card className="border-foreground/30 bg-foreground/[0.04] p-4 text-sm">
-          <AlertTriangle className="mr-2 inline h-4 w-4" /> {error}
-          <Button variant="ghost" size="sm" className="ml-3" onClick={() => void load(false)}>Retry</Button>
-        </Card>
+      {unreadable && (
+        <OrganOffline error={error} organ="op layer" onRetry={() => void load(false)} />
       )}
 
       {/* FINDINGS ────────────────────────────────────────────────────────── */}
       <section className="space-y-2">
-        <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
-          <Radar className="h-3.5 w-3.5" /> Correlated findings
+        <div className="flex items-center gap-2 text-[10px] tracking-[0.28em] text-muted-foreground">
+          <Radar className="h-3.5 w-3.5" aria-hidden /> correlated findings
         </div>
-        {open.length === 0 ? (
+        {unreadable ? (
           <Card className="border-border/60 p-6 text-sm text-muted-foreground">
-            <CheckCircle2 className="mb-2 h-5 w-5 text-foreground/70" />
-            Nothing is currently correlating across the roster. That statement covers only the {posture.covered} device{posture.covered === 1 ? "" : "s"} actually reporting — it is not a claim about the ones that are not.
+            no findings can be listed while the ledger is unread. that is not a claim that none exist.
+          </Card>
+        ) : open.length === 0 ? (
+          <Card className="border-border/60 p-6 text-sm text-muted-foreground">
+            <CheckCircle2 className="mb-2 h-5 w-5 text-foreground/70" aria-hidden />
+            nothing is currently correlating across the roster. that statement covers only the {posture.covered} device{posture.covered === 1 ? "" : "s"} actually reporting — it is not a claim about the ones that are not.
           </Card>
         ) : (
           <div className="space-y-2">
@@ -238,7 +262,7 @@ const OverwatchTab = () => {
                     </div>
                     {f.corroborating_devices < 2 && (
                       <p className="text-[11px] text-muted-foreground/80">
-                        Single-witness finding — capped at advisory. No automatic action can be taken from one device alone.
+                        single-witness finding — capped at advisory. no automatic action can be taken from one device alone.
                       </p>
                     )}
 
@@ -254,7 +278,7 @@ const OverwatchTab = () => {
                     variant="ghost" size="sm"
                     onClick={async () => { await opAcknowledge(f.id); await load(false); }}
                   >
-                    <EyeOff className="mr-1.5 h-3.5 w-3.5" /> Acknowledge
+                    <EyeOff className="mr-1.5 h-3.5 w-3.5" aria-hidden /> acknowledge
                   </Button>
                 </div>
               </Card>
@@ -265,9 +289,14 @@ const OverwatchTab = () => {
 
       {/* ROSTER ──────────────────────────────────────────────────────────── */}
       <section className="space-y-2">
-        <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
-          <Laptop className="h-3.5 w-3.5" /> Device roster
+        <div className="flex items-center gap-2 text-[10px] tracking-[0.28em] text-muted-foreground">
+          <Laptop className="h-3.5 w-3.5" aria-hidden /> device roster
         </div>
+        {devices.length === 0 && (
+          <Card className="border-border/60 p-4 text-xs text-muted-foreground">
+            {unreadable ? "the roster could not be read." : "no device has enrolled on this account."}
+          </Card>
+        )}
         <div className="grid gap-2 md:grid-cols-2">
           {devices.map((d) => {
             const Icon = FORM_ICON[d.form_factor] ?? HelpCircle;
@@ -289,7 +318,7 @@ const OverwatchTab = () => {
                       {d.platform} · consent {d.consent_level} · {d.last_tier ?? "no tier"} · last reading {rel(d.last_report_at)}
                     </div>
                     {overdue && !d.revoked && (
-                      <div className="text-[11px] text-foreground/80">Overdue against its {d.expected_interval_minutes}-minute cadence. Absence is recorded, not assumed safe.</div>
+                      <div className="text-[11px] text-foreground/80">overdue against its {d.expected_interval_minutes}-minute cadence. absence is recorded, not assumed safe.</div>
                     )}
                   </div>
                   {!d.revoked && (
@@ -301,7 +330,7 @@ const OverwatchTab = () => {
                       )}
                       <Button
                         variant="ghost" size="sm"
-                        onClick={async () => { await opRevokeDevice(d.device_id); await load(false); toast.success("Device revoked from the roster."); }}
+                        onClick={async () => { await opRevokeDevice(d.device_id); await load(false); toast.success("device revoked from the roster."); }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -317,13 +346,13 @@ const OverwatchTab = () => {
       {/* NETWORKS + AUDIT ────────────────────────────────────────────────── */}
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="space-y-2">
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
-            <Activity className="h-3.5 w-3.5" /> Shared network reputation
+          <div className="flex items-center gap-2 text-[10px] tracking-[0.28em] text-muted-foreground">
+            <Activity className="h-3.5 w-3.5" aria-hidden /> shared network reputation
           </div>
           <Card className="border-border/60">
             <ScrollArea className="h-56">
               <div className="divide-y divide-border/40">
-                {networks.length === 0 && <div className="p-4 text-xs text-muted-foreground">No network has been attributed yet.</div>}
+                {networks.length === 0 && <div className="p-4 text-xs text-muted-foreground">{unreadable ? "unread." : "no network has been attributed yet."}</div>}
                 {networks.map((n) => (
                   <div key={n.network_key} className="flex items-center justify-between gap-3 p-3">
                     <div className="min-w-0">
@@ -339,14 +368,14 @@ const OverwatchTab = () => {
         </section>
 
         <section className="space-y-2">
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
-            <History className="h-3.5 w-3.5" /> Automated action ledger
+          <div className="flex items-center gap-2 text-[10px] tracking-[0.28em] text-muted-foreground">
+            <History className="h-3.5 w-3.5" aria-hidden /> automated action ledger
           </div>
           <Card className="border-border/60">
             <ScrollArea className="h-56">
               <div className="divide-y divide-border/40">
                 {actions.length === 0 && (
-                  <div className="p-4 text-xs text-muted-foreground">No automatic action has ever been taken on this account. Every one that ever is will be written here before it executes.</div>
+                  <div className="p-4 text-xs text-muted-foreground">{unreadable ? "unread." : "no automatic action has been taken on this account. every one that ever is will be written here before it executes."}</div>
                 )}
                 {actions.map((a) => (
                   <div key={a.id} className="space-y-1 p-3">
@@ -367,11 +396,11 @@ const OverwatchTab = () => {
 
       {/* RECENT SIGNAL STREAM ────────────────────────────────────────────── */}
       <section className="space-y-2">
-        <div className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground">Recent readings across the roster</div>
+        <div className="text-[10px] tracking-[0.28em] text-muted-foreground">recent readings across the roster</div>
         <Card className="border-border/60">
           <ScrollArea className="h-44">
             <div className="grid gap-1 p-3 sm:grid-cols-2">
-              {signals.length === 0 && <div className="text-xs text-muted-foreground">No device has filed a reading yet.</div>}
+              {signals.length === 0 && <div className="text-xs text-muted-foreground">{unreadable ? "unread." : "no device has filed a reading yet."}</div>}
               {signals.map((s, i) => (
                 <div key={i} className="flex items-center justify-between gap-2 rounded border border-border/40 px-2 py-1 text-[11px]">
                   <span className="truncate text-muted-foreground">

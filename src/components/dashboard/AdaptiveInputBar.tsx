@@ -9,6 +9,7 @@ import { emitPull } from "@/lib/connect/emitPull";
 import { setModelPromptOverride } from "@/lib/promptOverrideMap";
 
 import type { FileAttachment } from "./types";
+import type { ResponseDepth } from "./DepthSelector";
 
 const LONG_PASTE_THRESHOLD = 500; // chars
 
@@ -25,7 +26,17 @@ interface AdaptiveInputBarProps {
   isStreaming: boolean;
   disabled?: boolean;
   conversationId?: string;
+  /** how far shepherd goes this turn; shown as four small pills under the composer */
+  depth?: ResponseDepth;
+  onDepthChange?: (depth: ResponseDepth) => void;
 }
+
+const DEPTHS: { id: ResponseDepth; label: string; hint: string }[] = [
+  { id: "shallow", label: "brief", hint: "a short answer" },
+  { id: "standard", label: "standard", hint: "the usual answer" },
+  { id: "deep", label: "deep", hint: "a longer, sourced answer" },
+  { id: "expert", label: "expert", hint: "the fullest answer, with its reasoning" },
+];
 
 function detectIntent(text: string): InputIntent {
   const trimmed = text.trim();
@@ -42,28 +53,28 @@ function detectIntent(text: string): InputIntent {
 const quickActions: Record<InputIntent, { id: string; icon: React.ElementType; label: string }[]> = {
   text: [],
   code: [
-    { id: "debug", icon: Bug, label: "Debug" },
-    { id: "explain", icon: FileText, label: "Explain" },
-    { id: "optimize", icon: Zap, label: "Optimize" },
-    { id: "test", icon: TestTubes, label: "Add Tests" },
+    { id: "debug", icon: Bug, label: "debug" },
+    { id: "explain", icon: FileText, label: "explain" },
+    { id: "optimize", icon: Zap, label: "optimize" },
+    { id: "test", icon: TestTubes, label: "add tests" },
   ],
   url: [
-    { id: "summarize", icon: FileText, label: "Summarize" },
-    { id: "fact-check", icon: Search, label: "Fact Check" },
-    { id: "extract", icon: BarChart3, label: "Extract Data" },
+    { id: "summarize", icon: FileText, label: "summarize" },
+    { id: "fact-check", icon: Search, label: "fact check" },
+    { id: "extract", icon: BarChart3, label: "extract data" },
   ],
   image: [
-    { id: "describe", icon: FileText, label: "Describe" },
-    { id: "extract-text", icon: FileText, label: "Extract Text" },
-    { id: "analyze", icon: Search, label: "Analyze" },
+    { id: "describe", icon: FileText, label: "describe" },
+    { id: "extract-text", icon: FileText, label: "extract text" },
+    { id: "analyze", icon: Search, label: "analyze" },
   ],
   file: [
-    { id: "summarize", icon: FileText, label: "Summarize" },
-    { id: "extract", icon: BarChart3, label: "Key Points" },
+    { id: "summarize", icon: FileText, label: "summarize" },
+    { id: "extract", icon: BarChart3, label: "key points" },
   ],
 };
 
-const AdaptiveInputBar = forwardRef<AdaptiveInputBarHandle, AdaptiveInputBarProps>(({ onSendMessage, onStop, onQuickAction, isStreaming, disabled, conversationId }, ref) => {
+const AdaptiveInputBar = forwardRef<AdaptiveInputBarHandle, AdaptiveInputBarProps>(({ onSendMessage, onStop, onQuickAction, isStreaming, disabled, conversationId, depth, onDepthChange }, ref) => {
   const [value, setValue] = useState("");
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
   const [longPasteText, setLongPasteText] = useState<string | null>(null);
@@ -438,7 +449,7 @@ const AdaptiveInputBar = forwardRef<AdaptiveInputBarHandle, AdaptiveInputBarProp
               <button
                 key={a.id}
                 onClick={() => onQuickAction?.(a.id, value)}
-                className="flex items-center gap-1.5 rounded-lg border border-border/20 bg-card/40 backdrop-blur-sm px-2.5 py-1 text-[11px] font-light text-muted-foreground hover:bg-foreground/10 hover:text-foreground transition-all hover:scale-[1.02]"
+                className="flex items-center gap-1.5 rounded-lg border border-border/20 bg-card/40 backdrop-blur-sm px-2.5 py-1 text-[11px] font-light text-muted-foreground hover:bg-foreground/10 hover:text-foreground transition-all"
               >
                 <a.icon className="h-3 w-3" />
                 {a.label}
@@ -550,7 +561,7 @@ const AdaptiveInputBar = forwardRef<AdaptiveInputBarHandle, AdaptiveInputBarProp
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
-              placeholder={online ? "Message shepherd…" : "Offline — messages will queue…"}
+              placeholder={online ? "message shepherd…" : "offline — messages will queue…"}
               rows={1}
               className="w-full resize-none bg-transparent text-sm font-light text-foreground placeholder:text-muted-foreground/50 outline-none max-h-32"
             />
@@ -580,19 +591,40 @@ const AdaptiveInputBar = forwardRef<AdaptiveInputBarHandle, AdaptiveInputBarProp
             </button>
           )}
         </div>
-        <div className="mt-2 flex items-center justify-center gap-1.5">
-          {!online && <WifiOff className="h-3 w-3 text-amber-400/70" />}
-          <Lock className="h-3 w-3 text-emerald-500/50" />
-          <p className="text-xs font-extralight text-muted-foreground/50">
-            {!online ? "Offline · messages queued" : "encrypted on this device"}{draftSaved ? ` · ${draftSaved}` : ""} · shepherd may make mistakes
-          </p>
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+          <div className="flex items-center gap-1.5">
+            {!online && <WifiOff className="h-3 w-3 text-amber-400/70" />}
+            <Lock className="h-3 w-3 text-foreground/40" />
+            <p className="text-xs font-extralight text-muted-foreground/50">
+              {!online ? "offline · messages queued" : "encrypted on this device"}{draftSaved ? ` · ${draftSaved}` : ""} · shepherd may make mistakes
+            </p>
+          </div>
+          {depth && onDepthChange && (
+            <div role="radiogroup" aria-label="answer depth" className="flex items-center gap-1">
+              {DEPTHS.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={depth === d.id}
+                  title={d.hint}
+                  onClick={() => onDepthChange(d.id)}
+                  className={`rounded-md px-1.5 py-0.5 text-[11px] font-light transition-colors ${
+                    depth === d.id ? "bg-foreground/10 text-foreground" : "text-muted-foreground/50 hover:text-foreground"
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Long paste modal */}
       {longPasteText && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/60 backdrop-blur-sm animate-fade-in">
-          <div className="w-[420px] rounded-2xl border border-border/30 bg-card/95 backdrop-blur-xl shadow-2xl overflow-hidden">
+          <div className="w-[min(420px,calc(100vw-2rem))] rounded-2xl border border-border/30 bg-card/95 backdrop-blur-xl shadow-2xl overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-border/20">
               <ClipboardPaste className="h-4 w-4 text-accent" />
               <span className="text-sm font-light text-foreground">Large Clipboard Content</span>

@@ -42,6 +42,13 @@ const LAYERS: { id: Layer; label: string; hint: string; icon: typeof Eye }[] = [
 
 const AsherinArVisionView = () => {
   const [layer, setLayer] = useState<Layer>("optical");
+  // eagle keeps its radio ledger alive across layer switches, but it does not
+  // start its sensors (geolocation, device list) until the operator has opened it once.
+  const [eagleVisited, setEagleVisited] = useState(false);
+  const openLayer = (next: Layer) => {
+    if (next === "eagle") setEagleVisited(true);
+    setLayer(next);
+  };
 
   return (
     <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-black">
@@ -52,7 +59,7 @@ const AsherinArVisionView = () => {
             <button
               key={id}
               type="button"
-              onClick={() => setLayer(id)}
+              onClick={() => openLayer(id)}
               aria-pressed={active}
               className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-light transition ${
                 active
@@ -72,9 +79,13 @@ const AsherinArVisionView = () => {
       </div>
 
       <div className="relative min-h-0 flex-1">
-        <div className={`absolute inset-0 ${layer === "optical" ? "" : "pointer-events-none invisible"}`}>
-          <OpticalHudView />
-        </div>
+        {/* the camera, the model loop and the sensors stop when the operator leaves the optical layer;
+            remounting asks the browser for the camera again, which it answers from its remembered decision */}
+        {layer === "optical" && (
+          <div className="absolute inset-0">
+            <OpticalHudView />
+          </div>
+        )}
         {layer === "spatial" && (
           <div className="absolute inset-0">
             <Suspense
@@ -88,20 +99,22 @@ const AsherinArVisionView = () => {
           </Suspense>
         </div>
       )}
-        <div
-          className={`absolute inset-0 ${layer === "eagle" ? "" : "pointer-events-none invisible"}`}
-          aria-hidden={layer !== "eagle"}
-        >
-          <Suspense
-            fallback={
-              <div className="flex h-full w-full items-center justify-center text-[12px] font-light text-white/45">
-                loading eagle.eye layer
-              </div>
-            }
+        {eagleVisited && (
+          <div
+            className={`absolute inset-0 ${layer === "eagle" ? "" : "pointer-events-none invisible"}`}
+            aria-hidden={layer !== "eagle"}
           >
-            <EagleEyeView />
-          </Suspense>
-        </div>
+            <Suspense
+              fallback={
+                <div className="flex h-full w-full items-center justify-center text-[12px] font-light text-white/45">
+                  loading eagle.eye layer
+                </div>
+              }
+            >
+              <EagleEyeView />
+            </Suspense>
+          </div>
+        )}
         {layer === "sensors" && (
           <div className="absolute inset-0">
             <Suspense

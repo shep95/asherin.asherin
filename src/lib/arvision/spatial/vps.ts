@@ -1,9 +1,12 @@
 // asherin.arvision — visual positioning client
-// Calls the asherin-arvision-vps edge function, which holds the map service
-// credentials. When the service is not configured the call returns an explicit
-// unavailable state; no pose is ever invented.
+//
+// The hosted build called an edge function that held the map service
+// credentials. This edition runs on the device alone: there is no function, so
+// the local shim would answer "kernel offline" and the room would read it as a
+// transient outage. The honest answer is static — the service does not exist
+// here — and it is given without building or sending a frame anywhere. No pose
+// is ever invented.
 
-import { supabase } from "@/integrations/supabase/client";
 import type { CameraIntrinsics } from "./intrinsics";
 import type { Quat, Vec3 } from "./types";
 
@@ -23,55 +26,26 @@ export interface VpsResult {
   unavailable: boolean;
 }
 
+export const VPS_UNAVAILABLE_MESSAGE =
+  "camera positioning needs a map service this device edition does not have — place yourself on the plan by hand, or use the live position";
+
 export async function getVpsStatus(): Promise<VpsStatus> {
-  const { data, error } = await supabase.functions.invoke("asherin-arvision-vps", {
-    body: { action: "status" },
-  });
-  if (error) return { configured: false, message: "positioning service unreachable" };
-  const body = data as { configured?: boolean; message?: string } | null;
-  return {
-    configured: Boolean(body?.configured),
-    message: body?.message ?? "positioning service state unknown",
-  };
+  return { configured: false, message: VPS_UNAVAILABLE_MESSAGE };
 }
 
-export async function localizeFrame(params: {
+/**
+ * The frame never leaves the device: with no service to receive it, the call
+ * answers unavailable at once. The parameter shape is kept so a future
+ * on-device localiser can slot in without touching the room.
+ */
+export async function localizeFrame(_params: {
   imageBase64: string;
   intrinsics: CameraIntrinsics;
   mapCode?: string;
   mapSetCode?: string;
   isRightHanded?: boolean;
 }): Promise<VpsResult> {
-  const { data, error } = await supabase.functions.invoke("asherin-arvision-vps", {
-    body: {
-      action: "localize",
-      image: params.imageBase64,
-      isRightHanded: params.isRightHanded ?? false,
-      fx: params.intrinsics.fx,
-      fy: params.intrinsics.fy,
-      px: params.intrinsics.px,
-      py: params.intrinsics.py,
-      width: params.intrinsics.width,
-      height: params.intrinsics.height,
-      mapCode: params.mapCode,
-      mapSetCode: params.mapSetCode,
-    },
-  });
-
-  if (error) {
-    return { poseFound: false, confidence: 0, message: "positioning request failed", unavailable: true };
-  }
-
-  const body = data as Partial<VpsResult> | null;
-  return {
-    poseFound: Boolean(body?.poseFound),
-    confidence: typeof body?.confidence === "number" ? body.confidence : 0,
-    position: body?.position,
-    rotation: body?.rotation,
-    mapCode: body?.mapCode,
-    message: body?.message ?? (body?.poseFound ? "pose found" : "no pose found in this frame"),
-    unavailable: Boolean(body?.unavailable),
-  };
+  return { poseFound: false, confidence: 0, message: VPS_UNAVAILABLE_MESSAGE, unavailable: true };
 }
 
 /** Downscale a video frame and return raw base64 jpeg, keeping the true frame size. */

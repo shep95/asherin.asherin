@@ -88,6 +88,8 @@ const chains = new Map<string, Promise<unknown>>();
 // In-memory fallback when IndexedDB is unavailable (private mode on some
 // browsers, or a test runner): the app still works for the session.
 let memoryOnly = false;
+/** true when storage was refused and rows live only in this tab (private windows, blocked site data). */
+export const storageIsMemoryOnly = (): boolean => memoryOnly;
 
 export async function loadTable(name: string): Promise<Row[]> {
   const hit = cache.get(name);

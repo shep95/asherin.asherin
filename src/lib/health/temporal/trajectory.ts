@@ -75,7 +75,7 @@ function projectFromFit(label: string, metricKey: string, unit: string, history:
   };
 }
 
-/** forward projections from every trend-capable series in the record: wearables, repeated labs, body solves. */
+/** forward projections from every trend-capable series in the record: wearable series and dated labs repeated at least three times. */
 export function buildTrajectories(record: HealthRecord): TrajectoryProjection[] {
   const out: TrajectoryProjection[] = [];
 

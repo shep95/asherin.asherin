@@ -1,13 +1,14 @@
 // asherin.defender — one finding shape for both measuring surfaces.
 //
-// A finding is only ever produced by something that actually looked. If neither
-// the browser looked, the protection stays `unmeasured`
-// and is counted as a gap, never as a pass. That rule is what stops this room
+// A finding is only ever produced by something that actually looked. If the
+// browser did not look, the protection stays `unmeasured` and is counted as a
+// gap, never as a pass. That rule is what stops this room
 // from drifting back into the tab-guard theatre it used to be.
 
 import { PROTECTIONS, PROTECTION_BY_ID, type Protection, type ProtectionCategory } from "./protections";
 
 export type FindingState = "pass" | "warn" | "fail" | "unmeasured";
+/** "agent" names the surface this edition does not have: a reading from it never arrives, and the type keeps the merge rule honest about that. */
 export type FindingSource = "browser" | "agent" | "none";
 
 export interface Finding {
@@ -33,7 +34,8 @@ const SEV_WEIGHT: Record<Protection["sev"], number> = {
   low: 1,
 };
 
-/** merge readings onto the register; later sources win only if they measured. */
+/** merge readings onto the register; later sources win only if they measured. a reading that
+ *  is itself `unmeasured` still lands (it explains why), but any real reading replaces it. */
 export function buildPosture(...sets: Finding[][]): PostureRow[] {
   const merged = new Map<string, Finding>();
   for (const set of sets) {
@@ -54,7 +56,7 @@ export function buildPosture(...sets: Finding[][]): PostureRow[] {
         observed:
           prot.src === "agent"
             ? "a browser tab cannot read this"
-            : "not measured in this session yet",
+            : "this browser gave no reading for it",
       } satisfies Finding),
   }));
 }
@@ -63,6 +65,8 @@ export interface PostureScore {
   /** 0–1000, weighted by severity. unmeasured counts against coverage, not correctness. */
   score: number;
   coverage: number; // 0–100, share of the register that was actually measured
+  /** how many protections carry a real reading (pass, warn or fail). */
+  measured: number;
   pass: number;
   warn: number;
   fail: number;
@@ -86,6 +90,7 @@ export function scorePosture(rows: PostureRow[]): PostureScore {
   return {
     score: possible ? Math.round((earned / possible) * 1000) : 0,
     coverage: rows.length ? Math.round((measured / rows.length) * 100) : 0,
+    measured,
     ...tally,
     total: rows.length,
   };
@@ -121,7 +126,8 @@ export function exportEvidence(rows: PostureRow[], meta: Record<string, unknown>
       generated_at: new Date().toISOString(),
       register_size: rows.length,
       score: scorePosture(rows),
-      device: meta,
+      signed: false,
+      measured_by: meta,
       findings: rows.map((r) => ({
         id: r.id,
         category: r.cat,

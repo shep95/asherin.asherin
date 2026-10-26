@@ -80,7 +80,8 @@ export function useGoogleApi() {
       setSyncStatus((s) => ({ ...s, lastUpdateAt: Date.now(), channelError: null }));
       return data.accounts || [];
     } catch (err) {
-      console.error("Failed to fetch accounts:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!/kernel offline|LOCAL_ONLY/i.test(msg)) console.warn("google accounts unavailable:", msg);
       return [];
     } finally {
       setLoading(false);

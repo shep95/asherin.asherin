@@ -1,0 +1,532 @@
+
+
+SHEPHERD — UNIVERSAL SOFTWARE ARCHITECTURE & NARRATIVE-TO-CODE DATASET
+version: 1.0
+compiled: 2026-10-25
+format: plain text / utf-8
+scope: consolidated conceptual data developed in this conversation
+status: proposed architecture and taxonomy; not an implemented or validated software engine
+
+PURPOSE
+Unify idea -> narrative -> code, code -> narrative -> code, whole-architecture repair, a 100-domain engineering taxonomy, 28 specialized software profiles, 50 senior engineering patterns, 80 vibe-coded anti-patterns, and implementation/verification contracts.
+
+EVIDENCE BOUNDARY
+All entries are design proposals and engineering heuristics, not empirical assertions that they detect authorship or guarantee correctness. An anti-pattern is identified by verified behavior and consequences, not by superficial style or the suspected use of AI. Different systems require different checks.
+
+UNIVERSAL OPERATING RULE
+Discover -> model -> diagnose -> trace -> repair -> verify -> record.
+The engine must not report completion until relevant acceptance conditions have been verified, and must disclose unverified behavior and missing dependencies.
+
+PART I — CONCEPTUAL FOUNDATION
+
+A. TWO ORIGINAL PATHWAYS
+1. code -> narrative -> code: reverse-engineer existing software into an implementation-independent account of its behavior and architecture; reconstruct, repair or migrate code while preserving required behavior.
+2. idea -> narrative -> code: extract intent and requirements from an idea; produce a structured, testable narrative and generate code from it.
+3. code -> narrative -> reasoning -> code: extend reconstruction with explicit constraint, architecture and security analysis.
+4. narrative -> code -> observed narrative: compare intended behavior with observed implementation to find divergence.
+5. complete feedback cycle: idea -> narrative -> code -> observed behavior -> narrative comparison -> code repair.
+
+B. NARRATIVE CONTENT
+- identity: system purpose and scope
+- actors: humans, services and external systems
+- behavior: triggers, operations and effects
+- state: owned and mutable information, state transitions
+- constraints: invariants and non-permitted outcomes
+- outcomes: success, failure, recovery
+
+C. TWO SYNCHRONIZED FORMS
+human narrative: comprehensible natural-language explanation of behavior and constraints.
+machine narrative: structured contract containing typed inputs, outputs, states, transitions, preconditions, effects, invariants and failure paths.
+
+D. EXAMPLE: CART ADDITION
+human: a customer can add a product to their cart only when sufficient inventory exists. adding to cart does not reserve inventory until checkout.
+structured conceptual record:
+actor: customer
+action: add_to_cart
+inputs: product_id, quantity
+preconditions: quantity > 0, product_exists, available_inventory >= quantity
+effects: cart_item_quantity_increases, inventory_unchanged
+failure: reject_invalid_quantity, reject_insufficient_inventory
+invariant: cart_addition_never_reserves_stock
+
+E. ARCHITECTURAL ENGINES
+01 semantic extractor: extract meaningful requirements from idea or code
+02 narrative constructor: express behavior, causality and rules
+03 structural modeler: build states, workflows, data, interfaces and dependencies
+04 reasoning engine: identify contradictions, omissions and tradeoffs
+05 code synthesizer: generate executable implementations from validated models
+06 verification engine: test runtime behavior, contracts, security and requirements
+07 recursive refinement: revise narrative and code based on verified results
+
+F. KEY PRINCIPLE
+Narrative should be a durable versioned intermediate representation. Code, tests, documentation, schemas and deployment configuration can be generated or maintained as related expressions of the narrative where technically feasible. Intended narrative must not be silently rewritten to excuse implementation errors.
+
+PART II — WHOLE-ARCHITECTURE REPAIR TAXONOMY
+
+FIVE QUESTIONS
+1 what exists? components, boundaries, state and dependencies
+2 what should exist? verified intent, contracts and requirements
+3 what is broken? observed violations and behavioral mismatch
+4 why is it broken? evidence-backed underlying causal mechanism
+5 how can it be repaired and verified? viable intervention and explicit tests
+
+TWELVE CORE REPAIR DOMAINS
+01 semantic: misinterpreted purpose or behavior
+02 requirements: omitted, contradictory or unimplemented expectations
+03 structural: faulty boundaries, decomposition, coupling and cohesion
+04 dependency: cycles, incompatible components and cascading failures
+05 behavioral: incorrect workflows, conditions and outputs
+06 state: ownership, races, invalid transitions and lifecycle errors
+07 data: schemas, integrity, data loss, transformations and migration errors
+08 interface: broken inter-component and external contracts
+09 security: broken trust boundaries, auth, injection, secrets and access policy
+10 execution: runtime, resource, timeout and concurrent execution defects
+11 performance: latency, complexity, memory and scaling constraints
+12 verification: inadequate tests, erroneous assumptions and architecture drift
+
+DIAGNOSTIC LEVELS
+level 1 domain classification: what component or field is affected?
+level 2 failure classification: what requirement or invariant is violated?
+level 3 causal classification: what mechanism produces that failure?
+level 4 repair classification: what verified change eliminates the cause?
+
+RELATIONSHIP TYPES
+depends_on, calls, owns_state, reads_from, writes_to, implements, constrained_by, trusts, verified_by, violates, caused_by.
+Relationships form a graph of effects and responsibilities. Causation must be supported by evidence rather than inferred from mere dependency.
+
+REPAIR MODES
+local correction: isolated defect
+contract repair: inconsistent interfaces or guarantees
+boundary repair: misassigned trust or responsibility
+state consolidation: conflicting authoritative state ownership
+dependency restructuring: faulty coupling/direction
+component replacement: existing module cannot meet required contract
+architectural migration: fundamental structure must change
+requirement reconciliation: contradictory or incomplete intended behavior
+
+EVIDENCE STATUS
+observed: supported by inspectable execution/code evidence
+inferred: strongly suggested but not proven
+hypothesized: plausible explanation needing test
+contradicted: inconsistent with better evidence
+unknown: insufficient information
+verified: specifically passed a defined acceptance condition
+
+SIX PHASES
+1 reconstruct: inventory and model actual code behavior
+2 classify: build responsibility/dependency graph; tag failures
+3 trace: evaluate causal chains and competing hypotheses
+4 repair: select bounded changes compatible with preserved constraints
+5 verify: execute targeted, integration, regression and risk tests
+6 reconcile: re-extract observed narrative, compare and repeat if needed
+
+REPAIR ACCEPTANCE
+- originally identified failure does not reproduce under relevant conditions
+- underlying causal mechanism addressed, not concealed
+- previously required behavior remains satisfied
+- related dependencies and trust boundaries remain valid
+- intended and observed narratives agree on verified claims
+Unverifiable claims remain explicitly marked partial or unknown.
+
+PART III — 100 CORE SOFTWARE DOMAINS
+
+DOMAIN FAMILY: SEMANTIC INTELLIGENCE AND REQUIREMENTS
+001 | intent analysis | should_do: recover purpose behind request or implementation
+002 | semantic interpretation | should_do: establish meaning of terms and behaviors
+003 | requirements engineering | should_do: extract functional and nonfunctional requirements
+004 | narrative modeling | should_do: express workflows and behavioral contracts
+005 | domain ontology | should_do: identify entities concepts relationships and rules
+006 | business logic | should_do: reconstruct and validate governing rules
+007 | use-case analysis | should_do: identify actors goals scenarios and outcomes
+008 | constraint analysis | should_do: identify invariants limitations and prohibitions
+009 | ambiguity and contradiction detection | should_do: surface inconsistent or missing specifications
+010 | requirement traceability | should_do: link intent architecture code and tests
+
+DOMAIN FAMILY: SOFTWARE ARCHITECTURE AND STRUCTURAL ENGINEERING
+011 | system architecture | should_do: map components boundaries and responsibilities
+012 | architectural pattern analysis | should_do: assess monolith microservices event-driven and other styles
+013 | modularity and decomposition | should_do: identify incorrect component divisions
+014 | coupling and cohesion | should_do: reduce unnecessary interdependence
+015 | dependency engineering | should_do: analyze graphs cycles and failures
+016 | interface architecture | should_do: define contracts among modules
+017 | layered architecture | should_do: preserve appropriate separation of concerns
+018 | distributed architecture | should_do: diagnose coordination and cross-node consistency
+019 | architectural evolution | should_do: plan behavior-preserving structural change
+020 | technical debt | should_do: prioritize architectural liabilities
+
+DOMAIN FAMILY: PROGRAMMING LANGUAGES AND CODE ENGINEERING
+021 | language semantics | should_do: understand execution guarantees
+022 | syntax and parsing | should_do: construct and inspect syntax trees
+023 | type systems | should_do: detect incompatible or unsafe types
+024 | compiler engineering | should_do: analyze compilation and intermediate representations
+025 | static analysis | should_do: inspect defects without execution
+026 | dynamic analysis | should_do: inspect executed behavior
+027 | code generation | should_do: build valid implementations from narrative
+028 | refactoring | should_do: change structure without intentional external behavior change
+029 | cross-language translation | should_do: preserve required semantics in migrations
+030 | code quality | should_do: evaluate correctness complexity and maintainability
+
+DOMAIN FAMILY: BEHAVIOR STATE AND EXECUTION
+031 | behavioral modeling | should_do: make behaviors testable
+032 | state management | should_do: identify ownership mutation and synchronization
+033 | state machine engineering | should_do: validate transitions and guards
+034 | control flow | should_do: inspect paths branches loops and exceptions
+035 | data flow | should_do: trace inputs through transformations
+036 | concurrency | should_do: detect races deadlocks starvation
+037 | asynchronous execution | should_do: repair queues futures and task coordination
+038 | event processing | should_do: verify producers consumers ordering and idempotency
+039 | resource lifecycle | should_do: manage file memory thread and connection lifetimes
+040 | failure recovery | should_do: design retries compensation and recovery
+
+DOMAIN FAMILY: DATA ARCHITECTURE AND INFORMATION SYSTEMS
+041 | data modeling | should_do: define entities relationships and constraints
+042 | database architecture | should_do: assess engines transactions indexing and access
+043 | schema engineering | should_do: detect migration and compatibility problems
+044 | data integrity | should_do: enforce consistency uniqueness and references
+045 | data transformation | should_do: verify conversions mappings and serialization
+046 | data pipelines | should_do: inspect ingestion processing and dependency failures
+047 | caching | should_do: diagnose stale reads and invalidation
+048 | data governance | should_do: track ownership retention and lineage
+049 | search and retrieval | should_do: verify indexing freshness and relevance
+050 | backup and restoration | should_do: test recoverability
+
+DOMAIN FAMILY: SECURITY PRIVACY AND TRUST
+051 | threat modeling | should_do: identify assets attackers assumptions and attack paths
+052 | authentication | should_do: verify identity and sessions
+053 | authorization | should_do: enforce roles permissions and policy
+054 | cryptography | should_do: use correct primitives protocols and key management
+055 | input security | should_do: prevent injection and unsafe interpretation
+056 | secrets management | should_do: protect credentials and distribution
+057 | application security | should_do: detect vulnerabilities in logic and apis
+058 | infrastructure security | should_do: assess service identity and network policy
+059 | privacy engineering | should_do: minimize sensitive-data exposure
+060 | security verification | should_do: perform authorized testing and validate fixes
+
+DOMAIN FAMILY: INTERFACES INTERACTION AND USER EXPERIENCE
+061 | frontend architecture | should_do: organize rendering routing and client state
+062 | user experience | should_do: find workflow friction and usability defects
+063 | interaction design | should_do: check control and feedback semantics
+064 | visual systems | should_do: check design tokens typography and consistency
+065 | accessibility | should_do: verify accessible interaction
+066 | responsive design | should_do: preserve task meaning across device sizes
+067 | human-computer interaction | should_do: match cognitive and operational needs
+068 | internationalization | should_do: support locale language and formatting
+
+DOMAIN FAMILY: NETWORKING INFRASTRUCTURE AND PLATFORM ENGINEERING
+069 | network architecture | should_do: inspect protocols connectivity and boundaries
+070 | api engineering | should_do: validate interfaces and versioning
+071 | cloud architecture | should_do: evaluate compute storage networking and managed services
+072 | containerization | should_do: diagnose isolation images and runtime
+073 | orchestration | should_do: repair scheduling scaling and discovery
+074 | infrastructure as code | should_do: validate reproducible infrastructure definitions
+075 | configuration management | should_do: identify environment drift
+076 | platform integration | should_do: verify OS hardware and service dependencies
+
+DOMAIN FAMILY: TESTING CORRECTNESS AND VERIFICATION
+077 | unit testing | should_do: verify individual functions
+078 | integration testing | should_do: verify component interactions
+079 | end-to-end testing | should_do: test real workflows
+080 | property-based testing | should_do: test rules with varied inputs
+081 | formal verification | should_do: prove feasible well-specified properties
+082 | regression testing | should_do: detect unintended changes
+083 | fault injection | should_do: evaluate resilience to controlled failures
+084 | test architecture | should_do: detect gaps and invalid assumptions
+
+DOMAIN FAMILY: PERFORMANCE RELIABILITY AND SCALABILITY
+085 | algorithmic complexity | should_do: identify space/time inefficiency
+086 | performance engineering | should_do: measure and optimize latency and throughput
+087 | scalability engineering | should_do: find capacity limits and bottlenecks
+088 | reliability engineering | should_do: set service objectives and reliability controls
+089 | resilience engineering | should_do: plan isolation redundancy and degradation
+090 | observability | should_do: use logs metrics traces and runtime evidence
+
+DOMAIN FAMILY: DELIVERY DEPLOYMENT AND OPERATIONAL LIFECYCLE
+091 | version control | should_do: maintain provenance and branching integrity
+092 | build engineering | should_do: diagnose build compilation and packaging
+093 | continuous integration | should_do: automate meaningful quality gates
+094 | continuous delivery | should_do: support rollout and rollback
+095 | incident management | should_do: investigate operational failures
+096 | lifecycle maintenance | should_do: manage upgrades deprecation and compatibility
+
+DOMAIN FAMILY: INTELLIGENT AUTOMATION AND RECURSIVE IMPROVEMENT
+097 | ai-assisted software engineering | should_do: orchestrate safe code analysis and generation
+098 | architecture synthesis | should_do: derive candidates from constraints
+099 | causal defect diagnosis | should_do: connect symptom to verified mechanism
+100 | recursive architecture refinement | should_do: update implementation from verified discrepancies
+
+PART IV — 28 SPECIALIZED SOFTWARE PROFILES
+001 | web applications | concerns: browser behavior sessions web security client/server separation
+002 | mobile applications | concerns: device lifecycle permissions offline native platform
+003 | desktop applications | concerns: OS integrations local persistence update lifecycle
+004 | embedded software | concerns: resource constraints interrupts hardware timing
+005 | real-time systems | concerns: deadlines deterministic scheduling
+006 | operating systems | concerns: kernels processes memory devices
+007 | device drivers | concerns: hardware communication failure isolation
+008 | firmware | concerns: boot lifecycle safe update hardware configuration
+009 | databases | concerns: query processing transaction and storage correctness
+010 | distributed systems | concerns: coordination partitions and replication
+011 | cloud-native systems | concerns: elasticity orchestration service reliability
+012 | serverless systems | concerns: event triggers stateless execution constraints
+013 | edge computing | concerns: connectivity interruption and synchronization
+014 | internet of things | concerns: device identity telemetry and firmware
+015 | artificial intelligence | concerns: inference and evaluation dependencies
+016 | machine learning platforms | concerns: model lifecycle training reproducibility drift
+017 | agentic software | concerns: tool permissions state action verification oversight
+018 | cybersecurity software | concerns: monitoring and defensive evaluation
+019 | financial software | concerns: transaction correctness audit and reconciliation
+020 | healthcare software | concerns: sensitive-data safety reliability compliance
+021 | industrial control | concerns: physical safety deterministic operational resilience
+022 | robotics | concerns: sensing actuation motion safety
+023 | game engines | concerns: rendering simulation frame performance
+024 | graphics and rendering | concerns: geometry shading gpu efficiency
+025 | audio/video software | concerns: codec streaming synchronization processing
+026 | scientific computing | concerns: numerical accuracy reproducibility HPC
+027 | blockchain systems | concerns: consensus transitions contract correctness
+028 | compiler and developer tools | concerns: parsing IR and transformation integrity
+
+PART V — 50 SENIOR ENGINEERING PATTERNS
+SE-001 | requirements before implementation | required_behavior: define purpose and acceptance conditions
+SE-002 | first-principles decomposition | required_behavior: model constraints responsibilities and mechanisms
+SE-003 | explicit architectural boundaries | required_behavior: assign meaningful component responsibilities
+SE-004 | high cohesion controlled coupling | required_behavior: limit unneeded dependencies
+SE-005 | dependency direction control | required_behavior: avoid coupling policy to implementation
+SE-006 | single ownership of authoritative state | required_behavior: define source of truth
+SE-007 | invariant-driven architecture | required_behavior: name conditions that must remain true
+SE-008 | interface-first integration | required_behavior: specify contracts before integration
+SE-009 | appropriate abstraction | required_behavior: abstract to solve actual duplication or variability
+SE-010 | architecture decision records | required_behavior: record rationale alternatives and tradeoffs
+SE-011 | correctness before cleverness | required_behavior: favor verifiable behavior
+SE-012 | minimal sufficient complexity | required_behavior: avoid needless layers
+SE-013 | explicit data contracts | required_behavior: specify input/output types and ranges
+SE-014 | boundary validation | required_behavior: check untrusted data at trust transitions
+SE-015 | intentional error handling | required_behavior: distinguish recoverable and fatal cases
+SE-016 | deterministic behavior where possible | required_behavior: keep effects predictable
+SE-017 | controlled side effects | required_behavior: make writes and network activity explicit
+SE-018 | resource ownership | required_behavior: close files connections and tasks
+SE-019 | edge-case engineering | required_behavior: handle null empty timeouts cancellation races
+SE-020 | implementation traceability | required_behavior: connect behavior to requirement
+SE-021 | root-cause analysis | required_behavior: distinguish causes from symptoms
+SE-022 | dependency impact mapping | required_behavior: evaluate blast radius before modifications
+SE-023 | failure-domain isolation | required_behavior: prevent cascades
+SE-024 | state transition analysis | required_behavior: model valid and invalid transitions
+SE-025 | temporal reasoning | required_behavior: account for ordering retries timeouts
+SE-026 | feedback-loop awareness | required_behavior: track outputs becoming inputs
+SE-027 | bottleneck identification | required_behavior: measure before optimizing
+SE-028 | tradeoff analysis | required_behavior: compare latency consistency cost safety
+SE-029 | boundary-condition analysis | required_behavior: identify when assumptions fail
+SE-030 | counterexample seeking | required_behavior: attempt to invalidate proposed solutions
+SE-031 | least privilege | required_behavior: grant only essential access
+SE-032 | complete authorization mediation | required_behavior: enforce checks at authoritative boundary
+SE-033 | secure-by-default configuration | required_behavior: avoid unsafe defaults
+SE-034 | secrets isolation | required_behavior: keep private keys and tokens protected
+SE-035 | trust-boundary modeling | required_behavior: identify authority/data transitions
+SE-036 | safe degradation | required_behavior: respond predictably to dependency loss
+SE-037 | idempotent operations where required | required_behavior: prevent repeated unintended effects
+SE-038 | transactional consistency | required_behavior: preserve invariant across operations
+SE-039 | defense in depth | required_behavior: use independent safeguards proportionally
+SE-040 | recovery engineering | required_behavior: plan restore and rollback
+SE-041 | testable design | required_behavior: make behaviors verifiable
+SE-042 | unit and integration coverage | required_behavior: test both components and interactions
+SE-043 | behavioral regression protection | required_behavior: avoid unintended behavior drift
+SE-044 | property-based testing | required_behavior: test generalized rules
+SE-045 | adversarial testing | required_behavior: exercise hostile or unusual inputs
+SE-046 | observability by design | required_behavior: use meaningful telemetry
+SE-047 | reproducible builds | required_behavior: control environment and dependencies
+SE-048 | controlled deployments | required_behavior: monitor rollout and enable rollback
+SE-049 | incremental refactoring | required_behavior: favor bounded changes
+SE-050 | evidence-based completion | required_behavior: declare complete only after verified criteria
+
+PART VI — 80 VIBE-CODED ANTI-PATTERNS
+
+ANTIPATTERN FAMILY: FAKE OR INCOMPLETE FUNCTIONALITY
+VC-001 | placeholder functionality | failure_signature: function exists but does not act | action: investigate evidence, trace root, repair and verify
+VC-002 | fabricated integrations | failure_signature: fake external results | action: investigate evidence, trace root, repair and verify
+VC-003 | hardcoded success | failure_signature: success independent of outcome | action: investigate evidence, trace root, repair and verify
+VC-004 | decorative interactivity | failure_signature: controls perform no meaningful action | action: investigate evidence, trace root, repair and verify
+VC-005 | mock data presented as live | failure_signature: simulation mislabeled as current | action: investigate evidence, trace root, repair and verify
+VC-006 | silent failure | failure_signature: exception concealed or mapped to success | action: investigate evidence, trace root, repair and verify
+VC-007 | todo-driven incompleteness | failure_signature: essential work omitted while marked complete | action: investigate evidence, trace root, repair and verify
+VC-008 | fake persistence | failure_signature: data not actually retained | action: investigate evidence, trace root, repair and verify
+VC-009 | simulated authentication | failure_signature: client state without real identity verification | action: investigate evidence, trace root, repair and verify
+VC-010 | unverified completion claims | failure_signature: production-ready asserted without checks | action: investigate evidence, trace root, repair and verify
+
+ANTIPATTERN FAMILY: STRUCTURAL AND ARCHITECTURAL DEFECTS
+VC-011 | god components | failure_signature: UI and business and data responsibilities combined | action: investigate evidence, trace root, repair and verify
+VC-012 | god services | failure_signature: unrelated responsibilities concentrated | action: investigate evidence, trace root, repair and verify
+VC-013 | premature abstraction | failure_signature: layers without justified need | action: investigate evidence, trace root, repair and verify
+VC-014 | abstraction leakage | failure_signature: internals exposed to consumers | action: investigate evidence, trace root, repair and verify
+VC-015 | circular dependency | failure_signature: cycles of dependency | action: investigate evidence, trace root, repair and verify
+VC-016 | duplicated business logic | failure_signature: inconsistent copies of rules | action: investigate evidence, trace root, repair and verify
+VC-017 | boundary violations | failure_signature: responsibility or authority at wrong layer | action: investigate evidence, trace root, repair and verify
+VC-018 | uncontrolled global state | failure_signature: unbounded mutation ownership | action: investigate evidence, trace root, repair and verify
+VC-019 | architecture by file accumulation | failure_signature: files added without model | action: investigate evidence, trace root, repair and verify
+VC-020 | unnecessary dependency proliferation | failure_signature: needless external dependencies | action: investigate evidence, trace root, repair and verify
+
+ANTIPATTERN FAMILY: CODE SEMANTICS AND NAMING DEFECTS
+VC-021 | meaningless identifiers | failure_signature: names obscure domain meaning | action: investigate evidence, trace root, repair and verify
+VC-022 | misleading identifiers | failure_signature: name promises unimplemented action | action: investigate evidence, trace root, repair and verify
+VC-023 | type erasure | failure_signature: unsafe any and casts | action: investigate evidence, trace root, repair and verify
+VC-024 | boolean blindness | failure_signature: flags obscure operation meaning | action: investigate evidence, trace root, repair and verify
+VC-025 | magic values | failure_signature: unexplained constants encode policy | action: investigate evidence, trace root, repair and verify
+VC-026 | dead code accumulation | failure_signature: obsolete unused branches | action: investigate evidence, trace root, repair and verify
+VC-027 | copy-paste divergence | failure_signature: duplicated logic becomes inconsistent | action: investigate evidence, trace root, repair and verify
+VC-028 | comment-code contradiction | failure_signature: comments claim different behavior | action: investigate evidence, trace root, repair and verify
+VC-029 | unnecessary indirection | failure_signature: too many wrappers for simple action | action: investigate evidence, trace root, repair and verify
+VC-030 | inconsistent domain vocabulary | failure_signature: one concept has conflicting terms | action: investigate evidence, trace root, repair and verify
+
+ANTIPATTERN FAMILY: BEHAVIORAL AND STATE DEFECTS
+VC-031 | happy-path-only engineering | failure_signature: failures unmodeled | action: investigate evidence, trace root, repair and verify
+VC-032 | missing state transitions | failure_signature: loading error cancellation omitted | action: investigate evidence, trace root, repair and verify
+VC-033 | state synchronization failure | failure_signature: competing sources of truth | action: investigate evidence, trace root, repair and verify
+VC-034 | race conditions | failure_signature: unsafe concurrent behavior | action: investigate evidence, trace root, repair and verify
+VC-035 | stale closures or reads | failure_signature: outdated state used | action: investigate evidence, trace root, repair and verify
+VC-036 | uncontrolled retries | failure_signature: repetition without safe limits | action: investigate evidence, trace root, repair and verify
+VC-037 | temporal coupling | failure_signature: unexpressed order requirements | action: investigate evidence, trace root, repair and verify
+VC-038 | missing idempotency | failure_signature: duplicate side effects under repeats | action: investigate evidence, trace root, repair and verify
+VC-039 | invalid lifecycle assumptions | failure_signature: use before init or after disposal | action: investigate evidence, trace root, repair and verify
+VC-040 | incomplete workflow implementation | failure_signature: pieces work but journey fails | action: investigate evidence, trace root, repair and verify
+
+ANTIPATTERN FAMILY: SECURITY AND DATA DEFECTS
+VC-041 | client-side-only authorization | failure_signature: trust in user-controlled state | action: investigate evidence, trace root, repair and verify
+VC-042 | exposed secrets | failure_signature: credentials in client or source | action: investigate evidence, trace root, repair and verify
+VC-043 | unvalidated input | failure_signature: untrusted data passed without checks | action: investigate evidence, trace root, repair and verify
+VC-044 | injection-prone construction | failure_signature: untrusted string enters interpreter | action: investigate evidence, trace root, repair and verify
+VC-045 | insecure session handling | failure_signature: broken lifecycle and revocation | action: investigate evidence, trace root, repair and verify
+VC-046 | overprivileged execution | failure_signature: permissions exceed need | action: investigate evidence, trace root, repair and verify
+VC-047 | sensitive-data logging | failure_signature: private information in telemetry | action: investigate evidence, trace root, repair and verify
+VC-048 | schema drift | failure_signature: stored shapes diverge | action: investigate evidence, trace root, repair and verify
+VC-049 | unsafe database migrations | failure_signature: risk data integrity or outage | action: investigate evidence, trace root, repair and verify
+VC-050 | missing transaction guarantees | failure_signature: partial writes violate invariants | action: investigate evidence, trace root, repair and verify
+
+ANTIPATTERN FAMILY: PERFORMANCE AND RELIABILITY DEFECTS
+VC-051 | unbounded iteration or recursion | failure_signature: resource growth without limits | action: investigate evidence, trace root, repair and verify
+VC-052 | n+1 queries | failure_signature: needless repeated database calls | action: investigate evidence, trace root, repair and verify
+VC-053 | unnecessary recomputation | failure_signature: expensive duplicate work | action: investigate evidence, trace root, repair and verify
+VC-054 | uncontrolled rendering | failure_signature: render cost exceeds meaningful state change | action: investigate evidence, trace root, repair and verify
+VC-055 | memory leaks | failure_signature: objects retained too long | action: investigate evidence, trace root, repair and verify
+VC-056 | connection leaks | failure_signature: resources not closed | action: investigate evidence, trace root, repair and verify
+VC-057 | blocking critical-path operations | failure_signature: synchronous latency on interactive path | action: investigate evidence, trace root, repair and verify
+VC-058 | missing timeout and cancellation | failure_signature: requests may hang | action: investigate evidence, trace root, repair and verify
+VC-059 | unbounded queues or caches | failure_signature: no resource limit | action: investigate evidence, trace root, repair and verify
+VC-060 | performance by assumption | failure_signature: optimize without profiling | action: investigate evidence, trace root, repair and verify
+
+ANTIPATTERN FAMILY: FRONTEND AND INTERFACE DEFECTS
+VC-061 | generic interface transplantation | failure_signature: wrong domain interaction pattern | action: investigate evidence, trace root, repair and verify
+VC-062 | aesthetic-first functionality | failure_signature: polish over incomplete behavior | action: investigate evidence, trace root, repair and verify
+VC-063 | fake loading states | failure_signature: decorative misleading progress | action: investigate evidence, trace root, repair and verify
+VC-064 | inaccessible controls | failure_signature: keyboard assistive tech or perception unsupported | action: investigate evidence, trace root, repair and verify
+VC-065 | responsive layout failure | failure_signature: critical task disappears on small display | action: investigate evidence, trace root, repair and verify
+VC-066 | misleading affordances | failure_signature: looks interactive but is not | action: investigate evidence, trace root, repair and verify
+VC-067 | animation without purpose | failure_signature: motion distracts or delays | action: investigate evidence, trace root, repair and verify
+VC-068 | inconsistent design tokens | failure_signature: contradictory visual semantics | action: investigate evidence, trace root, repair and verify
+VC-069 | misleading success feedback | failure_signature: confirmation before real success | action: investigate evidence, trace root, repair and verify
+VC-070 | error recovery omission | failure_signature: failure with no meaningful next action | action: investigate evidence, trace root, repair and verify
+
+ANTIPATTERN FAMILY: VERIFICATION AND DELIVERY DEFECTS
+VC-071 | test absence | failure_signature: critical behavior unchecked | action: investigate evidence, trace root, repair and verify
+VC-072 | assertion-free testing | failure_signature: tests execute without meaningful checking | action: investigate evidence, trace root, repair and verify
+VC-073 | mock-only confidence | failure_signature: no real-integration verification | action: investigate evidence, trace root, repair and verify
+VC-074 | snapshot-only validation | failure_signature: visual checks mistaken for correctness | action: investigate evidence, trace root, repair and verify
+VC-075 | flaky tests ignored | failure_signature: nondeterministic failures dismissed | action: investigate evidence, trace root, repair and verify
+VC-076 | unreproducible builds | failure_signature: environment uncontrolled | action: investigate evidence, trace root, repair and verify
+VC-077 | configuration drift | failure_signature: prod/dev assumptions inconsistent | action: investigate evidence, trace root, repair and verify
+VC-078 | missing deployment safeguards | failure_signature: no health monitoring or rollback | action: investigate evidence, trace root, repair and verify
+VC-079 | documentation theater | failure_signature: docs claim absent features | action: investigate evidence, trace root, repair and verify
+VC-080 | repair without regression analysis | failure_signature: fix creates unexamined consequences | action: investigate evidence, trace root, repair and verify
+
+PART VII — SENIOR ENGINEERING DECISION CONTRASTS
+
+senior: system model before implementation | avoid: files generated without interaction model
+senior: analyze irreversible decisions | avoid: committing schema/API/auth without migration assessment
+senior: attention proportional to risk | avoid: uniform review across low/high consequence
+senior: falsify assumptions | avoid: treating plausible architecture as established
+senior: measurable acceptance criteria | avoid: compilation mistaken for completion
+senior: runtime-evidence optimization | avoid: speculative performance tuning
+senior: justified abstraction | avoid: generic classes as a mark of sophistication
+senior: explicit error paths | avoid: only success cases
+senior: dependency impact analysis | avoid: patching first reported file
+senior: preserve rationale and history | avoid: unexplained rewrites
+
+REVERSIBILITY PRINCIPLE
+Examine high-cost-to-reverse decisions more carefully (schemas, public APIs, identity schemes, event contracts, storage formats, domain semantics). Low-cost reversible decisions should not receive unnecessary architectural ceremony. Classification is context dependent.
+
+PART VIII — REGISTRY SCHEMA AND DOMAIN EXECUTION CONTRACT
+
+Every pattern record should include:
+pattern_id, name, classification, domain, applicability, trigger, underlying_mechanism, detection_method, evidence, false_positive_conditions, severity, remediation, verification, dependencies, provenance, status.
+
+Every software-domain record should include:
+domain_id, family, description, domain_objects, applicability_predicates, relationship_types, invariants, failure_classes, diagnostics, repair_operations, verification_methods, confidence_or_evidence_status.
+
+DOMAIN EXECUTION CONTRACT
+1 discover components, actors, interfaces and evidence
+2 model intended and observed behavior
+3 diagnose violations, inconsistencies and uncertainty
+4 trace effects through typed dependency and causality relationships
+5 select minimally sufficient corrective changes
+6 verify with tests, instrumentation or formal analysis where feasible
+7 record the evidence, unresolved conditions and result
+
+APPLICABILITY GATE
+Activate a taxonomy domain only when characteristics or failure evidence justify it; do not blindly run all 128 classifications on every project. Cross-domain findings require meaningful linkage and evidence.
+
+EXAMPLE — DUPLICATE PAYMENT
+observed: users report repeat charges
+networking: timeout after provider may have processed request
+execution: retries submit duplicate requests
+state: no consistent operation identity
+architecture: no enforced idempotency boundary
+repair candidate: durable idempotency policy compatible with provider semantics and reconciliation for uncertain outcomes
+verification: repeated concurrent and timeout scenarios with provider-independent evidence; do not claim fix based on UI behavior alone.
+
+EXAMPLE — AUTHENTICATION STATE
+observed: sessions terminate unexpectedly
+state: services disagree on validity
+dependency: inconsistent session stores or clocks may contribute
+structural: no clear authoritative policy can be a root cause
+repair: determine verified cause, establish correct authority/validation mechanism, run expiry, invalidation and cross-service regression tests.
+
+EXAMPLE — INTENT VS OBSERVED NARRATIVE
+intended: only admins can delete user accounts
+observed: an authenticated non-admin can invoke deletion endpoint
+mismatch: authorization invariant violated
+repair: enforce policy at authoritative boundary
+verify: non-admin denied; admin permitted; associated logging and ownership policies remain consistent.
+
+PART IX — FORMALIZATION AND QUALITY GATES
+
+CONCEPTUAL TRANSFORM
+I --E--> N --G--> C
+I: idea or existing code
+E: extraction and semantic modeling
+N: structured narrative intermediate representation
+G: architectural translation and generation
+C: executable implementation
+
+VERIFICATION FUNCTION
+V(C,N) -> {pass, fail, unknown}
+Meaning: evaluate actual implementation against explicit, testable narrative clauses. A passing test is not a mathematical guarantee of equivalence for arbitrary software.
+
+QUALITY OPTIMIZATION (CONCEPTUAL)
+min over C of [L_behavior + L_constraints + L_implementation]
+Loss functions and weighting must be project-specific and evidence-backed, not arbitrary universal scores.
+
+TEN REVIEW GATES
+01 all required functions have actual implementations
+02 behavior is traceable to requirements and tests
+03 architecture has explicit component/state ownership
+04 external integrations use real contracts and honest error reporting
+05 security boundaries and policy enforcement have been checked
+06 important edge cases, recovery and cancellation tested
+07 performance requirements supported by measurements
+08 builds/dependencies reproducible
+09 implementation compared with intended narrative
+10 defects and unverified conditions disclosed
+
+NO-FALSE-COMPLETION RULE
+Do not mark work complete solely because it compiles, looks polished, returns success, or passes limited tests. Label each feature functional, partially functional, unimplemented or externally blocked with supporting evidence.
+
+BOUNDARY OF COVERAGE
+100 core domains + 28 application profiles is a practical, extensible classification, not a logically exhaustive enumeration of all software specializations. The 50/80 engineering patterns are diagnostic seed libraries, not mutually exclusive or exhaustive laws. A pattern should not be flagged automatically from a word, identifier, line count, rerender, or file shape alone.
+
+END OF DATASET

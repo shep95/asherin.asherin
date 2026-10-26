@@ -24,12 +24,12 @@ const MessageQueuePanel = ({ items, onRemove, onClear, onProcessNow, paused, onT
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/10">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-light tracking-wide text-foreground">Queue</span>
+              <span className="text-xs font-light tracking-wide text-foreground">queue</span>
               <span className="flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-accent/20 text-[10px] font-medium text-accent">
                 {items.length}
               </span>
               {paused && (
-                <span className="text-[10px] font-light text-amber-400/70 tracking-wide">Paused</span>
+                <span className="text-[10px] font-light text-amber-400/70 tracking-wide">paused</span>
               )}
             </div>
             <div className="flex items-center gap-1">
@@ -46,7 +46,7 @@ const MessageQueuePanel = ({ items, onRemove, onClear, onProcessNow, paused, onT
                 <button
                   onClick={onProcessNow}
                   className="p-1.5 rounded-lg text-accent/70 hover:text-accent hover:bg-accent/10 transition-all"
-                  title="Process all now"
+                  title="process all now"
                 >
                   <Play className="h-3.5 w-3.5 fill-current" />
                 </button>
@@ -54,7 +54,7 @@ const MessageQueuePanel = ({ items, onRemove, onClear, onProcessNow, paused, onT
               <button
                 onClick={onClear}
                 className="p-1.5 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/5 transition-all"
-                title="Clear queue"
+                title="clear queue"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -76,7 +76,7 @@ const MessageQueuePanel = ({ items, onRemove, onClear, onProcessNow, paused, onT
                 <button
                   onClick={() => onRemove(item.id)}
                   className="shrink-0 p-1 rounded-md text-muted-foreground/20 hover:text-destructive/70 opacity-0 group-hover:opacity-100 transition-all"
-                  title="Remove from queue"
+                  title="remove from queue"
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>

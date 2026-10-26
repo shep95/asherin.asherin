@@ -51,7 +51,7 @@ const SiteFooter = ({ variant = "full" }: SiteFooterProps) => {
             <button
               type="button"
               onClick={() => setShowHouseLogo(true)}
-              className="mt-1 flex items-center gap-2.5 self-start text-[10px] font-light tracking-[0.25em] uppercase text-muted-foreground transition-colors hover:text-foreground"
+              className="mt-1 flex items-center gap-2.5 self-start text-[10px] font-light tracking-[0.12em] lowercase text-muted-foreground transition-colors hover:text-foreground"
               aria-label="View House of Asher note"
             >
               <span className="h-6 w-6 overflow-hidden rounded-md border border-border/30 bg-black">
@@ -82,13 +82,13 @@ const SiteFooter = ({ variant = "full" }: SiteFooterProps) => {
                 href={s.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[10px] font-extralight tracking-[0.2em] uppercase text-muted-foreground/70 transition-colors hover:text-foreground"
+                className="text-[10px] font-extralight tracking-[0.12em] lowercase text-muted-foreground/70 transition-colors hover:text-foreground"
               >
                 {s.label}
               </a>
             ))}
           </div>
-          <p className="text-[10px] font-extralight tracking-[0.2em] uppercase text-muted-foreground/50">
+          <p className="text-[10px] font-extralight tracking-[0.12em] lowercase text-muted-foreground/50">
             © {year} zorak corp
           </p>
         </div>
@@ -127,11 +127,11 @@ const SiteFooter = ({ variant = "full" }: SiteFooterProps) => {
               </div>
 
               <div className="flex flex-col items-start gap-4 overflow-y-auto pr-2 text-left">
-                <span className="text-[10px] font-light tracking-[0.4em] uppercase text-muted-foreground/70">
+                <span className="text-[10px] font-light tracking-[0.12em] lowercase text-muted-foreground/70">
                   a small independent project
                 </span>
 
-                <h2 className="text-2xl font-extralight uppercase tracking-[0.2em] text-foreground sm:text-3xl">
+                <h2 className="text-2xl font-extralight lowercase tracking-[0.2em] text-foreground sm:text-3xl">
                   #houseofasher
                 </h2>
 

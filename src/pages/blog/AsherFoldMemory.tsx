@@ -5,8 +5,7 @@
  * selftest output. Nothing here promises a cloud-bill cut; the honest floor is
  * stated as plainly as the win.
  */
-import { useEffect, useState } from "react";
-import { Check, X } from "lucide-react";
+import { X } from "lucide-react";
 import ArticleShell from "@/components/seo/ArticleShell";
 import { BreadcrumbJsonLd, FaqJsonLd } from "@/components/seo/SeoJsonLd";
 import RelatedLinks from "@/components/seo/RelatedLinks";
@@ -41,12 +40,6 @@ const Bar = ({
   note?: string;
   tone?: "accent" | "muted" | "good";
 }) => {
-  const [w, setW] = useState(0);
-  useEffect(() => {
-    const t = window.setTimeout(() => setW(value), 60);
-    return () => window.clearTimeout(t);
-  }, [value]);
-
   const fill = tone === "muted" ? "bg-muted-foreground/25" : tone === "good" ? "bg-emerald-400/50" : "bg-accent/70";
 
   return (
@@ -57,8 +50,8 @@ const Bar = ({
       </div>
       <div className="mt-2 h-[10px] w-full overflow-hidden rounded-full bg-background/70 ring-1 ring-inset ring-border/30">
         <div
-          className={`h-full rounded-full ${fill} transition-[width] duration-1000 ease-out motion-reduce:transition-none`}
-          style={{ width: `${w}%` }}
+          className={`h-full rounded-full ${fill}`}
+          style={{ width: `${value}%` }}
         />
       </div>
       {note && <p className="mt-1.5 text-[10px] font-extralight leading-snug text-muted-foreground/60">{note}</p>}
@@ -69,7 +62,7 @@ const Bar = ({
 const ResultsPanel = () => (
   <figure className="my-10 rounded-2xl border border-border/15 bg-card/10 p-6 backdrop-blur-md">
     <figcaption className="mb-4">
-      <p className="text-[10px] font-extralight uppercase tracking-[0.35em] text-muted-foreground/60">
+      <p className="text-[10px] font-extralight lowercase tracking-[0.12em] text-muted-foreground/60">
         included selftest, synthetic pile
       </p>
       <p className="mt-2 text-[11px] font-extralight leading-relaxed text-muted-foreground/70">
@@ -126,7 +119,7 @@ const Donut = ({ pct, label, sub }: { pct: number; label: string; sub: string })
 
 const BandsPanel = () => (
   <figure className="my-10 rounded-2xl border border-border/15 bg-card/10 p-6 backdrop-blur-md">
-    <figcaption className="mb-5 text-[10px] font-extralight uppercase tracking-[0.35em] text-muted-foreground/60">
+    <figcaption className="mb-5 text-[10px] font-extralight lowercase tracking-[0.12em] text-muted-foreground/60">
       planning bands, upper edge of each honest range
     </figcaption>
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -156,7 +149,7 @@ const LoopPanel = () => {
   ];
   return (
     <figure className="my-10 rounded-2xl border border-border/15 bg-card/10 p-6 backdrop-blur-md">
-      <figcaption className="mb-4 text-[10px] font-extralight uppercase tracking-[0.35em] text-muted-foreground/60">
+      <figcaption className="mb-4 text-[10px] font-extralight lowercase tracking-[0.12em] text-muted-foreground/60">
         the loop
       </figcaption>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -357,7 +350,7 @@ const AsherFoldMemory = () => (
     <FaqJsonLd id="asher-fold-memory" items={FAQ} />
 
     <RelatedLinks
-      heading="keep reading"
+      heading="read next"
       links={[
         {
           to: "/blog",
@@ -367,7 +360,7 @@ const AsherFoldMemory = () => (
         {
           to: "/software",
           label: "what else asherin runs",
-          description: "the full list of rooms and organs inside the platform.",
+          description: "the rooms behind the chat, all of them on your own device.",
         },
       ]}
     />

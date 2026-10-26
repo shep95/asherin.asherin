@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { ArrowLeft, ExternalLink, AlertTriangle, CheckCircle, Clock, Shield, Link2, Loader2, Copy, Check, Download, Eye, X, Skull } from "lucide-react";
+import { ArrowLeft, ExternalLink, AlertTriangle, CheckCircle, Clock, Shield, Link2, Loader2, Copy, Check, Download, Eye, X } from "lucide-react";
 import { useZerlalFindings, useUpdateFinding } from "./useZerlalData";
 import type { ZerlalFinding } from "./types";
 import { toast } from "sonner";
-import ExploitIntelTab from "./ExploitIntelTab";
 
 const generateFindingReport = (f: ZerlalFinding): string => {
   let report = `══════════════════════════════════════════\n`;
@@ -57,7 +56,6 @@ const downloadTextFile = (content: string, filename: string) => {
 const FindingDetail = ({ findingId, onBack }: FindingDetailProps) => {
   const [copied, setCopied] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "exploit">("overview");
   const { findings, loading, refetch } = useZerlalFindings();
   const { markFalsePositive, waiveFinding, resolveFinding, assignFinding } = useUpdateFinding();
   const finding = findings.find(f => f.id === findingId);
@@ -112,33 +110,6 @@ const FindingDetail = ({ findingId, onBack }: FindingDetailProps) => {
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex items-center gap-0 mb-4 border-b border-border/[0.06]">
-          <button
-            onClick={() => setActiveTab("overview")}
-            className={`px-4 py-2.5 text-[10px] uppercase tracking-wider transition-colors border-b-2 ${
-              activeTab === "overview"
-                ? "text-foreground/70 border-foreground/30"
-                : "text-muted-foreground/30 border-transparent hover:text-foreground/50"
-            }`}
-          >
-            Overview
-          </button>
-          <button
-            onClick={() => setActiveTab("exploit")}
-            className={`px-4 py-2.5 text-[10px] uppercase tracking-wider transition-colors border-b-2 flex items-center gap-1.5 ${
-              activeTab === "exploit"
-                ? "text-red-400 border-red-400/50"
-                : "text-muted-foreground/30 border-transparent hover:text-red-400/50"
-            }`}
-          >
-            <Skull className="h-3 w-3" /> Exploit Intelligence
-          </button>
-        </div>
-
-        {activeTab === "exploit" ? (
-          <ExploitIntelTab finding={finding} />
-        ) : (
         <div className="grid grid-cols-3 gap-5">
           <div className="col-span-2 space-y-4">
             {/* Title */}
@@ -191,7 +162,7 @@ const FindingDetail = ({ findingId, onBack }: FindingDetailProps) => {
               <div className="rounded-xl border border-border/[0.06] bg-card/20 backdrop-blur-sm p-4">
                 <h3 className="text-[10px] text-muted-foreground/40 uppercase tracking-wider mb-3">Dataflow Trace</h3>
                 <div className="space-y-0">
-                  {dataflow.map((step: any, i: number) => (
+                  {dataflow.map((step: { file: string; line: number; label: string }, i: number) => (
                     <div key={i} className="flex gap-3 relative">
                       {i < dataflow.length - 1 && <div className="absolute left-[9px] top-5 bottom-0 w-px bg-border/10" />}
                       <div className={`w-[19px] h-[19px] rounded-full flex items-center justify-center text-[8px] shrink-0 z-10 ${
@@ -218,10 +189,6 @@ const FindingDetail = ({ findingId, onBack }: FindingDetailProps) => {
                 <div className="relative">
                   <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-emerald-500/30 rounded" />
                   <pre className="text-[10px] font-mono bg-background/60 rounded-lg p-4 pl-5 border border-emerald-500/10 text-emerald-300/70 overflow-x-auto whitespace-pre-wrap leading-6">{finding.suggested_fix}</pre>
-                </div>
-                <div className="flex gap-2 mt-4">
-                  <button className="px-4 py-2 rounded-lg bg-foreground/[0.06] text-[10px] text-foreground/60 hover:bg-foreground/[0.1]">Create PR with this fix</button>
-                  <button className="px-4 py-2 rounded-lg bg-foreground/[0.03] text-[10px] text-muted-foreground/40">Export to JIRA</button>
                 </div>
               </div>
             )}
@@ -279,7 +246,6 @@ const FindingDetail = ({ findingId, onBack }: FindingDetailProps) => {
                 <button onClick={async () => { await markFalsePositive(findingId); refetch(); }} className="w-full text-left px-3 py-2 rounded-lg bg-foreground/[0.03] text-[10px] text-muted-foreground/40 hover:text-foreground/60 hover:bg-foreground/[0.05]">Mark as false positive</button>
                 <button onClick={async () => { const reason = prompt("Waiver reason:"); if (reason) { await waiveFinding(findingId, reason); refetch(); } }} className="w-full text-left px-3 py-2 rounded-lg bg-foreground/[0.03] text-[10px] text-muted-foreground/40 hover:text-foreground/60 hover:bg-foreground/[0.05]">Accept risk (waive)</button>
                 <button onClick={async () => { await resolveFinding(findingId); refetch(); }} className="w-full text-left px-3 py-2 rounded-lg bg-emerald-500/[0.05] text-[10px] text-emerald-400/60 hover:text-emerald-400/80 hover:bg-emerald-500/[0.1]">Mark as resolved</button>
-                <button className="w-full text-left px-3 py-2 rounded-lg bg-foreground/[0.03] text-[10px] text-red-400/50 hover:text-red-400/70 hover:bg-red-500/[0.05]">Escalate</button>
               </div>
             </div>
 
@@ -323,7 +289,6 @@ const FindingDetail = ({ findingId, onBack }: FindingDetailProps) => {
             </div>
           </div>
         </div>
-        )}
       </div>
 
       {/* Report Preview Modal */}

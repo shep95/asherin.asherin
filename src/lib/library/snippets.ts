@@ -59,7 +59,7 @@ export async function saveFilesAsSnippets(
 ): Promise<SaveResult> {
   const { data: auth } = await supabase.auth.getUser();
   const user = auth.user?.id;
-  if (!user) return { saved: 0, error: "sign in to save code" };
+  if (!user) return { saved: 0, error: "this device has no identity yet — open chat once and come back." };
 
   const rows = files
     .filter((f) => f.content.trim().length > 0)

@@ -1,17 +1,24 @@
 // asherin.defender — the browser surface.
 //
 // Everything here is measured inside this page with no extra privilege. If a
-// reading is not available, the protection is simply left out and shows as
-// `unmeasured` in the register. Nothing in this file guesses.
+// reading is not available, the protection is either left out or pushed as an
+// explicit `unmeasured` reading that says why; both show as unmeasured in the
+// register and neither counts toward the score. Nothing in this file guesses,
+// and nothing in this file calls a host other than the page's own origin.
 
 import type { Finding } from "./posture";
 import { readCameraState } from "./covertCamera";
-import { isBunkerOn, bunkerBlockedCount } from "./signals";
+import { isBunkerOn, bunkerBlockedCount, isFetchPatchedByDefender } from "./signals";
 
 const now = () => Date.now();
 
 function f(id: string, state: Finding["state"], observed: string, action?: string): Finding {
   return { id, state, observed, action, source: "browser", at: now() };
+}
+
+/** an honest gap: the browser looked and found it has no way to measure this. */
+function gap(id: string, observed: string): Finding {
+  return { id, state: "unmeasured", observed, source: "browser", at: now() };
 }
 
 type PermName =
@@ -68,13 +75,35 @@ async function webrtcLeak(): Promise<{ hosts: string[]; supported: boolean }> {
 }
 
 /** the minimum current major versions at the time of writing; older is a real risk. */
-const BROWSER_FLOOR: Array<{ re: RegExp; name: string; min: number }> = [
+export const BROWSER_FLOOR: Array<{ re: RegExp; name: string; min: number }> = [
   { re: /Firefox\/(\d+)/, name: "firefox", min: 128 },
   { re: /Edg\/(\d+)/, name: "edge", min: 126 },
   { re: /OPR\/(\d+)/, name: "opera", min: 112 },
   { re: /Chrome\/(\d+)/, name: "chrome", min: 126 },
   { re: /Version\/(\d+)[.\d]* Safari/, name: "safari", min: 17 },
 ];
+
+/** pure: which browser the user agent names, its major version and whether it clears the floor. null when unrecognised. */
+export function browserVersionReading(ua: string): { name: string; major: number; min: number; current: boolean } | null {
+  const hit = BROWSER_FLOOR.find((b) => b.re.test(ua));
+  if (!hit) return null;
+  const major = Number(hit.re.exec(ua)?.[1] ?? 0);
+  return { name: hit.name, major, min: hit.min, current: major >= hit.min };
+}
+
+/** HEAD against this page's own origin, bounded; the only network call the probe makes. */
+async function ownOriginDate(timeoutMs = 4000): Promise<string | null> {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), timeoutMs);
+  try {
+    const head = await fetch(window.location.origin + "/favicon.png", { method: "HEAD", cache: "no-store", signal: ctl.signal });
+    return head.headers.get("date");
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export async function probeBrowser(): Promise<Finding[]> {
   const out: Finding[] = [];
@@ -90,39 +119,34 @@ export async function probeBrowser(): Promise<Finding[]> {
     ),
   );
 
-  try {
-    const head = await fetch(window.location.origin + "/favicon.png", { method: "HEAD", cache: "no-store" });
-    const serverDate = head.headers.get("date");
-    if (serverDate) {
-      const skew = Math.abs(Date.now() - new Date(serverDate).getTime());
-      out.push(
-        f(
-          "dev.clock-skew",
-          skew > 120_000 ? "warn" : "pass",
-          `${Math.round(skew / 1000)}s difference against the server clock`,
-          skew > 120_000 ? "set the clock to network time — certificate checks depend on it" : undefined,
-        ),
-      );
-    }
-  } catch {
-    /* offline or blocked — leave unmeasured */
+  const serverDate = await ownOriginDate();
+  if (serverDate) {
+    const skew = Math.abs(Date.now() - new Date(serverDate).getTime());
+    out.push(
+      f(
+        "dev.clock-skew",
+        skew > 120_000 ? "warn" : "pass",
+        `${Math.round(skew / 1000)}s difference against the clock of the host serving asherin`,
+        skew > 120_000 ? "set the clock to network time — certificate checks depend on it" : undefined,
+      ),
+    );
+  } else {
+    out.push(gap("dev.clock-skew", "the host serving asherin sent no date header to compare against"));
   }
 
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "unknown";
-  out.push(f("dev.locale-leak", "pass", `${tz} · ${nav.language} · offset ${-new Date().getTimezoneOffset() / 60}h`));
+  out.push(f("dev.locale-leak", "pass", `${tz} · ${nav.language} · offset ${-new Date().getTimezoneOffset() / 60}h — recorded; the ip side is not visible to a tab`));
 
   /* ── network ────────────────────────────────────────────────────────── */
   const conn = (nav as unknown as { connection?: { type?: string; effectiveType?: string; downlink?: number; rtt?: number } })
     .connection;
-  out.push(
-    f(
-      "net.link-quality",
-      "pass",
-      conn
-        ? `${conn.type || "unknown transport"} · ${conn.effectiveType || "?"} · ${conn.downlink ?? "?"} mbps · ${conn.rtt ?? "?"} ms rtt`
-        : "the network information api is not exposed in this browser",
-    ),
-  );
+  if (conn) {
+    out.push(
+      f("net.link-quality", "pass", `${conn.type || "unknown transport"} · ${conn.effectiveType || "?"} · ${conn.downlink ?? "?"} mbps · ${conn.rtt ?? "?"} ms rtt`),
+    );
+  } else {
+    out.push(gap("net.link-quality", "the network information api is not exposed in this browser"));
+  }
   out.push(f("net.online-state", nav.onLine ? "pass" : "warn", nav.onLine ? "link is up" : "this device is offline"));
 
   const leak = await webrtcLeak();
@@ -140,16 +164,7 @@ export async function probeBrowser(): Promise<Finding[]> {
     );
   }
 
-  try {
-    const probe = await fetch("https://www.gstatic.com/generate_204", { mode: "no-cors", cache: "no-store" });
-    out.push(
-      f("net.captive-portal", "pass", probe.type === "opaque" ? "no portal interception seen on this request" : "direct"),
-    );
-  } catch {
-    out.push(
-      f("net.captive-portal", "warn", "an outbound probe was blocked — a portal, filter or firewall is in the path"),
-    );
-  }
+  out.push(gap("net.captive-portal", "not probed — detecting a portal means calling a third-party host from this device, and this room calls none"));
 
   /* ── bluetooth ──────────────────────────────────────────────────────── */
   const ble = (
@@ -173,8 +188,8 @@ export async function probeBrowser(): Promise<Finding[]> {
           "bt.paired-inventory",
           paired.length ? "warn" : "pass",
           paired.length
-            ? `${paired.length} device(s) this browser may reach: ${paired.map((d) => d.name || d.id.slice(0, 6)).join(", ")}`
-            : "no bluetooth device has consent in this browser",
+            ? `${paired.length} device(s) this origin may reach: ${paired.map((d) => d.name || d.id.slice(0, 6)).join(", ")}`
+            : "no bluetooth device has been granted to this origin — grant one from the browser tab to inventory it",
           paired.length ? "revoke any pairing you do not recognise in the browser's device settings" : undefined,
         ),
       );
@@ -195,8 +210,8 @@ export async function probeBrowser(): Promise<Finding[]> {
           keyboards.length > 1 ? "fail" : "pass",
           keyboards.length > 1
             ? `${keyboards.length} keyboard-class devices are visible to this browser`
-            : `${devices.length} granted hid device(s), ${keyboards.length} keyboard-class`,
-          keyboards.length > 1 ? "unplug what you cannot name, then rescan with the agent for the full usb tree" : undefined,
+            : `${devices.length} granted hid device(s), ${keyboards.length} keyboard-class — only devices granted to this origin are visible`,
+          keyboards.length > 1 ? "unplug what you cannot name; the full usb tree is outside a tab's reach" : undefined,
         ),
       );
     } catch {
@@ -224,14 +239,17 @@ export async function probeBrowser(): Promise<Finding[]> {
 
   const nativeFetch = /\{\s*\[native code\]\s*\}/.test(Function.prototype.toString.call(window.fetch));
   const nativeXhr = /\{\s*\[native code\]\s*\}/.test(Function.prototype.toString.call(XMLHttpRequest.prototype.open));
-  const patched = (!nativeFetch && !isBunkerOn()) || !nativeXhr;
+  const foreignFetch = !nativeFetch && !isFetchPatchedByDefender();
+  const patched = foreignFetch || !nativeXhr;
   out.push(
     f(
       "br.devtools-hooks",
       patched ? "warn" : "pass",
       patched
         ? "fetch or xhr on this page has been replaced by something other than defender"
-        : "fetch and xhr are the browser's own implementations",
+        : isFetchPatchedByDefender()
+          ? "fetch is wrapped by defender's bunker; xhr is the browser's own"
+          : "fetch and xhr are the browser's own implementations",
       patched ? "close other extensions and reload — an in-page interceptor can read tokens in flight" : undefined,
     ),
   );
@@ -268,8 +286,8 @@ export async function probeBrowser(): Promise<Finding[]> {
   out.push(
     f(
       "br.cookie-scope",
-      nav.cookieEnabled ? "pass" : "warn",
-      nav.cookieEnabled ? "cookies enabled for this origin" : "cookies are blocked here — sign-in will not persist",
+      "pass",
+      nav.cookieEnabled ? "cookies can be set on this origin" : "cookies are blocked on this origin",
     ),
   );
 
@@ -309,30 +327,22 @@ export async function probeBrowser(): Promise<Finding[]> {
       "br.tracker-blocking",
       isBunkerOn() ? "pass" : "warn",
       isBunkerOn() ? `bunker is freezing tracker beacons · ${bunkerBlockedCount()} blocked this session` : "tracker beacons are not frozen on this origin",
-      isBunkerOn() ? undefined : "turn bunker on to freeze analytics and beacon traffic from this page",
+      isBunkerOn() ? undefined : "turn bunker on (apply, not dry-run) to freeze analytics and beacon traffic from this page",
     ),
   );
 
-  out.push(
-    f(
-      "br.background-tabs",
-      document.visibilityState === "visible" ? "pass" : "warn",
-      `this tab is ${document.visibilityState}; a browser tab cannot count other tabs — the agent reads the browser's own process and profile list`,
-    ),
-  );
+  out.push(gap("br.background-tabs", `this tab is ${document.visibilityState}; a tab cannot count other tabs or profiles`));
 
   out.push(f("br.private-mode", "pass", `storage persistence is ${(await navigator.storage?.persisted?.()) ? "granted" : "not granted"} on this origin`));
 
-  const ua = nav.userAgent;
-  const hit = BROWSER_FLOOR.find((b) => b.re.test(ua));
-  if (hit) {
-    const major = Number(hit.re.exec(ua)?.[1] ?? 0);
+  const ver = browserVersionReading(nav.userAgent);
+  if (ver) {
     out.push(
       f(
         "upd.browser-current",
-        major >= hit.min ? "pass" : "fail",
-        `${hit.name} ${major} (floor for security fixes is ${hit.min})`,
-        major >= hit.min ? undefined : "update the browser — it is the most attacked program on this device",
+        ver.current ? "pass" : "fail",
+        `${ver.name} ${ver.major} (floor for security fixes is ${ver.min})`,
+        ver.current ? undefined : "update the browser — it is the most attacked program on this device",
       ),
     );
   }
@@ -343,7 +353,7 @@ export async function probeBrowser(): Promise<Finding[]> {
     f(
       "srv.covert-camera",
       cam.verdict === "covert-blocked" ? "fail" : cam.verdict === "previewed" || cam.verdict === "idle" ? "pass" : "warn",
-      `camera state in this page: ${cam.verdict}`,
+      `camera state in this page: ${cam.verdict}; other apps are outside a tab's reach`,
       cam.verdict === "covert-blocked" ? "a page tried to open the camera with no visible preview; defender refused it" : undefined,
     ),
   );
@@ -351,7 +361,7 @@ export async function probeBrowser(): Promise<Finding[]> {
     f(
       "proc.camera-capture",
       cam.verdict === "covert-blocked" ? "fail" : "pass",
-      cam.verdict === "covert-blocked" ? "covert capture attempt refused in this page" : "no covert capture attempt in this page; other processes need the agent",
+      cam.verdict === "covert-blocked" ? "covert capture attempt refused in this page" : "no covert capture attempt in this page; other processes are outside a tab's reach",
     ),
   );
 
@@ -360,7 +370,9 @@ export async function probeBrowser(): Promise<Finding[]> {
     if (devices) {
       const cams = devices.filter((d) => d.kind === "videoinput").length;
       const mics = devices.filter((d) => d.kind === "audioinput").length;
-      out.push(f("srv.covert-mic", "pass", `${cams} camera(s) and ${mics} microphone(s) attached; live use by other apps needs the agent`));
+      out.push(
+        gap("srv.covert-mic", `${cams} camera(s) and ${mics} microphone(s) attached; whether another app is using one is not visible to a tab`),
+      );
     }
   } catch {
     /* leave unmeasured */
@@ -386,12 +398,12 @@ export async function probeBrowser(): Promise<Finding[]> {
   }
 
   /* ── recovery ───────────────────────────────────────────────────────── */
-  out.push(f("rec.evidence-export", "pass", "every finding on this screen exports as signed json from the export control"));
+  out.push(f("rec.evidence-export", "pass", "every finding on this screen exports as plain json from the export control; the file is not signed"));
   out.push(
     f(
       "rec.incident-plan",
       "pass",
-      "if something here reads fail: disconnect the network, stop using the account, export evidence, then work the failures worst-first",
+      "if something here reads fail: disconnect the network, export evidence, then work the failures worst-first",
     ),
   );
 

@@ -151,9 +151,9 @@ export default function WealthHousesPanel({ ascendant, planets, ingresses }: Pro
   return (
     <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-5 space-y-4">
       <div className="flex items-baseline justify-between gap-4 flex-wrap">
-        <h3 className="text-lg font-extralight tracking-[0.15em] text-foreground uppercase">Whole-Sign Houses</h3>
+        <h3 className="text-lg font-extralight tracking-[0.15em] text-foreground">whole-sign houses</h3>
         <p className="text-[10px] font-light text-muted-foreground/80 italic">
-          Tap any house for a deep, specific reading — body, life areas, brand, archetype, planets
+          tap any house for its reading — body, life areas, brand, archetype, planets
         </p>
       </div>
 
@@ -161,19 +161,20 @@ export default function WealthHousesPanel({ ascendant, planets, ingresses }: Pro
       <div className="rounded-lg border border-border/40 bg-foreground/[0.015]">
         <div className="px-4 py-2.5 flex items-center gap-2 border-b border-border/25">
           <Coins className="h-3.5 w-3.5 text-foreground/70" />
-          <span className="text-xs font-light tracking-[0.15em] text-foreground/85 uppercase">
-            Wealth Doctrine — How Vedic Astrology Reveals Wealth
+          <span className="text-xs font-light tracking-[0.15em] text-foreground/85">
+            wealth doctrine — how a vedic chart is read for wealth
           </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 text-xs">
           {[
-            { key: "step" as const, icon: BookOpen, label: "Step-by-Step (Your Chart)" },
-            { key: "yogas" as const, icon: Sparkles, label: "Detected Yogas" },
-            { key: "glossary" as const, icon: BookOpen, label: "Glossary" },
+            { key: "step" as const, icon: BookOpen, label: "step by step (your chart)" },
+            { key: "yogas" as const, icon: Sparkles, label: "detected yogas" },
+            { key: "glossary" as const, icon: BookOpen, label: "glossary" },
           ].map(({ key, icon: Icon, label }) => (
             <button
               key={key}
               onClick={() => setSection(section === key ? null : key)}
+              aria-expanded={section === key}
               className="px-4 py-2.5 flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition border-r border-border/15 last:border-r-0"
             >
               <Icon className="h-3 w-3" />
@@ -194,7 +195,7 @@ export default function WealthHousesPanel({ ascendant, planets, ingresses }: Pro
         {section === "yogas" && (
           <div className="px-4 py-3 border-t border-border/15 text-xs space-y-2">
             {detectedYogas.length === 0 ? (
-              <p className="text-muted-foreground/70 font-light italic">No major classical yogas detected in primary set.</p>
+              <p className="text-muted-foreground/70 font-light italic">none of the six classical yogas checked here is present.</p>
             ) : (
               detectedYogas.map((y) => (
                 <div key={y.name} className="flex gap-2">
@@ -233,11 +234,15 @@ export default function WealthHousesPanel({ ascendant, planets, ingresses }: Pro
                 open ? "border-foreground/40 bg-foreground/[0.04]" : "border-border/25 hover:border-border/50"
               }`}
               onClick={() => setOpenHouse(open ? null : h.house)}
+              role="button"
+              tabIndex={0}
+              aria-expanded={open}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpenHouse(open ? null : h.house); } }}
             >
               <div className="px-3 pt-2.5 pb-2 flex items-start justify-between gap-2">
                 <div>
-                  <div className="text-[9px] font-light text-muted-foreground/70 uppercase tracking-[0.12em]">
-                    House {h.house} · {meta.title}
+                  <div className="text-[9px] font-light text-muted-foreground/70 tracking-[0.12em]">
+                    house {h.house} · {meta.title.toLowerCase()}
                   </div>
                   <div className="text-sm font-light text-foreground/85 mt-0.5">
                     {sign.symbol} {sign.name} <span className="text-muted-foreground/70">({sign.sanskrit})</span>
@@ -264,25 +269,25 @@ export default function WealthHousesPanel({ ascendant, planets, ingresses }: Pro
                   <div className="px-3 pb-3 pt-2 border-t border-border/20 text-[11px] font-light text-muted-foreground/90 space-y-3">
                     {/* Quick frame */}
                     <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-                      <div><span className="text-muted-foreground/60">Body / Life:</span> {meta.body}</div>
-                      <div><span className="text-muted-foreground/60">Brand:</span> {meta.brand}</div>
-                      <div><span className="text-muted-foreground/60">Archetype:</span> {meta.archetype}</div>
-                      <div><span className="text-muted-foreground/60">Sign ruler:</span> {sign.ruler} · {sign.element}</div>
-                      <div className="col-span-2"><span className="text-muted-foreground/60">House karaka:</span> {r.houseKaraka} · <span className="text-muted-foreground/60">Themes:</span> {r.houseThemes.join(", ")}</div>
+                      <div><span className="text-muted-foreground/60">body / life:</span> {meta.body.toLowerCase()}</div>
+                      <div><span className="text-muted-foreground/60">brand:</span> {meta.brand.toLowerCase()}</div>
+                      <div><span className="text-muted-foreground/60">archetype:</span> {meta.archetype.toLowerCase()}</div>
+                      <div><span className="text-muted-foreground/60">sign ruler:</span> {sign.ruler} · {sign.element.toLowerCase()}</div>
+                      <div className="col-span-2"><span className="text-muted-foreground/60">house karaka:</span> {r.houseKaraka} · <span className="text-muted-foreground/60">themes:</span> {r.houseThemes.join(", ")}</div>
                     </div>
 
                     {/* Resident planets — KRS deep readings */}
                     {r.residents.length > 0 ? (
                       <div className="space-y-2">
-                        <div className="text-[9px] uppercase tracking-[0.2em] text-foreground/60">Resident Planets</div>
+                        <div className="text-[9px] tracking-[0.2em] text-foreground/60">resident planets</div>
                         {r.residents.map((res) => (
                           <div key={res.planet} className="rounded border border-border/20 bg-foreground/[0.02] p-2 space-y-1">
                             <div className="text-foreground/85">
-                              {res.planet}{res.retrograde && <span className="text-muted-foreground/70"> (R)</span>} in House {h.house} ({sign.name})
+                              {res.planet}{res.retrograde && <span className="text-muted-foreground/70"> (retrograde)</span>} in house {h.house} ({sign.name})
                             </div>
                             <div className="text-muted-foreground/85 leading-relaxed">{res.reading}</div>
                             <div className="text-muted-foreground/60 text-[10px]">
-                              Aspect → House {res.aspectHouse}: <span className="text-muted-foreground/80">{res.aspectEffect}</span>
+                              aspect → house {res.aspectHouse}: <span className="text-muted-foreground/80">{res.aspectEffect}</span>
                             </div>
                           </div>
                         ))}
@@ -296,7 +301,7 @@ export default function WealthHousesPanel({ ascendant, planets, ingresses }: Pro
                     {/* Conjunctions */}
                     {r.conjunctions.length > 0 && (
                       <div className="space-y-1.5">
-                        <div className="text-[9px] uppercase tracking-[0.2em] text-foreground/60">Conjunctions in this House</div>
+                        <div className="text-[9px] tracking-[0.2em] text-foreground/60">conjunctions in this house</div>
                         {r.conjunctions.map((c) => (
                           <div key={c.pair.join("-")} className="rounded border border-border/20 bg-foreground/[0.02] p-2">
                             <div className="text-foreground/85">{c.pair[0]} + {c.pair[1]} — <span className="text-muted-foreground/80">{c.yogaName}</span></div>
@@ -309,10 +314,10 @@ export default function WealthHousesPanel({ ascendant, planets, ingresses }: Pro
                     {/* Incoming aspects */}
                     {r.incomingAspects.length > 0 && (
                       <div className="space-y-1">
-                        <div className="text-[9px] uppercase tracking-[0.2em] text-foreground/60">Aspects Coming In</div>
+                        <div className="text-[9px] tracking-[0.2em] text-foreground/60">aspects coming in</div>
                         {r.incomingAspects.map((a, i) => (
                           <div key={i} className="text-muted-foreground/80">
-                            <span className="text-foreground/80">{a.planet}</span> from House {a.fromHouse} — <span className="text-muted-foreground/70">{a.meaning}</span>
+                            <span className="text-foreground/80">{a.planet}</span> from house {a.fromHouse} — <span className="text-muted-foreground/70">{a.meaning}</span>
                     {/* ── ACTIVATION TRIGGERS — what each transit unlocks here ── */}
                     {(() => {
                       const act = buildHouseActivation(h.house, { ascendant, planets }, ingresses);
@@ -329,26 +334,26 @@ export default function WealthHousesPanel({ ascendant, planets, ingresses }: Pro
                           {/* Life outcome triggers for THIS house */}
                           {act.outcomes.length > 0 && (
                             <div className="space-y-1.5">
-                              <div className="text-[9px] uppercase tracking-[0.2em] text-foreground/60">Life Outcome Triggers</div>
+                              <div className="text-[9px] tracking-[0.2em] text-foreground/60">life outcome triggers</div>
                               {act.outcomes.map((o, i) => (
                                 <div key={i} className={`rounded border bg-foreground/[0.02] p-2 space-y-1 ${verdictStyle[o.chartVerdict]}`}>
                                   <div className="flex items-baseline justify-between gap-2 flex-wrap">
                                     <div className="text-foreground/90 text-[11.5px]">
                                       {o.outcome} <span className="text-muted-foreground/60">— when</span>{" "}
                                       <span className="text-foreground/85">{o.planet}</span>
-                                      <span className="text-muted-foreground/60"> transits House {h.house}</span>
-                                      {o.currentlyActive && <span className="ml-1.5 text-[9px] uppercase tracking-[0.15em] text-emerald-300/90">· active now</span>}
+                                      <span className="text-muted-foreground/60"> transits house {h.house}</span>
+                                      {o.currentlyActive && <span className="ml-1.5 text-[9px] tracking-[0.15em] text-emerald-300/90">· active now</span>}
                                     </div>
-                                    <div className="text-[9px] uppercase tracking-[0.15em] opacity-80">{o.chartVerdict}</div>
+                                    <div className="text-[9px] tracking-[0.15em] opacity-80">{o.chartVerdict}</div>
                                   </div>
                                   <div className="text-muted-foreground/85 leading-relaxed text-[10.5px]">{o.why}</div>
-                                  <div className="text-muted-foreground/75 leading-relaxed text-[10.5px]"><span className="text-foreground/60">Your chart: </span>{o.chartReason}</div>
+                                  <div className="text-muted-foreground/75 leading-relaxed text-[10.5px]"><span className="text-foreground/60">your chart: </span>{o.chartReason}</div>
                                   <div className="text-[10px] text-foreground/70">
                                     {o.currentlyActive
-                                      ? "Window is OPEN right now — act."
+                                      ? "the window is open now."
                                       : o.nextDate
-                                        ? <>Next window: <span className="tabular-nums">{fmt(o.nextDate)}</span></>
-                                        : <span className="text-muted-foreground/50">No upcoming ingress in the current scan horizon.</span>}
+                                        ? <>next window: <span className="tabular-nums">{fmt(o.nextDate)}</span></>
+                                        : <span className="text-muted-foreground/50">no upcoming ingress inside the current scan horizon.</span>}
                                   </div>
                                 </div>
                               ))}
@@ -356,7 +361,7 @@ export default function WealthHousesPanel({ ascendant, planets, ingresses }: Pro
                           )}
                           {/* What each transiting planet unlocks in this house */}
                           <div className="space-y-1">
-                            <div className="text-[9px] uppercase tracking-[0.2em] text-foreground/60">What Each Transit Unlocks Here</div>
+                            <div className="text-[9px] tracking-[0.2em] text-foreground/60">what each transit unlocks here</div>
                             <div className="grid grid-cols-1 gap-0.5">
                               {act.planetUnlocks.map((u) => (
                                 <div key={u.planet} className="text-[10.5px] leading-relaxed">

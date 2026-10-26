@@ -7,7 +7,7 @@ import WW3Dossier from "./WW3Dossier";
 
 type Era = "Past" | "Present" | "Future";
 
-const SUIT_ICONS: Record<string, any> = { air: Plane, land: Mountain, sea: Anchor, space: Rocket };
+const SUIT_ICONS: Record<string, typeof Plane> = { air: Plane, land: Mountain, sea: Anchor, space: Rocket };
 
 export default function GlobalPredictionsTab() {
   const [era, setEra] = useState<Era>("Present");
@@ -26,7 +26,7 @@ export default function GlobalPredictionsTab() {
         <div className="flex items-start gap-4">
           <Crown className="h-8 w-8 text-amber-500/80 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] uppercase tracking-[0.2em] text-amber-500/70 mb-1">Projected Future #1 Global Power</div>
+            <div className="text-[10px] tracking-[0.2em] text-amber-500/70 mb-1">projected future #1 global power · a mundane-astrology forecast, not a measurement</div>
             <div className="text-2xl font-light text-foreground flex items-center gap-3">
               <span className="text-3xl">{futureKing?.flag}</span>
               <span>{futureKing?.country}</span>
@@ -50,9 +50,9 @@ export default function GlobalPredictionsTab() {
           <button
             key={e}
             onClick={() => setEra(e)}
-            className={`px-4 py-2.5 text-xs uppercase tracking-[0.18em] transition border-r border-border/20 last:border-r-0 ${era === e ? "text-foreground bg-foreground/[0.06]" : "text-muted-foreground hover:text-foreground"}`}
+            className={`px-4 py-2.5 text-xs tracking-[0.18em] transition border-r border-border/20 last:border-r-0 ${era === e ? "text-foreground bg-foreground/[0.06]" : "text-muted-foreground hover:text-foreground"}`}
           >
-            {e}
+            {e.toLowerCase()}
           </button>
         ))}
       </div>
@@ -61,7 +61,7 @@ export default function GlobalPredictionsTab() {
       <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden">
         <div className="flex items-center gap-2 border-b border-border/15 px-5 py-3">
           <TrendingUp className="h-4 w-4 text-foreground/70" />
-          <h3 className="text-sm font-light tracking-[0.15em] text-foreground uppercase">Power Ranking · {era}</h3>
+          <h3 className="text-sm font-light tracking-[0.15em] text-foreground">power ranking · {era.toLowerCase()}</h3>
         </div>
         <div className="divide-y divide-border/10">
           {ranks.map((r) => (
@@ -71,7 +71,7 @@ export default function GlobalPredictionsTab() {
                 <div className="text-sm font-light text-foreground/95 flex items-center gap-2">
                   <span className="text-base">{r.flag}</span> {r.country}
                 </div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground/70 mt-0.5">{r.driver}</div>
+                <div className="text-[10px] tracking-wider text-muted-foreground/70 mt-0.5">{r.driver}</div>
                 <div className="text-[11px] text-foreground/70 mt-1 italic font-light">{r.note}</div>
               </div>
               <div className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap pt-1">{r.window}</div>
@@ -84,7 +84,7 @@ export default function GlobalPredictionsTab() {
       <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-5 space-y-4">
         <div className="flex items-center gap-2 border-b border-border/15 pb-3">
           <Swords className="h-4 w-4 text-foreground/70" />
-          <h3 className="text-sm font-light tracking-[0.15em] text-foreground uppercase">Power Suit · Air / Land / Sea / Space</h3>
+          <h3 className="text-sm font-light tracking-[0.15em] text-foreground">power suit · air / land / sea / space</h3>
           <select
             value={suitCountry}
             onChange={(e) => setSuitCountry(e.target.value)}
@@ -105,7 +105,7 @@ export default function GlobalPredictionsTab() {
                   <div key={k} className="rounded-lg border border-border/25 bg-background/30 p-3">
                     <div className="flex items-center gap-2 mb-2">
                       <Icon className="h-3.5 w-3.5 text-foreground/60" />
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{k}</span>
+                      <span className="text-[10px] tracking-wider text-muted-foreground">{k}</span>
                     </div>
                     <div className="text-2xl font-extralight text-foreground tabular-nums">{val}<span className="text-xs text-muted-foreground/60">/100</span></div>
                     <div className="mt-2 h-1 rounded bg-foreground/10 overflow-hidden">
@@ -116,7 +116,7 @@ export default function GlobalPredictionsTab() {
               })}
             </div>
             <div className="rounded-lg border border-border/20 bg-background/20 p-3">
-              <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">Strongest suit</div>
+              <div className="text-[10px] tracking-[0.18em] text-muted-foreground/70">strongest suit</div>
               <div className="text-sm text-foreground/95 font-light mt-0.5">{suit.primary}</div>
               <div className="text-[11px] text-muted-foreground/80 italic mt-1">{suit.note}</div>
             </div>
@@ -128,7 +128,7 @@ export default function GlobalPredictionsTab() {
       <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-5 space-y-3">
         <div className="flex items-center gap-2 border-b border-border/15 pb-3">
           <AlertTriangle className="h-4 w-4 text-foreground/70" />
-          <h3 className="text-sm font-light tracking-[0.15em] text-foreground uppercase">Forecast Events · {era}</h3>
+          <h3 className="text-sm font-light tracking-[0.15em] text-foreground">forecast events · {era.toLowerCase()}</h3>
         </div>
         <div className="space-y-2">
           {events.map((f, i) => (
@@ -137,7 +137,7 @@ export default function GlobalPredictionsTab() {
               <div className="min-w-0">
                 <div className="text-sm font-light text-foreground/95 flex items-center gap-2">
                   <span>{f.flag}</span> {f.region}
-                  <span className="ml-auto text-[9px] uppercase tracking-wider text-muted-foreground/60">{f.protocol}</span>
+                  <span className="ml-auto text-[9px] tracking-wider text-muted-foreground/60">{f.protocol}</span>
                 </div>
                 <div className="text-[12px] text-foreground/85 mt-0.5">{f.headline}</div>
                 <div className="text-[11px] text-muted-foreground/80 italic mt-1">{f.detail}</div>
@@ -151,7 +151,7 @@ export default function GlobalPredictionsTab() {
       <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden">
         <div className="flex items-center gap-2 border-b border-border/15 px-5 py-3">
           <Globe2 className="h-4 w-4 text-foreground/70" />
-          <h3 className="text-sm font-light tracking-[0.15em] text-foreground uppercase">10 Mundane Protocols</h3>
+          <h3 className="text-sm font-light tracking-[0.15em] text-foreground">ten mundane protocols</h3>
         </div>
         <div className="divide-y divide-border/10">
           {PROTOCOLS.map((p) => {
@@ -164,17 +164,17 @@ export default function GlobalPredictionsTab() {
                 >
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-light text-foreground/95">{p.title}</div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground/70 mt-0.5">{p.target}</div>
+                    <div className="text-[10px] tracking-wider text-muted-foreground/70 mt-0.5">{p.target}</div>
                   </div>
                   <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
                 </button>
                 {open && (
                   <div className="px-5 pb-4 space-y-2">
                     <div className="rounded-md border border-amber-500/20 bg-amber-500/[0.04] px-3 py-2">
-                      <div className="text-[9px] uppercase tracking-[0.2em] text-amber-500/80">Active Signal</div>
+                      <div className="text-[9px] tracking-[0.2em] text-amber-500/80">active signal</div>
                       <div className="text-[12px] text-foreground/90 mt-0.5">{p.signal}</div>
                     </div>
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground/70">Technique</div>
+                    <div className="text-[11px] tracking-wider text-muted-foreground/70">technique</div>
                     <div className="text-[12px] text-foreground/85 italic">{p.technique}</div>
                     <div className="text-[12px] text-foreground/80 leading-relaxed">{p.body}</div>
                   </div>

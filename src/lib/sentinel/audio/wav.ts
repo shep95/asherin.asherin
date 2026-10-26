@@ -1,10 +1,10 @@
-// asherin.sentinel — the upload container.
+// asherin.sentinel — the audio container.
 //
-// Transcription rejects recorder fragments: only the first chunk of a
-// MediaRecorder timeslice stream carries a container header, and Safari records
-// fragmented mp4 that the model cannot decode. So the capture layer keeps raw
-// PCM and every segment leaves here as a COMPLETE 16 kHz mono wav — decodable
-// on any browser, small enough to sync on a phone plan.
+// A recorder fragment is not a file: only the first chunk of a MediaRecorder
+// timeslice stream carries a container header, and Safari records fragmented
+// mp4. So the capture layer keeps raw PCM and every segment leaves here as a
+// COMPLETE 16 kHz mono wav — the on-device speech model judges it, the local
+// buffer stores it, and a session download hands it back as a playable file.
 
 export const TARGET_RATE = 16000;
 

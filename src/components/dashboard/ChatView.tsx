@@ -5,7 +5,6 @@ const WorkspacePanel = lazy(() => import("@/components/dashboard/workspace/Works
 
 import { supabase } from "@/integrations/supabase/client";
 import BrainsManager from "./BrainsManager";
-import { Link } from "react-router-dom";
 
 import {
   Copy,
@@ -46,7 +45,6 @@ import type { FeedbackType } from "./CalibrationFeedback";
 import AdaptiveInputBar from "./AdaptiveInputBar";
 import ScrollIntelligence from "./ScrollIntelligence";
 import ThinkingPanel from "./ThinkingPanel";
-import TurnTraces from "./TurnTraces";
 import PropertyMapCard, { type PropertyMapCardData } from "@/components/dashboard/property/PropertyMapCard";
 import { detectAddresses, geocodeAddress } from "@/lib/propertyIntent";
 import { detectGeoIntent } from "@/lib/geoIntent";
@@ -64,6 +62,9 @@ interface ChatViewProps {
   onDepthChange: (depth: ResponseDepth) => void;
   isStreaming?: boolean;
   suggestions?: string[];
+  /** a provider or runtime error from the last turn, shown as an error with a retry */
+  error?: { message: string; code?: string } | null;
+  onErrorDismiss?: () => void;
   onCalibrationFeedback?: (messageId: string, feedback: FeedbackType) => void;
   onStopStreaming?: () => void;
   focusMode?: boolean;
@@ -90,6 +91,7 @@ interface ChatViewProps {
  */
 function SendToBoardButton({ content }: { content: string }) {
   const [sent, setSent] = useState(false);
+  const navigate = useNavigate();
   const send = () => {
     const lines = content
       .split("\n")
@@ -108,19 +110,17 @@ function SendToBoardButton({ content }: { content: string }) {
       bullets: bullets.length ? bullets : undefined,
     });
     setSent(true);
-    window.setTimeout(() => {
-      window.location.assign("/dashboard?view=whiteboard");
-    }, 220);
+    window.setTimeout(() => navigate("/dashboard/whiteboard"), 220);
   };
 
   return (
     <button
       onClick={send}
       className="flex items-center gap-1 text-[10px] font-light text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-      title="Send this answer to the whiteboard"
+      title="put this answer on the whiteboard"
     >
       <LayoutDashboard className="h-3 w-3" />
-      {sent ? "On board" : "Send to board"}
+      {sent ? "on the board" : "send to board"}
     </button>
   );
 }
@@ -157,6 +157,8 @@ const SubscriptionGatedInput = forwardRef<
     onQuickAction?: (action: string, content: string) => void;
     isStreaming: boolean;
     conversationId?: string;
+    depth?: ResponseDepth;
+    onDepthChange?: (depth: ResponseDepth) => void;
   }
 >((props, ref) => {
   // Free dashboard users are allowed to message through the Asherin Algorithm.
@@ -434,7 +436,7 @@ const createMarkdownComponents = (navigate: ReturnType<typeof useNavigate>) => (
           src={src}
           alt={hasAlt ? alt : ""}
           role={hasAlt ? undefined : "presentation"}
-          className="rounded-xl border border-border/20 max-w-full my-3 shadow-lg transition-transform hover:scale-[1.02]"
+          className="rounded-xl border border-border/20 max-w-full my-3 shadow-lg"
           style={{ maxHeight: "500px", objectFit: "contain" }}
           loading="lazy"
           {...props}
@@ -457,6 +459,10 @@ const ChatView = ({
   queueItems = [],
   activeBrainId = null,
   onBrainChange,
+  error: externalError = null,
+  onErrorDismiss,
+  depth,
+  onDepthChange,
 }: ChatViewProps) => {
   // Directive profiles are optional: when the host doesn't wire a handler the
   // control stays out of the bar rather than rendering a dead button.
@@ -540,6 +546,8 @@ const ChatView = ({
         if (propertyMaps[m.id]) continue;
         if (geocodeAttempted.current.has(m.id)) continue;
         if (m.role === "assistant" && isStreaming && m.id === lastMsgId) continue;
+        // only what the operator typed is looked up; a model's text never leaves the device
+        if (m.role !== "user") continue;
         const [hit] = detectAddresses(m.content);
         const geo = hit ? null : detectGeoIntent(m.content);
         const query = hit?.raw || geo?.place;
@@ -579,7 +587,8 @@ const ChatView = ({
     messages: branchMessages,
     isStreaming,
     conversationId: conversation.id,
-    hasResearchProvider: true,
+    // the research store left with asherin.investigations; the lane keeps only geocoding.
+    hasResearchProvider: false,
   });
 
   // Listen for cross-component jump signals (e.g. sidebar hover preview)
@@ -726,40 +735,43 @@ const ChatView = ({
           {branchMessages.length === 0 ? (
             <div className="flex h-full items-center justify-center">
               <div className="text-center max-w-md animate-fade-in motion-reduce:animate-none">
-                <h1 className="text-2xl sm:text-3xl font-extralight tracking-wide text-foreground mb-3">
-                  <Link
-                    to="/dashboard/settings"
-                    aria-label="How can I help? Open settings"
-                    title="Open settings"
-                    className="rounded-md px-1 outline-none transition-colors duration-200 hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
-                  >
-                    How can I help?
-                  </Link>
-                </h1>
+                {/* a heading is a heading: it names the room, it does not navigate */}
+                <h1 className="text-2xl sm:text-3xl font-extralight lowercase tracking-wide text-foreground mb-3">how can i help?</h1>
 
                 <div className="flex items-center justify-center gap-1.5 mb-1">
-                  <Lock className="h-3 w-3 text-emerald-500/70" />
-                  <span className="text-xs font-extralight text-emerald-500/70">encrypted on this device</span>
+                  <Lock className="h-3 w-3 text-foreground/50" />
+                  <span className="text-xs font-extralight text-foreground/50">encrypted on this device</span>
                 </div>
                 <p className="text-sm font-extralight text-muted-foreground">
-                  conversations are stored encrypted at rest under a key that lives on this device. nothing leaves
-                  the browser unless you send it to the model you connected.
+                  conversations are stored encrypted at rest under a key that lives on this device. what you send
+                  goes only to the model you connected; a room that reaches a public source says so before it does.
                 </p>
               </div>
             </div>
           ) : (
             <div ref={messagesRef} className="relative mx-auto max-w-3xl space-y-3 sm:space-y-4 py-4">
-              {chatError && (
+              {(chatError || externalError) && (
                 <ChatErrorBanner
-                  error={chatError}
+                  error={chatError ?? externalError?.message ?? ""}
+                  errorCode={externalError?.code}
                   onRetry={() => {
                     setChatError(null);
+                    onErrorDismiss?.();
                     const lastUserMsg = [...branchMessages].reverse().find((m) => m.role === "user");
                     if (lastUserMsg) onSendMessage(lastUserMsg.content);
                   }}
-                  onFallback={() => setChatError(null)}
-                  onDismiss={() => setChatError(null)}
+                  onFallback={() => {
+                    setChatError(null);
+                    onErrorDismiss?.();
+                  }}
+                  onDismiss={() => {
+                    setChatError(null);
+                    onErrorDismiss?.();
+                  }}
                 />
+              )}
+              {branchMessages.length >= 500 && (
+                <p className="px-2 text-[11px] font-light text-muted-foreground/60">older messages are not loaded — the latest 500 are shown.</p>
               )}
               {branchMessages.map((msg, idx) =>
                 msg.role === "assistant" &&
@@ -907,7 +919,7 @@ const ChatView = ({
                                         <img
                                           src={att.previewUrl}
                                           alt={att.name}
-                                          className="max-w-[200px] max-h-[150px] object-cover rounded-lg transition-transform hover:scale-[1.02]"
+                                          className="max-w-[200px] max-h-[150px] object-cover rounded-lg"
                                         />
                                         <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-lg">
                                           <ZoomIn className="h-5 w-5 text-white drop-shadow-lg" />
@@ -1047,14 +1059,6 @@ const ChatView = ({
                         </div>
                       )}
 
-                      {/* Tool traces — read back from the Connect pulls table, so a row
-                        exists only if a real invoke wrote it, and survives refresh. */}
-                      {msg.role === "assistant" && (
-                        <TurnTraces
-                          messageId={msg.id}
-                          onOpenOrgan={(organ) => navigate(`/dashboard/connect?organ=${encodeURIComponent(organ)}`)}
-                        />
-                      )}
                     </div>
                   </div>
                 ),
@@ -1106,6 +1110,8 @@ const ChatView = ({
           onQuickAction={handleQuickAction}
           isStreaming={!!isStreaming}
           conversationId={conversation.id}
+          depth={depth}
+          onDepthChange={onDepthChange}
         />
       </div>
 

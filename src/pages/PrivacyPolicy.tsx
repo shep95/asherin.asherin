@@ -5,129 +5,134 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { applySeoHead } from "@/lib/seoHead";
 
+/**
+ * Privacy, local edition.
+ *
+ * Every claim here is something the code does. asherin has no accounts and no
+ * server of its own: the workspace runs in the browser, data lives in the
+ * browser's own storage on this device, and the only things that leave are
+ * the requests the operator starts — to the model provider they connected,
+ * and to the public sources a room names when it is used.
+ */
 const PrivacyPolicy = () => {
   useEffect(() => {
     applySeoHead({
-      title: "Privacy Policy, Asherin",
+      title: "privacy, asherin",
       description:
-        "How Asherin collects, encrypts, and protects your data. Account-scoped encryption at rest, zero training on user content, and the operator-grade privacy stance.",
+        "asherin runs on your device. no account, no server of its own, nothing sold, nothing trained on. what stays here, what leaves, and when.",
       path: "/privacy",
     });
   }, []);
 
+  const H = ({ children }: { children: React.ReactNode }) => (
+    <h2 className="text-lg font-light tracking-wide lowercase text-foreground mb-3">{children}</h2>
+  );
+  const K = ({ children }: { children: React.ReactNode }) => <strong className="font-normal text-foreground/80">{children}</strong>;
+
   return (
     <LandingBackground>
-
       <Header />
 
       <div className="relative z-10 px-6 pt-32 pb-24">
         <div className="mx-auto max-w-3xl">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm font-extralight tracking-wide text-muted-foreground hover:text-foreground transition-colors mb-12">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-sm font-extralight tracking-wide text-muted-foreground hover:text-foreground transition-colors mb-12"
+          >
             <ArrowLeft className="h-4 w-4" />
-            Back to Home
+            back to home
           </Link>
 
           <div className="rounded-2xl border border-border/20 bg-card/30 backdrop-blur-md p-8 sm:p-12">
-            <h1 className="text-3xl sm:text-4xl font-extralight tracking-wide mb-2">Privacy Policy</h1>
-            <p className="text-sm font-extralight text-muted-foreground mb-12">Last updated: February 14, 2026</p>
+            <h1 className="text-3xl sm:text-4xl font-extralight tracking-wide lowercase mb-2">privacy</h1>
+            <p className="text-sm font-extralight text-muted-foreground mb-12">last updated: october 25, 2026 · local edition</p>
 
             <div className="space-y-10 text-sm font-extralight leading-relaxed text-muted-foreground">
               <section>
-                <h2 className="text-lg font-light tracking-wide text-foreground mb-3">1. Data We Collect</h2>
-                <p className="mb-3">We collect only what is necessary to operate the Service:</p>
-                <ul className="space-y-2 ml-4">
-                  <li>→ <strong className="text-foreground/80">Account data:</strong> Email address and display name (provided at sign-up).</li>
-                  <li>→ <strong className="text-foreground/80">Conversations:</strong> Prompts and AI-generated responses, stored encrypted at rest.</li>
-                  <li>→ <strong className="text-foreground/80">Uploaded files:</strong> Documents you upload to your Library.</li>
-                  <li>→ <strong className="text-foreground/80">Usage metadata:</strong> Prompt counts and session activity (no content).</li>
-                  <li>→ <strong className="text-foreground/80">Memory entries:</strong> Facts you save for persistent context.</li>
-                </ul>
-              </section>
-
-              <section>
-                <h2 className="text-lg font-light tracking-wide text-foreground mb-3">2. Why We Collect It</h2>
-                <ul className="space-y-2 ml-4">
-                  <li>→ To provide, maintain, and improve the Service.</li>
-                  <li>→ To persist your conversation history and memory across sessions.</li>
-                  <li>→ We do <strong className="text-foreground/80">NOT</strong> use your data to train AI models.</li>
-                  <li>→ We do <strong className="text-foreground/80">NOT</strong> sell your data to third parties.</li>
-                  <li>→ We do <strong className="text-foreground/80">NOT</strong> share your data with advertisers.</li>
-                </ul>
-              </section>
-
-              <section>
-                <h2 className="text-lg font-light tracking-wide text-foreground mb-3">3. Data Retention</h2>
-                <ul className="space-y-2 ml-4">
-                  <li>→ <strong className="text-foreground/80">Active account:</strong> Data retained for the lifetime of your account.</li>
-                  <li>→ <strong className="text-foreground/80">After deletion:</strong> All data permanently purged within 30 days.</li>
-                  <li>→ <strong className="text-foreground/80">System logs:</strong> Retained for 90 days on a rolling basis, then deleted.</li>
-                  <li>→ <strong className="text-foreground/80">Backups:</strong> Retained for 30 days, then purged.</li>
-                </ul>
-              </section>
-
-              <section>
-                <h2 className="text-lg font-light tracking-wide text-foreground mb-3">4. Third-Party Processors</h2>
-                <p className="mb-3">We use the following third parties who may process your data under strict agreements:</p>
-                <ul className="space-y-2 ml-4">
-                  <li>→ <strong className="text-foreground/80">Cloud infrastructure</strong>, Hosting and database (US-based servers).</li>
-                </ul>
-                <p className="mt-3">Each vendor operates under a Data Processing Agreement (DPA). No other third parties receive your data.</p>
-              </section>
-
-              <section>
-                <h2 className="text-lg font-light tracking-wide text-foreground mb-3">5. Your Rights (GDPR & CCPA)</h2>
-                <p className="mb-3">You have the following rights over your personal data:</p>
-                <ul className="space-y-2 ml-4">
-                  <li>→ <strong className="text-foreground/80">Right of access:</strong> Download all your data in one click from Settings → Your Data Rights.</li>
-                  <li>→ <strong className="text-foreground/80">Right to erasure:</strong> Delete your account and all associated data permanently from Settings.</li>
-                  <li>→ <strong className="text-foreground/80">Right to rectification:</strong> Edit your profile, display name, and memory entries at any time.</li>
-                  <li>→ <strong className="text-foreground/80">Right to portability:</strong> Data export is provided in machine-readable JSON format.</li>
-                  <li>→ <strong className="text-foreground/80">Right to object:</strong> We do not process data for marketing. No marketing emails are sent without explicit consent.</li>
-                </ul>
-              </section>
-
-              <section>
-                <h2 className="text-lg font-light tracking-wide text-foreground mb-3">6. Encryption & Security</h2>
-                <ul className="space-y-2 ml-4">
-                  <li>→ All conversations are encrypted at rest using AES-256-GCM under a key scoped to your account. The wrapping secret stays server-side, so Asherin can decrypt on your behalf, this is not zero-knowledge end-to-end encryption, and we do not claim it is.</li>
-                  <li>→ Keys are derived per-account via HKDF-SHA-256 and released only to sessions authenticated as the owner.</li>
-                  <li>→ Data is encrypted in transit (TLS) and at rest.</li>
-                  <li>→ All servers are hosted in the United States.</li>
-                  <li>→ No Asherin employee can read your encrypted messages.</li>
-                </ul>
-              </section>
-
-              <section>
-                <h2 className="text-lg font-light tracking-wide text-foreground mb-3">7. Consent</h2>
-                <ul className="space-y-2 ml-4">
-                  <li>→ We do not send marketing emails.</li>
-                  <li>→ Pre-ticked consent boxes are never used.</li>
-                  <li>→ You may withdraw consent at any time by deleting your account.</li>
-                </ul>
-              </section>
-
-              <section>
-                <h2 className="text-lg font-light tracking-wide text-foreground mb-3">8. Cookies</h2>
-                <p>Asherin uses only essential session cookies required for authentication. We do not use tracking cookies, analytics cookies, or advertising cookies.</p>
-              </section>
-
-              <section>
-                <h2 className="text-lg font-light tracking-wide text-foreground mb-3">9. Children's Privacy</h2>
-                <p>The Service is not intended for users under the age of 13. We do not knowingly collect data from children. If we discover that a child has created an account, it will be deleted immediately.</p>
-              </section>
-
-              <section>
-                <h2 className="text-lg font-light tracking-wide text-foreground mb-3">10. Changes to This Policy</h2>
-                <p>We may update this Privacy Policy from time to time. Material changes will be communicated through the platform. Continued use after changes constitutes acceptance.</p>
-              </section>
-
-              <section>
-                <h2 className="text-lg font-light tracking-wide text-foreground mb-3">11. Contact</h2>
+                <H>1. the shape of it</H>
+                <p className="mb-3">
+                  asherin is software that runs in your browser, on your device. there is no account to create, no sign-in, and no
+                  asherin server that holds your data. the page is served as static files; what you do in it stays in your
+                  browser's own storage unless you send it somewhere yourself.
+                </p>
                 <p>
-                  For privacy inquiries, data requests, or to exercise your rights, contact us via{" "}
-                  <a href="https://x.com/shep_newton" target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors">
+                  because there is no server, there is no one at asherin who can read your conversations, your files or your
+                  keys. we do not collect usage data, run analytics, or set tracking cookies.
+                </p>
+              </section>
+
+              <section>
+                <H>2. what is kept on this device</H>
+                <ul className="space-y-2 ml-4">
+                  <li>→ <K>conversations</K> with shepherd, the files you add to the library and to projects, notebooks, snippets, pages, boards, briefings, agents, health records, vedic charts, and the vault of what shepherd has learned about you.</li>
+                  <li>→ <K>model keys</K> you connect, in a key vault sealed by webcrypto under a key that never leaves the device. you can put a passphrase in front of it, lock it, and change or remove the passphrase at any time.</li>
+                  <li>→ <K>the device trail</K>: the actions you took inside asherin, kept for you, readable in asherin.activity and guardian vault.</li>
+                  <li>→ <K>appearance and preferences</K>, in the browser's local storage.</li>
+                </ul>
+                <p className="mt-3">
+                  conversation text, sealed vault items, saved boards, and sentinel transcripts are encrypted at rest with
+                  aes-gcm under a device key. other rows (titles, timestamps, library metadata, settings) are stored as plain rows
+                  in the browser's indexeddb. guardian vault shows you exactly which stores are sealed and which are not.
+                </p>
+              </section>
+
+              <section>
+                <H>3. what leaves the device, and when</H>
+                <p className="mb-3">nothing leaves on its own. a request goes out only when you start the action that needs it:</p>
+                <ul className="space-y-2 ml-4">
+                  <li>→ <K>the model provider you connected</K> receives the message you send, the context shepherd assembles for it (your conversation, attached files, project directions, the vault brief), and your key. that traffic is governed by that provider's own terms, not ours.</li>
+                  <li>→ <K>a local runtime</K> (ollama, lm studio) receives the same, on your own machine, and nothing crosses the network.</li>
+                  <li>→ <K>public sources a room names</K>, when you use that room: map tiles, terrain and earthquake feeds in asherin.adam; an address you typed, to a geocoder; weather for a place you chose; public indexes in asherin.search; a range of a password hash (never the password) in guardian vault's exposure check. each room says what it reaches before it reaches it.</li>
+                  <li>→ <K>engine files</K> some rooms load from a content network the first time they run (a code editor, an on-device vision model, the ocr engine). these are downloads of software, not uploads of your data.</li>
+                </ul>
+                <p className="mt-3">
+                  we do not sell anything, we do not share anything with advertisers, and nothing you do is used to train
+                  asherin or anyone else.
+                </p>
+              </section>
+
+              <section>
+                <H>4. your control</H>
+                <ul className="space-y-2 ml-4">
+                  <li>→ <K>export</K> everything as json from settings → privacy &amp; data.</li>
+                  <li>→ <K>forget</K> single memories, conversations, files and records inside each room.</li>
+                  <li>→ <K>wipe this device</K> from settings → privacy &amp; data: the local database, the key vault and local storage are deleted in one step. there is no copy anywhere else to delete.</li>
+                  <li>→ <K>lock</K> the key vault with a passphrase so a saved key cannot be used until you unlock it.</li>
+                </ul>
+              </section>
+
+              <section>
+                <H>5. permissions the browser asks for</H>
+                <p>
+                  camera (asherin.arvision), microphone (asherin.sentinel), location (asherin.adam, sentinel's environment
+                  panel), bluetooth where the browser offers it. each is requested when you start the room that needs it and can
+                  be withdrawn in the browser at any time. the rooms say plainly what they can and cannot do with a permission.
+                </p>
+              </section>
+
+              <section>
+                <H>6. children</H>
+                <p>asherin is not intended for people under 13. there is no account to delete; wiping the device removes everything.</p>
+              </section>
+
+              <section>
+                <H>7. changes</H>
+                <p>when this page changes, the date at the top changes with it. the code is the authority: if a claim here and the software ever disagree, the software is wrong and we will fix it.</p>
+              </section>
+
+              <section>
+                <H>8. contact</H>
+                <p>
+                  for privacy questions, reach{" "}
+                  <a
+                    href="https://x.com/shep_newton"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
+                  >
                     @shep_newton on X
-                  </a>.
+                  </a>
+                  .
                 </p>
               </section>
             </div>

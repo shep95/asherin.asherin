@@ -1,8 +1,9 @@
-// Guardian Vault — stored items + Watchtower exposure review.
+// guardian vault — stored items + watchtower exposure review.
 //
-// Everything sensitive is decrypted in-page and rendered masked by default.
-// Connect traces carry counts and verdicts only: no label content, no domain
-// value, no secret, ever.
+// everything sensitive is sealed with the device data key before the row is
+// written and decrypted in-page, rendered masked by default. connect traces
+// and the device trail carry counts and verdicts only: no label content, no
+// domain value, no secret, ever.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -15,12 +16,13 @@ import { emitPull } from "@/lib/connect/emitPull";
 import {
   createVaultItem, deleteVaultItem, listVaultItems, recordExposure,
   updateVaultItem, KIND_LABEL,
-  type VaultDraft, type VaultItem, type VaultKind, type VaultSecret,
+  type VaultDraft, type VaultItem, type VaultKind,
 } from "@/lib/security/vaultItems";
 import {
   ageInDays, checkPasswordExposure, findReuse, passwordStrength,
 } from "@/lib/security/watchtower";
 import { extractSeed, totpCode, totpRemaining } from "@/lib/security/totp";
+import { recordTrail } from "@/lib/guardian/deviceSecurity";
 
 const KIND_ICON: Record<VaultKind, React.ElementType> = {
   login: KeyRound,
@@ -48,7 +50,7 @@ const CopyButton = ({ value, label }: { value: string; label: string }) => {
   return (
     <button
       type="button"
-      aria-label={`Copy ${label}`}
+      aria-label={`copy ${label}`}
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(value);
@@ -86,7 +88,7 @@ const TotpCode = ({ seed }: { seed: string }) => {
     return () => { alive = false; window.clearInterval(id); };
   }, [seed]);
 
-  if (bad) return <span className="text-[11px] text-amber-400/70">Seed is not valid base32</span>;
+  if (bad) return <span className="text-[11px] text-amber-400/70">seed is not valid base32</span>;
   if (!code) return <span className="text-[11px] text-muted-foreground/40">…</span>;
   return (
     <span className="flex items-center gap-2">
@@ -117,7 +119,7 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
     try {
       setItems(await listVaultItems(user.id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Vault unavailable");
+      setError(e instanceof Error ? e.message : "the vault is unavailable");
     } finally {
       setLoading(false);
     }
@@ -139,7 +141,7 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
 
   const openEdit = (item: VaultItem) => {
     if (item.sealed) {
-      toast({ title: "Item is sealed", description: "This device could not open the envelope.", variant: "destructive" });
+      toast({ title: "item is sealed", description: "the device data key could not open this envelope.", variant: "destructive" });
       return;
     }
     setDraft({ kind: item.kind, label: item.label, domain: item.domain ?? "", secret: { ...(item.secret ?? {}) } });
@@ -150,7 +152,7 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
   const save = async () => {
     if (!user?.id) return;
     if (!draft.label.trim()) {
-      toast({ title: "A label is required", variant: "destructive" });
+      toast({ title: "a label is required", variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -172,18 +174,19 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
         quote: `${KIND_LABEL[draft.kind]} item sealed`,
         meta: { kind: draft.kind },
       });
+      void recordTrail(editing ? "item_updated" : "item_created", "vault_item", { kind: draft.kind });
       setFormOpen(false);
       setEditing(null);
       setDraft(EMPTY_DRAFT);
       await load();
-      toast({ title: editing ? "Item updated" : "Item stored", description: "Sealed with your account key before upload." });
+      toast({ title: editing ? "item updated" : "item stored", description: "sealed with the device data key before it was written." });
     } catch (e) {
       void emitPull({
         organ: "vault", capability: editing ? "item-update" : "item-create",
         fromSurface: "guardian-vault", status: "fail",
         latencyMs: performance.now() - started, quote: "vault write failed",
       });
-      toast({ title: "Could not save", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+      toast({ title: "could not save", description: e instanceof Error ? e.message : "unknown error", variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -193,12 +196,13 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
     try {
       await deleteVaultItem(item.id);
       setItems((prev) => prev.filter((i) => i.id !== item.id));
+      void recordTrail("item_deleted", "vault_item", { kind: item.kind });
       void emitPull({
         organ: "vault", capability: "item-delete", fromSurface: "guardian-vault",
         status: "ok", quote: `${KIND_LABEL[item.kind]} item removed`, meta: { kind: item.kind },
       });
     } catch (e) {
-      toast({ title: "Could not delete", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+      toast({ title: "could not delete", description: e instanceof Error ? e.message : "unknown error", variant: "destructive" });
     }
   };
 
@@ -209,7 +213,14 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
         organ: "vault", capability: "breach-check", fromSurface: "guardian-vault",
         status: "skip", quote: "no credentials to check",
       });
-      toast({ title: "Nothing to check", description: "No stored passwords or tokens yet." });
+      toast({ title: "nothing to check", description: "no stored passwords or tokens yet." });
+      return;
+    }
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      toast({
+        title: "offline",
+        description: "the exposure check needs the range service. reuse, weak and age checks below are local and already current.",
+      });
       return;
     }
     setScanning(true);
@@ -230,10 +241,11 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
         quote: `checked ${targets.length}, exposed ${exposed}`,
         meta: { checked: targets.length, exposed, errors: failed },
       });
+      void recordTrail("exposure_check", "watchtower", { checked: targets.length, exposed, errors: failed });
       await load();
       toast({
-        title: exposed > 0 ? `${exposed} credential${exposed === 1 ? "" : "s"} exposed` : "No exposures found",
-        description: failed > 0 ? `${failed} could not be checked — service unreachable.` : "Only a 5-character hash prefix left this device.",
+        title: exposed > 0 ? `${exposed} credential${exposed === 1 ? "" : "s"} exposed` : failed === targets.length ? "nothing could be checked" : "no exposures found",
+        description: failed > 0 ? `${failed} could not be checked — the range service was unreachable.` : "only a 5-character hash prefix left this device.",
         variant: exposed > 0 ? "destructive" : "default",
       });
     } finally {
@@ -256,10 +268,10 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
   if (error) {
     return (
       <div className="rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 space-y-2">
-        <p className="text-xs font-light text-foreground">The vault did not load.</p>
+        <p className="text-xs font-light text-foreground">the vault did not load.</p>
         <p className="text-[10px] text-muted-foreground/50">{error}</p>
-        <button onClick={() => void load()} className="text-[10px] px-2.5 py-1 rounded-lg border border-border/30 hover:border-border/60 transition-colors">
-          Try again
+        <button onClick={() => void load()} className="text-[10px] px-2.5 py-1 rounded-lg border border-border/30 hover:border-border/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          try again
         </button>
       </div>
     );
@@ -277,10 +289,11 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-xs font-light tracking-wider text-muted-foreground/60 uppercase">Watchtower</h3>
+            <h3 className="text-xs font-light tracking-wider text-muted-foreground/60">watchtower</h3>
             <p className="text-[10px] text-muted-foreground/40 mt-1 max-w-lg">
-              Exposure is checked with k-anonymity: your browser hashes the secret and sends only the first five
-              characters of that hash. The password itself never leaves this device.
+              reuse, weakness and age are checked entirely on this device. the exposure check is the one thing that
+              talks to the outside: each password is hashed here and only the first five characters of that sha-1 go
+              to api.pwnedpasswords.com (k-anonymity). the password, its label and its site never leave this device.
             </p>
           </div>
           <button
@@ -289,16 +302,17 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
             className="text-[10px] font-light tracking-wide px-3 py-1.5 rounded-lg border border-border/30 text-foreground hover:border-border/60 transition-colors disabled:opacity-30 flex items-center gap-2 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <RefreshCw className={`h-3 w-3 ${scanning ? "animate-spin" : ""}`} />
-            {scanning ? "Checking…" : "Run check"}
+            {scanning ? "checking…" : "run exposure check"}
           </button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
           {[
-            { label: "Items", value: items.length },
-            { label: "Exposed", value: exposedItems.length, warn: exposedItems.length > 0 },
-            { label: "Reused", value: reusedIds.size, warn: reusedIds.size > 0 },
-            { label: "Over a year old", value: stale.length, warn: stale.length > 0 },
+            { label: "items", value: items.length },
+            { label: "exposed", value: exposedItems.length, warn: exposedItems.length > 0 },
+            { label: "reused", value: reusedIds.size, warn: reusedIds.size > 0 },
+            { label: "weak", value: weak.length, warn: weak.length > 0 },
+            { label: "over a year old", value: stale.length, warn: stale.length > 0 },
           ].map((s) => (
             <div key={s.label} className="rounded-xl border border-border/15 bg-card/5 px-4 py-3">
               <p className={`text-lg font-extralight tabular-nums ${s.warn ? "text-amber-400/80" : "text-foreground"}`}>{s.value}</p>
@@ -309,7 +323,7 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
 
         {items.length === 0 ? (
           <p className="text-[11px] text-muted-foreground/40 px-1">
-            Nothing stored yet. Add a login on the Items tab and Watchtower will review it.
+            nothing stored yet. add a login on the items tab and watchtower will review it.
           </p>
         ) : (
           <div className="space-y-2">
@@ -333,10 +347,10 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
                     <p className="text-[10px] text-muted-foreground/40 mt-0.5">
                       {clean
                         ? item.breach_status === "unchecked"
-                          ? "Not checked yet."
+                          ? "not checked yet."
                           : item.breach_status === "error"
-                            ? "Last check could not reach the exposure service."
-                            : "No exposure, reuse, or age issue found."
+                            ? "last check could not reach the range service."
+                            : "no exposure, reuse or age issue found."
                         : flags.join(" · ")}
                     </p>
                   </div>
@@ -347,8 +361,8 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
         )}
 
         <p className="text-[10px] text-muted-foreground/30 px-1">
-          Per-account breach history (which sites leaked a given email) needs a paid HaveIBeenPwned key, which
-          Asherin does not hold. That check is unavailable rather than guessed.
+          which sites leaked a given email address needs a paid Have I Been Pwned key, which asherin does not
+          hold. that check is unavailable rather than guessed.
         </p>
       </div>
     );
@@ -361,24 +375,24 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-xs font-light tracking-wider text-muted-foreground/60 uppercase">Stored Items</h3>
+          <h3 className="text-xs font-light tracking-wider text-muted-foreground/60">stored items</h3>
           <p className="text-[10px] text-muted-foreground/40 mt-1">
-            Sealed with your account key in this browser. The server stores ciphertext only.
+            sealed with the device data key before the row is written. the row holds a label, a kind and ciphertext; nothing leaves this device.
           </p>
         </div>
         <button
           onClick={openNew}
           className="text-[10px] font-light tracking-wide px-3 py-1.5 rounded-lg border border-border/30 text-foreground hover:border-border/60 transition-colors flex items-center gap-2 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <Plus className="h-3 w-3" /> New item
+          <Plus className="h-3 w-3" /> new item
         </button>
       </div>
 
       {formOpen && (
         <div className="rounded-xl border border-border/25 bg-card/10 p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-light text-foreground">{editing ? "Edit item" : "New item"}</p>
-            <button onClick={() => { setFormOpen(false); setEditing(null); }} aria-label="Close form" className="text-muted-foreground/40 hover:text-foreground">
+            <p className="text-xs font-light text-foreground">{editing ? "edit item" : "new item"}</p>
+            <button onClick={() => { setFormOpen(false); setEditing(null); }} aria-label="close form" className="text-muted-foreground/40 hover:text-foreground">
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -397,53 +411,53 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
             ))}
           </div>
 
-          <input className={inputClass} placeholder="Label" value={draft.label} maxLength={120}
+          <input className={inputClass} placeholder="label" aria-label="label" value={draft.label} maxLength={120}
             onChange={(e) => setDraft((d) => ({ ...d, label: e.target.value }))} />
 
           {draft.kind === "login" && (
             <>
-              <input className={inputClass} placeholder="Site (example.com)" value={draft.domain ?? ""}
+              <input className={inputClass} placeholder="site (example.com)" aria-label="site" value={draft.domain ?? ""}
                 onChange={(e) => setDraft((d) => ({ ...d, domain: e.target.value }))} />
-              <input className={inputClass} placeholder="Username" autoComplete="off" value={draft.secret.username ?? ""}
+              <input className={inputClass} placeholder="username" aria-label="username" autoComplete="off" value={draft.secret.username ?? ""}
                 onChange={(e) => setDraft((d) => ({ ...d, secret: { ...d.secret, username: e.target.value } }))} />
-              <input className={inputClass} type="password" placeholder="Password" autoComplete="new-password" value={draft.secret.password ?? ""}
+              <input className={inputClass} type="password" placeholder="password" aria-label="password" autoComplete="new-password" value={draft.secret.password ?? ""}
                 onChange={(e) => setDraft((d) => ({ ...d, secret: { ...d.secret, password: e.target.value } }))} />
             </>
           )}
 
           {draft.kind === "note" && (
-            <textarea className={`${inputClass} min-h-[120px] resize-y`} placeholder="Note" value={draft.secret.note ?? ""}
+            <textarea className={`${inputClass} min-h-[120px] resize-y`} placeholder="note" aria-label="note" value={draft.secret.note ?? ""}
               onChange={(e) => setDraft((d) => ({ ...d, secret: { ...d.secret, note: e.target.value } }))} />
           )}
 
           {draft.kind === "card" && (
             <>
-              <input className={inputClass} placeholder="Cardholder" value={draft.secret.cardHolder ?? ""}
+              <input className={inputClass} placeholder="cardholder" aria-label="cardholder" value={draft.secret.cardHolder ?? ""}
                 onChange={(e) => setDraft((d) => ({ ...d, secret: { ...d.secret, cardHolder: e.target.value } }))} />
-              <input className={inputClass} inputMode="numeric" autoComplete="off" placeholder="Card number" value={draft.secret.cardNumber ?? ""}
+              <input className={inputClass} inputMode="numeric" autoComplete="off" placeholder="card number" aria-label="card number" value={draft.secret.cardNumber ?? ""}
                 onChange={(e) => setDraft((d) => ({ ...d, secret: { ...d.secret, cardNumber: e.target.value } }))} />
-              <input className={inputClass} placeholder="Expiry (MM/YY)" value={draft.secret.cardExpiry ?? ""}
+              <input className={inputClass} placeholder="expiry (mm/yy)" aria-label="expiry" value={draft.secret.cardExpiry ?? ""}
                 onChange={(e) => setDraft((d) => ({ ...d, secret: { ...d.secret, cardExpiry: e.target.value } }))} />
             </>
           )}
 
           {draft.kind === "totp" && (
-            <input className={inputClass} placeholder="Base32 seed or otpauth:// URI" autoComplete="off" value={draft.secret.totpSeed ?? ""}
+            <input className={inputClass} placeholder="base32 seed or otpauth:// uri" aria-label="authenticator seed" autoComplete="off" value={draft.secret.totpSeed ?? ""}
               onChange={(e) => setDraft((d) => ({ ...d, secret: { ...d.secret, totpSeed: e.target.value } }))} />
           )}
 
           {draft.kind === "token" && (
-            <textarea className={`${inputClass} min-h-[72px] resize-y font-mono`} placeholder="Token value" value={draft.secret.token ?? ""}
+            <textarea className={`${inputClass} min-h-[72px] resize-y font-mono`} placeholder="token value" aria-label="token value" value={draft.secret.token ?? ""}
               onChange={(e) => setDraft((d) => ({ ...d, secret: { ...d.secret, token: e.target.value } }))} />
           )}
 
           <div className="flex justify-end gap-2 pt-1">
             <button onClick={() => { setFormOpen(false); setEditing(null); }} className="text-[10px] px-3 py-1.5 rounded-lg border border-border/20 text-muted-foreground/60 hover:text-foreground transition-colors">
-              Cancel
+              cancel
             </button>
             <button onClick={() => void save()} disabled={saving}
               className="text-[10px] px-3 py-1.5 rounded-lg border border-border/50 text-foreground hover:border-border transition-colors disabled:opacity-30">
-              {saving ? "Sealing…" : "Save"}
+              {saving ? "sealing…" : "save"}
             </button>
           </div>
         </div>
@@ -451,7 +465,7 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
 
       {items.length === 0 && !formOpen ? (
         <p className="text-[11px] text-muted-foreground/40 px-1">
-          Nothing stored yet. Add a login, note, card, authenticator seed, or API token — it is encrypted before upload.
+          nothing stored yet. add a login, note, card, authenticator seed or api token — it is sealed before it is written to this device.
         </p>
       ) : (
         <div className="space-y-2">
@@ -474,13 +488,13 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
                   </div>
                   {!item.sealed && (
                     <button onClick={() => setRevealed((r) => ({ ...r, [item.id]: !show }))}
-                      aria-label={show ? `Hide ${item.label}` : `Reveal ${item.label}`}
+                      aria-label={show ? `hide ${item.label}` : `reveal ${item.label}`}
                       className="text-muted-foreground/40 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
                       {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </button>
                   )}
-                  <button onClick={() => openEdit(item)} className="text-[10px] text-muted-foreground/40 hover:text-foreground transition-colors">Edit</button>
-                  <button onClick={() => void remove(item)} aria-label={`Delete ${item.label}`}
+                  <button onClick={() => openEdit(item)} className="text-[10px] text-muted-foreground/40 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">edit</button>
+                  <button onClick={() => void remove(item)} aria-label={`delete ${item.label}`}
                     className="text-muted-foreground/30 hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -488,7 +502,7 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
 
                 {item.sealed && (
                   <p className="text-[10px] text-amber-400/70">
-                    Sealed — this account key could not open the envelope. The ciphertext is intact.
+                    sealed — the device data key could not open this envelope. the ciphertext is intact.
                   </p>
                 )}
 
@@ -499,20 +513,20 @@ const VaultItemsPanel = ({ mode }: { mode: "items" | "watchtower" }) => {
                 {!item.sealed && show && s && item.kind !== "totp" && (
                   <div className="pl-6 space-y-1">
                     {([
-                      ["Username", s.username],
-                      ["Password", s.password],
-                      ["Cardholder", s.cardHolder],
-                      ["Card", s.cardNumber],
-                      ["Expiry", s.cardExpiry],
-                      ["Token", s.token],
-                      ["Note", s.note],
+                      ["username", s.username],
+                      ["password", s.password],
+                      ["cardholder", s.cardHolder],
+                      ["card", s.cardNumber],
+                      ["expiry", s.cardExpiry],
+                      ["token", s.token],
+                      ["note", s.note],
                     ] as [string, string | undefined][])
                       .filter(([, v]) => !!v)
                       .map(([k, v]) => (
                         <div key={k} className="flex items-start gap-2">
                           <span className="text-[10px] text-muted-foreground/35 w-20 flex-shrink-0">{k}</span>
                           <span className="text-[11px] font-light text-foreground break-all flex-1 whitespace-pre-wrap">{v}</span>
-                          <CopyButton value={v as string} label={k.toLowerCase()} />
+                          <CopyButton value={v as string} label={k} />
                         </div>
                       ))}
                   </div>

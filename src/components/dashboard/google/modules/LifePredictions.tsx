@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import {
   Stethoscope, TrendingUp, Sparkles, RefreshCw,
   Calendar, Activity, Users, BarChart3,
-  Clock, Mail, CheckCircle2, AlertTriangle, Target, Send,
+  Mail, CheckCircle2, AlertTriangle, Target, Send,
 } from "lucide-react";
 import { useGoogleApi } from "@/hooks/useGoogleApi";
 import FindingCard from "../intel/FindingCard";
@@ -13,7 +13,8 @@ import {
   optimalSendWindows, classifyInbound, relationshipDrift,
   type CalEvent, type InboxMessage, type MailboxCounters,
 } from "@/lib/cloudIntel/augur";
-import { round, signedPct } from "@/lib/cloudIntel/logic";
+import { signedPct } from "@/lib/cloudIntel/logic";
+import { CONNECT_UNAVAILABLE, describeFailure } from "../offline";
 
 type TabKey = "schedule" | "health" | "social" | "trends";
 
@@ -22,13 +23,13 @@ type TabKey = "schedule" | "health" | "social" | "trends";
 const INBOX_SAMPLE = 100;
 
 const CLASS_LABEL: Record<string, string> = {
-  financial: "Financial",
-  legal: "Legal",
-  industry: "Industry signal",
-  scheduling: "Scheduling",
-  security: "Security",
-  commercial: "Commercial",
-  personal: "Personal",
+  financial: "financial",
+  legal: "legal",
+  industry: "industry signal",
+  scheduling: "scheduling",
+  security: "security",
+  commercial: "commercial",
+  personal: "personal",
 };
 
 const LifePredictions = () => {
@@ -43,9 +44,10 @@ const LifePredictions = () => {
   const [fitData, setFitData] = useState<any[]>([]);
   const [driveFiles, setDriveFiles] = useState<any[]>([]);
 
+  // state is only written on success, so a failed sweep leaves the previous
+  // results standing without a snapshot-and-restore that could go stale.
   const loadData = useCallback(async () => {
     setLoading(true);
-    const prev = { calEvents, gmailStats, emails, contacts, totalContacts, fitData, driveFiles };
     try {
       const now = new Date();
       const [cal, stats, inbox, contactData, fit, drive] = await Promise.all([
@@ -69,23 +71,15 @@ const LifePredictions = () => {
       setFitData(fit.dailyData || []);
       setDriveFiles(drive.files || []);
     } catch (err) {
-      console.error("Failed to fetch prediction data:", err);
-      setCalEvents(prev.calEvents);
-      setGmailStats(prev.gmailStats);
-      setEmails(prev.emails);
-      setContacts(prev.contacts);
-      setTotalContacts(prev.totalContacts);
-      setFitData(prev.fitData);
-      setDriveFiles(prev.driveFiles);
-      toast.error("Failed to sync prediction data — showing previous results.");
+      toast.error(describeFailure(err, "google data organ"), { description: "the previous results, if any, are still shown." });
     } finally {
       setLoading(false);
     }
   }, [fetchGoogleData]);
 
   useEffect(() => {
-    if (isConnected) loadData();
-  }, [isConnected]);
+    if (isConnected) void loadData();
+  }, [isConnected, loadData]);
 
   // Rule 16 — an empty calendar is not an empty screen. Augur runs on any
   // surface that returned something, and interprets the ones that did not.
@@ -111,11 +105,11 @@ const LifePredictions = () => {
   const classified = useMemo(() => classifyInbound(emails), [emails]);
   const drift = useMemo(() => relationshipDrift(contacts, emails), [contacts, emails]);
 
-  const tabs: { key: TabKey; label: string; icon: any }[] = [
-    { key: "schedule", label: "Schedule", icon: Calendar },
-    { key: "health", label: "Health", icon: Activity },
-    { key: "social", label: "Social", icon: Users },
-    { key: "trends", label: "Trends", icon: BarChart3 },
+  const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
+    { key: "schedule", label: "schedule", icon: Calendar },
+    { key: "health", label: "health", icon: Activity },
+    { key: "social", label: "social", icon: Users },
+    { key: "trends", label: "trends", icon: BarChart3 },
   ];
 
   const avgSteps = fitData.length > 0
@@ -135,7 +129,7 @@ const LifePredictions = () => {
         <div className="rounded-2xl border border-dashed border-border/30 bg-card/10 p-10 text-center space-y-3">
           <Sparkles className="h-10 w-10 text-muted-foreground/20 mx-auto" />
           <p className="text-sm font-extralight text-muted-foreground/50">
-            {isConnected ? "No surface returned data yet — run a sweep to populate the projection." : "Link a Google account to enable forward projection."}
+            {isConnected ? "no surface returned data yet — run a sweep to populate the projection." : CONNECT_UNAVAILABLE}
           </p>
         </div>
       );
@@ -483,24 +477,25 @@ const LifePredictions = () => {
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-foreground/5">
           <Sparkles className="h-6 w-6 text-foreground/70" />
         </div>
-        <div className="space-y-1 flex-1">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-light tracking-wide text-foreground">AUGUR — Predictive Intelligence</h3>
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-light tracking-wide text-foreground">life projection</h3>
             {isConnected && (
               <button
-                onClick={loadData}
+                type="button"
+                onClick={() => void loadData()}
                 disabled={loading}
                 className="flex items-center gap-1 rounded-lg bg-foreground/10 px-3 py-1.5 text-[10px] font-light text-foreground hover:bg-foreground/20 transition-all disabled:opacity-50"
               >
-                <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-                Sync
+                <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden />
+                sweep
               </button>
             )}
           </div>
           <p className="text-[10px] font-extralight text-muted-foreground">
             {hasAnySurface
-              ? `Projecting from ${calEvents.length} calendar records and ${emails.length} timestamped messages. Every projection carries its failure condition.`
-              : "Link a Google account to enable forward projection."}
+              ? `projecting from ${calEvents.length} calendar records and ${emails.length} timestamped messages. every projection carries its failure condition.`
+              : CONNECT_UNAVAILABLE}
           </p>
         </div>
       </div>
@@ -509,7 +504,7 @@ const LifePredictions = () => {
       {synthesis && <FindingCard finding={synthesis} defaultOpen />}
       {findings.length > 0 && (
         <section className="space-y-2">
-          <h4 className="text-[9px] tracking-[0.22em] text-muted-foreground/40 font-light">STANDING JUDGEMENTS</h4>
+          <h4 className="text-[9px] tracking-[0.22em] text-muted-foreground/40 font-light">standing judgements</h4>
           {findings.map((f) => (
             <FindingCard key={f.id} finding={f} defaultOpen={f.severity === "critical"} />
           ))}

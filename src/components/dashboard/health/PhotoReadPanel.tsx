@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { invokeWithByokRetry } from "@/lib/byokInvoke";
 import type { HealthRecord } from "@/lib/health/store";
+import { readPhotos } from "@/lib/health/shepherd";
 import {
   CATEGORY_LABEL,
   SEVERITY_LABEL,
@@ -24,8 +24,7 @@ const MAX_PHOTOS = 4;
 interface Props {
   record: HealthRecord;
   persist: (r: HealthRecord) => void;
-  resolveByok: () => Promise<Record<string, string> | undefined>;
-  /** hands a line to the room's assistant — this is how a quoted finding gets answered. */
+  /** hands a line to shepherd in this room — this is how a quoted finding gets answered. */
   onAsk: (line: string) => void;
 }
 
@@ -73,7 +72,7 @@ const SEVERITY_STYLE = {
  * first, detail underneath, every line traceable to the photograph it came from
  * and quotable straight into the assistant.
  */
-export default function PhotoReadPanel({ record, persist, resolveByok, onAsk }: Props) {
+export default function PhotoReadPanel({ record, persist, onAsk }: Props) {
   const [photos, setPhotos] = useState<PhotoInRead[]>([]);
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
@@ -115,16 +114,10 @@ export default function PhotoReadPanel({ record, persist, resolveByok, onAsk }: 
     if (photos.length === 0 || busy) return;
     setBusy(true);
     try {
-      const byok = await resolveByok();
-      const data = await invokeWithByokRetry<Record<string, unknown>>("asherin-health-ai", {
-        body: {
-          action: "photo.read",
-          prompt,
-          images: photos.map((p) => ({ view: p.label.slice(0, 12), ...splitDataUrl(p.dataUrl) })),
-          ...(byok ? { byok } : {}),
-        },
+      const data = await readPhotos({
+        prompt,
+        images: photos.map((p) => ({ view: p.label.slice(0, 12), ...splitDataUrl(p.dataUrl) })),
       });
-      if (data?.error) throw new Error(String(data.error));
       const read = normaliseRead(data, photos, prompt);
       if (read.findings.length === 0) {
         toast.error("nothing in those photographs could be read into a finding. try closer, in even light.");
@@ -205,9 +198,10 @@ export default function PhotoReadPanel({ record, persist, resolveByok, onAsk }: 
       />
       <div>
         <p className="text-[11px] font-light leading-relaxed text-foreground/55">
-          hand over photographs and say what you want looked at. the read-out comes back in plain words, every line tied to the
-          photograph it came from. this describes what is visible — it does not diagnose, and the photographs stay on this device
-          apart from the single reading you start.
+          hand over photographs and say what you want looked at. shepherd reads them with the model key held on this device and
+          the read-out comes back in plain words, every line tied to the photograph it came from. this describes what is visible —
+          it does not diagnose. the photographs stay on this device apart from the single reading you start, which goes to the
+          provider you connected.
         </p>
       </div>
 
@@ -369,7 +363,7 @@ export default function PhotoReadPanel({ record, persist, resolveByok, onAsk }: 
                             className="h-7 gap-1.5 text-[10px]"
                             onClick={() => onAsk(quoteFinding(latest, f, askDraft[f.id]))}
                           >
-                            <MessageSquareQuote className="h-3 w-3" /> ask asherin about this
+                            <MessageSquareQuote className="h-3 w-3" /> ask shepherd about this
                           </Button>
                         </div>
                       </div>

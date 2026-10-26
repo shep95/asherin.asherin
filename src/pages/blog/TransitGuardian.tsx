@@ -1,18 +1,16 @@
-import { useEffect } from "react";
 import ArticleShell from "@/components/seo/ArticleShell";
 import {
   ArticleJsonLd,
   BreadcrumbJsonLd,
   FaqJsonLd,
 } from "@/components/seo/SeoJsonLd";
-import { applySeoHead } from "@/lib/seoHead";
 
 /**
  * /blog/transit-guardian
  *
- * Product briefing for Transit Guardian — rideshare and multi-modal
- * travel safety: plate-anchored driver identity, full-trip telemetry,
- * and expansion from cars to rail, air, bus, and sea.
+ * archived research note for "Transit Guardian" — rideshare and
+ * multi-modal travel safety: plate-anchored checks, trip telemetry,
+ * route corridors. never a shipped room.
  */
 
 const URL = "https://asherin.com/blog/transit-guardian";
@@ -29,15 +27,6 @@ const Box = ({ children }: { children: React.ReactNode }) => (
 );
 
 const TransitGuardian = () => {
-  useEffect(() => {
-    applySeoHead({
-      title: TITLE,
-      description:
-        "Archived trip-safety research on user-recorded ride details, browser telemetry, route deviation, and evidence limits.",
-      path: "/blog/transit-guardian",
-    });
-  }, []);
-
   return (
     <>
       <ArticleJsonLd
@@ -46,7 +35,6 @@ const TransitGuardian = () => {
         headline={TITLE}
         description={DEK}
         datePublished={PUBLISHED}
-        author="Asherin R&D"
         keywords={[
           "rideshare safety",
           "uber driver check",
@@ -62,7 +50,7 @@ const TransitGuardian = () => {
         id="transit-guardian-crumbs"
         items={[
           { name: "Asherin", url: "/" },
-          { name: "Journal", url: "/blog" },
+          { name: "blog", url: "/blog" },
           { name: "Transit Guardian", url: "/blog/transit-guardian" },
         ]}
       />
@@ -83,27 +71,36 @@ const TransitGuardian = () => {
           },
           {
             q: "Who can see my trip record?",
-            a: "The proposed design isolated records to the signed-in owner and explicit shares. Transit Guardian itself is not a current Asherin room.",
+            a: "the proposed design kept records on the rider's own device and shared only by explicit choice. Transit Guardian itself is not a current asherin room.",
           },
         ]}
       />
 
       <ArticleShell
-        eyebrow="Archived Research · Trip Safety"
+        eyebrow="archived · research note"
         title="The ride can leave evidence, not certainty"
         dek={DEK}
         publishedLabel="Aug 5 2026"
         readTime="11 min"
       >
-        <h2>1. The gap this closes</h2>
+        <p>
+          <strong>status.</strong> archived research note. transit guardian
+          was designed and never shipped as a room; nothing below is
+          available in asherin today. the closest current rooms are{" "}
+          <a href="/dashboard/asherin-adam">asherin.adam</a> for the map and{" "}
+          <a href="/dashboard/asherin-defender">asherin.defender</a> for what
+          this browser can measure about its own device.
+        </p>
+
+        <h2>1. The gap this would have closed</h2>
         <p>
           A rideshare app shows you a name, a photo, a plate, and a star
           rating for about forty seconds, and then that information ceases
           to exist for you. If anything goes wrong, the only record of the
-          journey belongs to the platform. Transit Guardian gives the
-          passenger a parallel record, one they own, one that survives the
-          trip, and one that is anchored to identifiers a stranger cannot
-          casually fake.
+          journey belongs to the platform. Transit Guardian would have given
+          the passenger a parallel record, one they own, one that survives
+          the trip, and one that is anchored to identifiers a stranger
+          cannot casually fake.
         </p>
 
         <h2>2. Pre-ride, plate-anchored identity</h2>
@@ -226,8 +223,9 @@ const TransitGuardian = () => {
         </p>
         <h3>Can I share a trip live?</h3>
         <p>
-          Yes. Arming live sharing issues a revocable link that shows
-          position, mode, and anomaly state to whoever you send it to.
+          the design proposed a revocable link showing position, mode and
+          anomaly state to whoever you sent it to. a live link needs a relay
+          server; the local edition has none, and nothing here ships.
         </p>
       </ArticleShell>
     </>

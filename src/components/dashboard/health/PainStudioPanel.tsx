@@ -113,8 +113,12 @@ export default function PainStudioPanel({ record, persist, onEvent, onHighlights
   const output = painOutput(draft);
 
   const copy = async () => {
-    await navigator.clipboard.writeText(output.markdown);
-    toast.success("copied.");
+    try {
+      await navigator.clipboard.writeText(output.markdown);
+      toast.success("copied.");
+    } catch {
+      toast.error("the browser refused clipboard access, so nothing was copied.");
+    }
   };
 
   return (

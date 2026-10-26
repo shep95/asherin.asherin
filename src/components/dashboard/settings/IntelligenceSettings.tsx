@@ -1,7 +1,8 @@
-// intelligence settings — the control surface for what asherin is allowed to
-// remember and learn. every switch here is honest: memory off means nothing is
-// retrieved, learning off means nothing is written, and shared contribution is
-// opt-in and abstracted. nothing on this screen is simulated.
+// intelligence settings — the control surface for what shepherd is allowed to
+// remember and learn. every switch here is read: memory off means nothing is
+// retrieved (store.ts loadSettings → orchestrator, memory/vault), learning off
+// means nothing is written (learningGate.ts). the old "contribute anonymised
+// lessons" switch had no reader on a device and is gone. nothing is simulated.
 
 import { useCallback, useEffect, useState } from "react";
 import { Brain, Loader2, Trash2, Check, X, RefreshCw } from "lucide-react";
@@ -122,7 +123,7 @@ export default function IntelligenceSettings() {
         kind: "prefer",
         scope: "user",
         content,
-        rationale: "entered directly by the account owner",
+        rationale: "entered directly by the operator",
         confidence: 0.95,
         evidenceCount: 1,
         source: "user_stated",
@@ -185,9 +186,9 @@ export default function IntelligenceSettings() {
           status: "active",
           projectId: null,
         } as MemoryRecord);
-        await resolveCandidate(c.id, "promoted", "approved by the account owner", newId ? { to: "user", id: newId } : undefined);
+        await resolveCandidate(c.id, "promoted", "approved by the operator", newId ? { to: "user", id: newId } : undefined);
       } else {
-        await resolveCandidate(c.id, "rejected", "rejected by the account owner");
+        await resolveCandidate(c.id, "rejected", "rejected by the operator");
       }
       await refresh();
     } catch {
@@ -202,7 +203,7 @@ export default function IntelligenceSettings() {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Brain className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-sm font-light text-foreground">Memory &amp; learning</h3>
+          <h3 className="text-sm font-light text-foreground">memory &amp; learning</h3>
         </div>
         <button
           type="button"
@@ -215,24 +216,17 @@ export default function IntelligenceSettings() {
 
       <div className="space-y-4">
         <Toggle
-          label="Remember things about me"
-          hint="off means nothing saved here is used in a conversation."
+          label="remember things about me"
+          hint="off means nothing saved here or in asherin.vault is used in a conversation, and nothing new is learned about you."
           value={settings.memoryEnabled}
           onChange={(v) => void update({ memoryEnabled: v })}
           disabled={busy}
         />
         <Toggle
-          label="Learn from how conversations go"
+          label="learn from how conversations go"
           hint="records what worked and what failed. requires memory to be on before anything is stored about you."
           value={settings.learningEnabled}
           onChange={(v) => void update({ learningEnabled: v })}
-          disabled={busy}
-        />
-        <Toggle
-          label="Contribute anonymised lessons"
-          hint="opt-in. only abstracted methods, never your text, names, files or identifiers."
-          value={settings.globalContributionEnabled}
-          onChange={(v) => void update({ globalContributionEnabled: v })}
           disabled={busy}
         />
       </div>
@@ -245,7 +239,7 @@ export default function IntelligenceSettings() {
 
       {/* add a rule */}
       <div className="space-y-2">
-        <div className="text-[11px] text-muted-foreground">Add a standing rule</div>
+        <div className="text-[11px] text-muted-foreground">add a standing rule</div>
         <div className="flex gap-2">
           <input
             value={draft}
@@ -270,7 +264,7 @@ export default function IntelligenceSettings() {
       {/* stored memories */}
       <div className="space-y-2">
         <div className="text-[11px] text-muted-foreground">
-          What asherin has stored about you ({memories.length})
+          rules shepherd carries ({memories.length})
         </div>
         {loading ? (
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
@@ -328,7 +322,7 @@ export default function IntelligenceSettings() {
       {/* pending candidates */}
       {candidates.length > 0 && (
         <div className="space-y-2">
-          <div className="text-[11px] text-muted-foreground">Waiting for your decision ({candidates.length})</div>
+          <div className="text-[11px] text-muted-foreground">waiting for your decision ({candidates.length})</div>
           <ul className="space-y-1.5">
             {candidates.map((c) => (
               <li key={c.id} className="border border-border/20 rounded-lg px-3 py-2 flex items-start gap-2">
@@ -352,7 +346,7 @@ export default function IntelligenceSettings() {
 
       {/* procedures */}
       <div className="space-y-1">
-        <div className="text-[11px] text-muted-foreground">Procedures it can reuse ({patterns.length})</div>
+        <div className="text-[11px] text-muted-foreground">procedures it can reuse ({patterns.length})</div>
         {patterns.length === 0 ? (
           <div className="text-[11px] text-muted-foreground">none stored yet — they appear as conversations produce methods that worked.</div>
         ) : (
@@ -368,7 +362,7 @@ export default function IntelligenceSettings() {
 
       {/* audit */}
       <div className="space-y-1">
-        <div className="text-[11px] text-muted-foreground">Recent decisions ({events.length})</div>
+        <div className="text-[11px] text-muted-foreground">recent decisions ({events.length})</div>
         {events.length === 0 ? (
           <div className="text-[11px] text-muted-foreground">no decisions recorded yet.</div>
         ) : (

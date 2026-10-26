@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, Plus, MessageSquare, Code, FlaskConical, Shield, FolderOpen, Layers, Brain, BarChart3, Settings, Focus, Download, FileText, Upload, Moon, Sun, Database, Newspaper, Users, Globe, Activity, ClipboardList, Code2, CreditCard, Bell } from "lucide-react";
+import { Search, Plus, MessageSquare, Code, FlaskConical, Shield, FolderOpen, Layers, Brain, BarChart3, Settings, Focus, Download, FileText, Upload, Moon, Sun, Database, Newspaper, Globe, Activity, Code2, CreditCard, Bell } from "lucide-react";
 import type { ChatMode, DashboardView } from "./types";
 
 interface CommandPaletteProps {
@@ -68,17 +68,14 @@ const CommandPalette = ({ open, onClose, onNewConversation, onViewChange, onMode
     { id: "knowledge-vault", label: "Knowledge Vault", category: "Navigation", icon: Database, action: wrap("knowledge-vault", () => onViewChange("knowledge-vault")), keywords: ["vault", "files", "documents", "rag"] },
     { id: "whiteboard", label: "Whiteboard", category: "Navigation", icon: Layers, action: wrap("whiteboard", () => onViewChange("whiteboard")), keywords: ["canvas", "draw", "board"] },
     { id: "briefing", label: "Intel Briefings", category: "Navigation", icon: Newspaper, action: wrap("briefing", () => onViewChange("briefing")), keywords: ["news", "morning"] },
-    { id: "notebooks", label: "Notebooks", category: "Navigation", icon: FileText, action: wrap("notebooks", () => onViewChange("notebooks")), keywords: ["notebook", "note"] },
-    { id: "teams", label: "Team Workspace", category: "Navigation", icon: Users, action: wrap("teams", () => onViewChange("teams")), keywords: ["team", "collaborate"] },
+    { id: "notebooks", label: "asherin.notebooks", category: "Navigation", icon: FileText, action: wrap("notebooks", () => onViewChange("notebooks")), keywords: ["notebook", "note", "cells"] },
     { id: "cyber", label: "asherin.cyber", category: "Navigation", icon: Shield, action: wrap("cyber", () => onViewChange("zerlal")), keywords: ["cyber", "recon", "domain", "vulnerability"] },
-    
-    { id: "audit", label: "Audit Trail", category: "Navigation", icon: ClipboardList, action: wrap("audit", () => onViewChange("audit")), keywords: ["log", "compliance"] },
     { id: "library", label: "Library", category: "Navigation", icon: FolderOpen, action: wrap("library", () => onViewChange("library")), keywords: ["files", "uploads"] },
     { id: "ide", label: "Code Workspace", category: "Navigation", icon: Code, action: wrap("ide", () => onViewChange("ide")), keywords: ["ide", "editor", "code", "workspace", "files", "diff"] },
     { id: "snippets", label: "Code Snippets", category: "Navigation", icon: Code2, action: wrap("snippets", () => onViewChange("snippets")), keywords: ["code", "snippet"] },
     { id: "projects", label: "Projects", category: "Navigation", icon: Layers, action: wrap("projects", () => onViewChange("projects")) },
     { id: "memory", label: "asherin.vault", category: "Navigation", icon: Brain, action: wrap("memory", () => onViewChange("memory")), keywords: ["remember", "recall", "memory", "vault"] },
-    { id: "stats", label: "My Stats", category: "Navigation", icon: BarChart3, action: wrap("stats", () => onViewChange("stats")), keywords: ["usage", "analytics"] },
+    { id: "stats", label: "asherin.activity", category: "Navigation", icon: BarChart3, action: wrap("stats", () => onViewChange("stats")), keywords: ["usage", "activity", "trail", "audit", "streak"] },
     { id: "settings", label: "Settings", category: "Navigation", icon: Settings, action: wrap("settings", () => onViewChange("settings")), keywords: ["preferences", "config"] },
   ];
 

@@ -1,35 +1,37 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
-  FolderPlus, Layers, Trash2, Loader2, Globe, Lock, Target, FileText, Brain, Check,
-  ChevronRight, ArrowLeft, MessageSquare, Upload, Save, Plus, AlertTriangle,
+  FolderPlus, Layers, Trash2, Loader2, Globe, Lock, Target, FileText, Check,
+  ChevronRight, ArrowLeft, MessageSquare, Upload, Save, Plus, AlertTriangle, RefreshCw,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import {
-  listProjects, setProjectMode, loadScopeCounts, getActiveScope, setActiveScope, onScopeChange,
-  saveProjectInstructions,
+  listProjects, createProject, deleteProject, setProjectMode, loadScopeCounts, getActiveScope, setActiveScope,
+  onScopeChange, reconcileScope, saveProjectInstructions, DIRECTIONS_BRIEF_CHARS, MAX_PROJECT_NAME, MAX_PROJECT_DESCRIPTION,
   type Project, type ProjectMode, type ProjectScope, type ScopeCounts,
 } from "@/lib/projects/scope";
-import { listLibrary, ingestFile, deleteLibraryFile, type LibraryFile } from "@/lib/library/library";
+import { listLibrary, ingestFile, retryExtract, TEXT_STATUS_LABEL, formatBytes, type LibraryFile } from "@/lib/library/library";
 import type { Conversation } from "@/components/dashboard/types";
 import { useIsV2 } from "@/lib/dashboardUiContext";
 import { V2Action, v2ActionClass } from "@/components/dashboard/v2/V2PageShell";
+import FilePreview from "@/components/dashboard/library/FilePreview";
+import { scheduleFileDelete } from "@/components/dashboard/library/undoDelete";
 
 const MODE_COPY: Record<ProjectMode, { label: string; detail: string; icon: typeof Lock }> = {
   isolated: {
-    label: "Isolated sources",
-    detail: "Answers may only use this project's files and notes. Anything outside the corpus is returned as unsure.",
+    label: "isolated sources",
+    detail: "answers ground on this project's files and directions only. where they fall short, shepherd says it is unsure.",
     icon: Lock,
   },
   web: {
-    label: "Web + corpus",
-    detail: "Project files stay primary, but the model may also reach live sources and must label which is which.",
+    label: "web + corpus",
+    detail: "project files stay primary; shepherd may add live sources and labels which is which.",
     icon: Globe,
   },
 };
 
 const card = "rounded-xl border border-border/20 bg-card/20 backdrop-blur-sm";
+const byNewest = (a: LibraryFile, b: LibraryFile) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0);
 
 interface ProjectsViewProps {
   conversations?: Conversation[];
@@ -45,53 +47,78 @@ const ProjectsView = ({ conversations = [], onOpenConversation, onNewProjectConv
   const [projects, setProjects] = useState<Project[]>([]);
   const [counts, setCounts] = useState<Record<string, ScopeCounts>>({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [scope, setScope] = useState<ProjectScope | null>(() => getActiveScope());
   const [openId, setOpenId] = useState<string | null>(null);
+  const alive = useRef(true);
 
   useEffect(() => onScopeChange(setScope), []);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
 
   const refreshCounts = useCallback(async (rows: Project[]) => {
     if (!user) return;
     const entries = await Promise.all(
       rows.map(async (p) => [p.id, await loadScopeCounts(user.id, p.id)] as const),
     );
-    setCounts(Object.fromEntries(entries));
+    if (alive.current) setCounts(Object.fromEntries(entries));
   }, [user]);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!user) return;
-    let alive = true;
-    listProjects(user.id).then((rows) => {
-      if (!alive) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const rows = await listProjects(user.id);
+      if (!alive.current) return;
       setProjects(rows);
-      setLoading(false);
+      setScope(reconcileScope(rows));
       void refreshCounts(rows);
-    });
-    return () => { alive = false; };
+    } catch (e) {
+      if (alive.current) setError(e instanceof Error ? e.message : "could not read your projects.");
+    } finally {
+      if (alive.current) setLoading(false);
+    }
   }, [user, refreshCounts]);
 
-  const createProject = async () => {
-    if (!user || !name.trim()) return;
-    const { data, error } = await supabase.from("projects")
-      .insert({ user_id: user.id, name: name.trim(), description: desc.trim(), mode: "isolated" } as never)
-      .select("id,name,description,instructions,mode,created_at").single();
-    if (error) { toast.error("Could not create project: " + error.message); return; }
-    const created = { ...(data as unknown as Project), instructions: (data as { instructions?: string })?.instructions ?? "" };
-    setProjects((prev) => [created, ...prev]);
-    setCounts((prev) => ({ ...prev, [created.id]: { files: 0, filesReadable: 0, memories: 0 } }));
-    setName(""); setDesc(""); setCreating(false);
-    setOpenId(created.id);
+  useEffect(() => { void load(); }, [load]);
+
+  const submitCreate = async () => {
+    if (!user || !name.trim() || saving) return;
+    setSaving(true);
+    try {
+      const created = await createProject(user.id, name, desc);
+      setProjects((prev) => [created, ...prev]);
+      setCounts((prev) => ({ ...prev, [created.id]: { files: 0, filesReadable: 0 } }));
+      setName(""); setDesc(""); setCreating(false);
+      // entering the new workspace makes it the active scope — see openProject.
+      setActiveScope({ projectId: created.id, name: created.name, mode: created.mode });
+      setOpenId(created.id);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "could not create the project.");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const deleteProject = async (id: string) => {
-    const { error } = await supabase.from("projects").delete().eq("id", id);
-    if (error) { toast.error("Could not delete project: " + error.message); return; }
-    setProjects((prev) => prev.filter((p) => p.id !== id));
-    if (openId === id) setOpenId(null);
-    if (scope?.projectId === id) setActiveScope(null);
+  const removeProject = async (p: Project) => {
+    const c = counts[p.id];
+    const threads = conversations.filter((cv) => cv.projectId === p.id).length;
+    const ok = window.confirm(
+      `delete project "${p.name}"?\n\nits ${c?.files ?? 0} file${c?.files === 1 ? "" : "s"} stay in the library and its ${threads} conversation${threads === 1 ? "" : "s"} stay in chat — only the workspace and its directions go. this cannot be undone.`,
+    );
+    if (!ok) return;
+    try {
+      await deleteProject(p.id);
+      setProjects((prev) => prev.filter((x) => x.id !== p.id));
+      if (openId === p.id) setOpenId(null);
+      toast.success(`${p.name} deleted — its files and conversations were released, not removed.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "could not delete the project.");
+    }
   };
 
   const toggleMode = async (p: Project) => {
@@ -101,14 +128,14 @@ const ProjectsView = ({ conversations = [], onOpenConversation, onNewProjectConv
       await setProjectMode(p.id, next);
     } catch {
       setProjects((prev) => prev.map((x) => (x.id === p.id ? { ...x, mode: p.mode } : x)));
-      toast.error("Could not change the answer mode.");
+      toast.error("could not change the answer mode.");
     }
   };
 
   const activate = (p: Project) => {
-    if (scope?.projectId === p.id) { setActiveScope(null); return; }
+    if (scope?.projectId === p.id) { setActiveScope(null); toast(`scope cleared — new conversations and uploads are unscoped.`); return; }
     setActiveScope({ projectId: p.id, name: p.name, mode: p.mode });
-    toast.success(`Chat, Library and Memory are now scoped to ${p.name}.`);
+    toast.success(`new conversations and uploads now belong to ${p.name}.`);
   };
 
   const openProject = (p: Project) => {
@@ -121,17 +148,34 @@ const ProjectsView = ({ conversations = [], onOpenConversation, onNewProjectConv
   const opened = openId ? (projects.find((p) => p.id === openId) ?? null) : null;
 
   if (loading) {
-    return <div className="flex h-full items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="flex h-full items-center justify-center" aria-busy="true">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <div role="alert" className="max-w-sm space-y-3 rounded-xl border border-destructive/30 bg-card/20 p-4 text-center">
+          <AlertTriangle className="mx-auto h-5 w-5 text-destructive" />
+          <p className="text-xs font-extralight text-muted-foreground">{error}</p>
+          <button onClick={() => void load()} className="text-xs font-light text-foreground underline-offset-4 hover:underline">try again</button>
+        </div>
+      </div>
+    );
   }
 
   if (opened) {
     return (
       <ProjectWorkspace
         project={opened}
+        active={scope?.projectId === opened.id}
         counts={counts[opened.id]}
         conversations={conversations}
         onBack={() => setOpenId(null)}
-        onToggleMode={() => toggleMode(opened)}
+        onToggleMode={() => void toggleMode(opened)}
         onOpenConversation={onOpenConversation}
         onNewConversation={() => onNewProjectConversation?.(opened.id)}
         onInstructionsSaved={(text) =>
@@ -142,22 +186,56 @@ const ProjectsView = ({ conversations = [], onOpenConversation, onNewProjectConv
     );
   }
 
-  if (projects.length === 0 && !creating) {
+  const createForm = creating && (
+    <form
+      onSubmit={(e) => { e.preventDefault(); void submitCreate(); }}
+      className="rounded-xl border border-border/30 bg-card/20 p-4 space-y-3"
+      aria-label="new project"
+    >
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        maxLength={MAX_PROJECT_NAME}
+        placeholder="project name"
+        aria-label="project name"
+        autoFocus
+        className="w-full bg-transparent text-sm font-light text-foreground placeholder:text-muted-foreground/50 outline-none"
+      />
+      <input
+        value={desc}
+        onChange={(e) => setDesc(e.target.value)}
+        maxLength={MAX_PROJECT_DESCRIPTION}
+        placeholder="description (optional)"
+        aria-label="project description"
+        className="w-full bg-transparent text-xs font-extralight text-muted-foreground placeholder:text-muted-foreground/50 outline-none"
+      />
+      <div className="flex gap-2">
+        <button type="submit" disabled={!name.trim() || saving} className="text-xs bg-foreground text-background px-3 py-1 rounded-lg disabled:opacity-40">
+          {saving ? "creating…" : "create"}
+        </button>
+        <button type="button" onClick={() => { setCreating(false); setName(""); setDesc(""); }} className="text-xs text-muted-foreground">cancel</button>
+      </div>
+    </form>
+  );
+
+  if (projects.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center p-8">
-        <div className="text-center max-w-md space-y-6">
+      <div className="flex h-full items-center justify-center p-6 sm:p-8">
+        <div className="w-full max-w-md space-y-6 text-center">
           <div className="mx-auto w-16 h-16 rounded-2xl border border-border/20 bg-card/30 backdrop-blur-sm flex items-center justify-center">
             <Layers className="h-7 w-7 text-muted-foreground" />
           </div>
           <div>
-            <h2 className="text-xl font-extralight tracking-wide text-foreground mb-2">Projects</h2>
+            {!v2 && <h2 className="text-xl font-extralight tracking-wide text-foreground mb-2">projects</h2>}
             <p className="text-sm font-extralight text-muted-foreground">
-              A project is a workspace that keeps its own files, standing directions and conversations. Walk in and the setup is already there.
+              a project is a workspace that keeps its own files, standing directions and conversations. walk in and the setup is already there.
             </p>
           </div>
-          <button onClick={() => setCreating(true)} className="inline-flex items-center gap-2 rounded-xl border border-border/20 bg-card/30 backdrop-blur-sm px-5 py-2.5 text-sm font-light text-foreground hover:bg-foreground/5 transition-colors">
-            <FolderPlus className="h-4 w-4" /> Create First Project
-          </button>
+          {createForm || (
+            <button onClick={() => setCreating(true)} className="inline-flex items-center gap-2 rounded-xl border border-border/20 bg-card/30 backdrop-blur-sm px-5 py-2.5 text-sm font-light text-foreground hover:bg-foreground/5 transition-colors">
+              <FolderPlus className="h-4 w-4" /> create your first project
+            </button>
+          )}
         </div>
       </div>
     );
@@ -165,7 +243,7 @@ const ProjectsView = ({ conversations = [], onOpenConversation, onNewProjectConv
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-3xl mx-auto p-6 space-y-6">
+      <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
         {v2 ? (
           <V2Action>
             <button onClick={() => setCreating(true)} className={v2ActionClass}>
@@ -173,29 +251,20 @@ const ProjectsView = ({ conversations = [], onOpenConversation, onNewProjectConv
             </button>
           </V2Action>
         ) : (
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-extralight tracking-wide text-foreground">Projects</h2>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-xl font-extralight tracking-wide text-foreground">projects</h2>
               <p className="text-sm font-extralight text-muted-foreground mt-1">
-                One active workspace at a time. Nothing from another project is ever read.
+                one active workspace at a time. a conversation inside it reads only that project's files and directions.
               </p>
             </div>
             <button onClick={() => setCreating(true)} className="inline-flex items-center gap-2 rounded-xl border border-border/20 bg-card/30 px-4 py-2 text-xs font-light text-foreground hover:bg-foreground/5 transition-colors">
-              <FolderPlus className="h-4 w-4" /> New Project
+              <FolderPlus className="h-4 w-4" /> new project
             </button>
           </div>
         )}
 
-        {creating && (
-          <div className="rounded-xl border border-border/30 bg-card/20 p-4 space-y-3">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Project name" className="w-full bg-transparent text-sm font-light text-foreground placeholder:text-muted-foreground/50 outline-none" />
-            <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Description (optional)" className="w-full bg-transparent text-xs font-extralight text-muted-foreground placeholder:text-muted-foreground/50 outline-none" />
-            <div className="flex gap-2">
-              <button onClick={createProject} className="text-xs bg-foreground text-background px-3 py-1 rounded-lg">Create</button>
-              <button onClick={() => setCreating(false)} className="text-xs text-muted-foreground">Cancel</button>
-            </div>
-          </div>
-        )}
+        {createForm}
 
         <div className="space-y-2">
           {projects.map((p) => {
@@ -206,15 +275,14 @@ const ProjectsView = ({ conversations = [], onOpenConversation, onNewProjectConv
             return (
               <div key={p.id} className={`group rounded-xl border bg-card/20 backdrop-blur-sm p-4 space-y-3 transition-colors ${active ? "border-accent/40" : "border-border/20"}`}>
                 <div className="flex items-start justify-between gap-3">
-                  <button onClick={() => openProject(p)} className="min-w-0 text-left flex-1">
-                    <p className="text-sm font-light text-foreground flex items-center gap-2">
-                      {p.name}
+                  <button onClick={() => openProject(p)} className="min-w-0 text-left flex-1" aria-label={`open ${p.name}`}>
+                    <p className="text-sm font-light text-foreground flex flex-wrap items-center gap-2">
+                      <span className="truncate">{p.name}</span>
                       {active && <span className="text-[9px] uppercase tracking-widest text-accent">active scope</span>}
                     </p>
                     {p.description && <p className="text-xs font-extralight text-muted-foreground mt-0.5">{p.description}</p>}
                     <div className="flex flex-wrap items-center gap-3 mt-2 text-[10px] text-muted-foreground/50">
-                      <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> {c ? `${c.filesReadable}/${c.files} files readable` : "…"}</span>
-                      <span className="flex items-center gap-1"><Brain className="h-3 w-3" /> {c ? `${c.memories} scoped memories` : "…"}</span>
+                      <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> {c ? `${c.filesReadable} of ${c.files} file${c.files === 1 ? "" : "s"} readable` : "…"}</span>
                       <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {threads} conversation{threads === 1 ? "" : "s"}</span>
                       <span>{p.instructions?.trim() ? "directions set" : "no directions"}</span>
                     </div>
@@ -222,25 +290,32 @@ const ProjectsView = ({ conversations = [], onOpenConversation, onNewProjectConv
                   <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={() => activate(p)}
+                      aria-pressed={active}
                       className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-light transition-colors ${
                         active ? "border-accent/40 text-accent" : "border-border/20 text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       {active ? <Check className="h-3 w-3" /> : <Target className="h-3 w-3" />}
-                      {active ? "Scoped" : "Use scope"}
+                      {active ? "scoped" : "use scope"}
                     </button>
-                    <button onClick={() => openProject(p)} aria-label={`Open ${p.name}`} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors">
+                    <button onClick={() => openProject(p)} aria-label={`open ${p.name}`} className="hidden sm:block p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors">
                       <ChevronRight className="h-4 w-4" />
                     </button>
-                    <button onClick={() => deleteProject(p.id)} aria-label={`Delete ${p.name}`} className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 rounded-lg text-muted-foreground hover:text-destructive transition-all">
+                    <button
+                      onClick={() => void removeProject(p)}
+                      aria-label={`delete ${p.name}`}
+                      title="delete project"
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive transition-all opacity-70 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 group-focus-within:opacity-100"
+                    >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
 
                 <button
-                  onClick={() => toggleMode(p)}
+                  onClick={() => void toggleMode(p)}
                   className="w-full text-left rounded-lg border border-border/20 bg-card/20 px-3 py-2 hover:bg-foreground/5 transition-colors"
+                  aria-label={`answer mode: ${mode.label}. press to switch`}
                 >
                   <span className="flex items-center gap-2 text-[11px] font-light text-foreground">
                     <mode.icon className="h-3 w-3" /> {mode.label}
@@ -259,6 +334,7 @@ const ProjectsView = ({ conversations = [], onOpenConversation, onNewProjectConv
 // ── The workspace itself ──────────────────────────────────────────────────
 interface WorkspaceProps {
   project: Project;
+  active: boolean;
   counts?: ScopeCounts;
   conversations: Conversation[];
   onBack: () => void;
@@ -270,31 +346,43 @@ interface WorkspaceProps {
 }
 
 const ProjectWorkspace = ({
-  project, counts, conversations, onBack, onToggleMode,
+  project, active, counts, conversations, onBack, onToggleMode,
   onOpenConversation, onNewConversation, onInstructionsSaved, onCountsChanged,
 }: WorkspaceProps) => {
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>("conversations");
   const [files, setFiles] = useState<LibraryFile[]>([]);
   const [filesLoading, setFilesLoading] = useState(true);
+  const [filesError, setFilesError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [directions, setDirections] = useState(project.instructions ?? "");
   const [saving, setSaving] = useState(false);
+  const [preview, setPreview] = useState<LibraryFile | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const alive = useRef(true);
 
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   useEffect(() => { setDirections(project.instructions ?? ""); }, [project.id, project.instructions]);
 
-  useEffect(() => {
+  const patchFile = useCallback((updated: LibraryFile) => {
+    setFiles((prev) => prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
+  }, []);
+
+  const loadFiles = useCallback(async () => {
     if (!user) return;
-    let alive = true;
     setFilesLoading(true);
-    listLibrary(user.id, project.id).then((rows) => {
-      if (!alive) return;
-      setFiles(rows);
-      setFilesLoading(false);
-    });
-    return () => { alive = false; };
+    setFilesError(null);
+    try {
+      const rows = await listLibrary(user.id, project.id);
+      if (alive.current) setFiles(rows);
+    } catch (e) {
+      if (alive.current) setFilesError(e instanceof Error ? e.message : "could not read this project's files.");
+    } finally {
+      if (alive.current) setFilesLoading(false);
+    }
   }, [user, project.id]);
+
+  useEffect(() => { void loadFiles(); }, [loadFiles]);
 
   const threads = useMemo(
     () => conversations.filter((c) => c.projectId === project.id),
@@ -305,9 +393,7 @@ const ProjectWorkspace = ({
     if (!user || !list || list.length === 0) return;
     setUploading(true);
     for (const f of Array.from(list)) {
-      const res = await ingestFile(user.id, f, project.id, (updated) =>
-        setFiles((prev) => prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x))),
-      );
+      const res = await ingestFile(user.id, f, project.id, patchFile);
       if (res.error || !res.file) { toast.error(`${f.name}: ${res.error ?? "upload failed"}`); continue; }
       const added = res.file;
       setFiles((prev) => [added, ...prev]);
@@ -317,15 +403,21 @@ const ProjectWorkspace = ({
     if (inputRef.current) inputRef.current.value = "";
   };
 
-  const removeFile = async (f: LibraryFile) => {
+  const removeFile = (f: LibraryFile) => {
     setFiles((prev) => prev.filter((x) => x.id !== f.id));
-    try {
-      await deleteLibraryFile(f);
-      onCountsChanged();
-    } catch {
-      setFiles((prev) => [f, ...prev]);
-      toast.error("Could not remove that file.");
-    }
+    if (preview?.id === f.id) setPreview(null);
+    scheduleFileDelete(
+      f,
+      (restored) => setFiles((prev) => (prev.some((x) => x.id === restored.id) ? prev : [...prev, restored].sort(byNewest))),
+      () => onCountsChanged(),
+    );
+  };
+
+  const reExtract = async (f: LibraryFile) => {
+    patchFile({ ...f, text_status: "pending" });
+    const { status, chars } = await retryExtract(f);
+    patchFile({ ...f, text_status: status, text_chars: chars });
+    onCountsChanged();
   };
 
   const saveDirections = async () => {
@@ -333,9 +425,9 @@ const ProjectWorkspace = ({
     try {
       await saveProjectInstructions(project.id, directions);
       onInstructionsSaved(directions);
-      toast.success("Directions saved. Every conversation in this project follows them.");
+      toast.success("directions saved. every conversation in this project follows them.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save the directions.");
+      toast.error(e instanceof Error ? e.message : "could not save the directions.");
     } finally {
       setSaving(false);
     }
@@ -343,29 +435,37 @@ const ProjectWorkspace = ({
 
   const mode = MODE_COPY[project.mode];
   const dirty = (project.instructions ?? "") !== directions;
+  const overBrief = directions.length > DIRECTIONS_BRIEF_CHARS;
+
+  const back = () => {
+    if (dirty && !window.confirm("leave without saving the directions? the unsaved text will be lost.")) return;
+    onBack();
+  };
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
-    { id: "conversations", label: "Conversations", count: threads.length },
-    { id: "files", label: "Files", count: counts?.files ?? files.length },
-    { id: "directions", label: "Directions" },
+    { id: "conversations", label: "conversations", count: threads.length },
+    { id: "files", label: "files", count: counts?.files ?? files.length },
+    { id: "directions", label: "directions" },
   ];
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-3xl mx-auto p-6 space-y-5">
-        <button onClick={onBack} className="inline-flex items-center gap-1.5 text-[11px] font-light text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="h-3.5 w-3.5" /> All projects
+      <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-5">
+        <button onClick={back} className="inline-flex items-center gap-1.5 text-[11px] font-light text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft className="h-3.5 w-3.5" /> all projects
         </button>
 
-        <div className={`${card} p-5 space-y-3`}>
+        <div className={`${card} p-4 sm:p-5 space-y-3`}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="text-lg font-extralight tracking-wide text-foreground">{project.name}</h2>
+              <h2 className="text-lg font-extralight tracking-wide text-foreground break-words">{project.name}</h2>
               {project.description && <p className="text-xs font-extralight text-muted-foreground mt-1">{project.description}</p>}
             </div>
-            <span className="shrink-0 text-[9px] uppercase tracking-widest text-accent">active scope</span>
+            <span className={`shrink-0 text-[9px] uppercase tracking-widest ${active ? "text-accent" : "text-muted-foreground/50"}`}>
+              {active ? "active scope" : "not active"}
+            </span>
           </div>
-          <button onClick={onToggleMode} className="w-full text-left rounded-lg border border-border/20 bg-card/20 px-3 py-2 hover:bg-foreground/5 transition-colors">
+          <button onClick={onToggleMode} className="w-full text-left rounded-lg border border-border/20 bg-card/20 px-3 py-2 hover:bg-foreground/5 transition-colors" aria-label={`answer mode: ${mode.label}. press to switch`}>
             <span className="flex items-center gap-2 text-[11px] font-light text-foreground">
               <mode.icon className="h-3 w-3" /> {mode.label}
             </span>
@@ -373,10 +473,12 @@ const ProjectWorkspace = ({
           </button>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" role="tablist" aria-label="project sections">
           {tabs.map((t) => (
             <button
               key={t.id}
+              role="tab"
+              aria-selected={tab === t.id}
               onClick={() => setTab(t.id)}
               className={`rounded-lg px-3 py-1.5 text-[11px] font-light transition-colors ${
                 tab === t.id ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -388,13 +490,13 @@ const ProjectWorkspace = ({
         </div>
 
         {tab === "conversations" && (
-          <div className="space-y-2">
+          <div className="space-y-2" role="tabpanel">
             <button onClick={onNewConversation} className={`${card} w-full flex items-center gap-2 px-4 py-3 text-xs font-light text-foreground hover:bg-foreground/5 transition-colors`}>
-              <Plus className="h-3.5 w-3.5" /> New conversation in this project
+              <Plus className="h-3.5 w-3.5" /> new conversation in this project
             </button>
             {threads.length === 0 ? (
               <p className="text-xs font-extralight text-muted-foreground/70 px-1 py-4">
-                No conversations here yet. A new one starts with this project's files and directions already in place.
+                no conversations here yet. a new one starts with this project's files and directions already in place.
               </p>
             ) : threads.map((c) => (
               <button
@@ -415,7 +517,7 @@ const ProjectWorkspace = ({
         )}
 
         {tab === "files" && (
-          <div className="space-y-2">
+          <div className="space-y-2" role="tabpanel">
             <input
               ref={inputRef}
               type="file"
@@ -429,57 +531,68 @@ const ProjectWorkspace = ({
               className={`${card} w-full flex items-center gap-2 px-4 py-3 text-xs font-light text-foreground hover:bg-foreground/5 transition-colors disabled:opacity-50`}
             >
               {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-              {uploading ? "Adding files…" : "Add files to this project"}
+              {uploading ? "adding files…" : "add files to this project"}
             </button>
             <p className="px-1 text-[10px] font-extralight text-muted-foreground/60">
-              Text, PDF, Word, spreadsheets, markdown, images and code. Uploaded once, read by every conversation in this project. Files only become quotable once they read as text.
+              text, csv, json, yaml, xml, sql, logs, pdf, spreadsheets, zip and images, up to 500mb each. text-like files and pdfs are read on this device and become quotable; images, spreadsheets and archives are stored but not read.
             </p>
             {filesLoading ? (
-              <div className="flex justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+              <div className="flex justify-center py-6" aria-busy="true"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+            ) : filesError ? (
+              <div role="alert" className="px-1 py-4 text-xs font-extralight text-muted-foreground">
+                {filesError} <button onClick={() => void loadFiles()} className="text-foreground underline-offset-4 hover:underline">try again</button>
+              </div>
             ) : files.length === 0 ? (
-              <p className="text-xs font-extralight text-muted-foreground/70 px-1 py-4">Nothing uploaded yet.</p>
+              <p className="text-xs font-extralight text-muted-foreground/70 px-1 py-4">nothing uploaded yet.</p>
             ) : files.map((f) => (
               <div key={f.id} className={`${card} group flex items-center justify-between gap-3 px-4 py-3`}>
-                <div className="min-w-0">
+                <button onClick={() => setPreview(f)} className="min-w-0 flex-1 text-left" aria-label={`open ${f.file_name}`}>
                   <p className="truncate text-xs font-light text-foreground">{f.file_name}</p>
                   <p className="text-[10px] font-extralight text-muted-foreground/60 mt-0.5">
-                    {(f.file_size / 1024).toFixed(0)} KB ·{" "}
-                    {f.text_status === "ok"
-                      ? `readable · ${f.text_chars.toLocaleString()} characters`
-                      : f.text_status === "pending"
-                        ? "reading…"
-                        : f.text_status === "empty"
-                          ? "no text found — stored, but not quotable"
-                          : f.text_status === "unsupported"
-                            ? "stored, but this format cannot be read as text"
-                            : "could not be read"}
+                    {formatBytes(f.file_size)} · {TEXT_STATUS_LABEL[f.text_status] ?? f.text_status}
+                    {f.text_status === "ok" ? ` · ${f.text_chars.toLocaleString()} characters` : ""}
                   </p>
-                </div>
-                <button onClick={() => void removeFile(f)} aria-label={`Remove ${f.file_name}`} className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 rounded-lg text-muted-foreground hover:text-destructive transition-all">
-                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
+                <div className="flex shrink-0 items-center gap-1">
+                  {(f.text_status === "failed" || f.text_status === "empty") && (
+                    <button onClick={() => void reExtract(f)} aria-label={`read ${f.file_name} again`} title="read again" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors">
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => removeFile(f)}
+                    aria-label={`remove ${f.file_name}`}
+                    title="remove"
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive transition-all opacity-70 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 group-focus-within:opacity-100"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
 
         {tab === "directions" && (
-          <div className="space-y-3">
+          <div className="space-y-3" role="tabpanel">
             <div className={`${card} p-4 space-y-3`}>
-              <p className="text-[11px] font-light text-foreground">Standing directions</p>
+              <p className="text-[11px] font-light text-foreground">standing directions</p>
               <p className="text-[10px] font-extralight text-muted-foreground/70">
-                Written once, active before every conversation in this project. Use it for role, tone, output shape, the frameworks to apply and what never to do. It shapes how answers are written; it never loosens honesty or sourcing.
+                written once, in force before every conversation in this project. use it for role, tone, output shape, the frameworks to apply and what never to do. it shapes how answers are written; it never loosens honesty or sourcing.
               </p>
               <textarea
                 value={directions}
                 onChange={(e) => setDirections(e.target.value)}
                 rows={14}
-                placeholder="Operate as… Keep answers… Never…"
+                placeholder="operate as… keep answers… never…"
+                aria-label="standing directions"
                 className="w-full resize-y rounded-lg border border-border/20 bg-background/20 p-3 text-xs font-extralight leading-relaxed text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-border/40"
               />
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="text-[10px] font-extralight text-muted-foreground/60">
-                  {directions.length.toLocaleString()} characters · no limit
+                  {directions.length.toLocaleString()} characters
+                  {overBrief ? ` · stored whole; the first ${DIRECTIONS_BRIEF_CHARS.toLocaleString()} reach shepherd each turn` : ""}
+                  {dirty ? " · unsaved" : ""}
                 </span>
                 <button
                   onClick={() => void saveDirections()}
@@ -487,17 +600,18 @@ const ProjectWorkspace = ({
                   className="inline-flex items-center gap-1.5 rounded-lg border border-border/20 bg-card/30 px-3 py-1.5 text-[11px] font-light text-foreground hover:bg-foreground/5 transition-colors disabled:opacity-40"
                 >
                   {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                  {saving ? "Saving…" : dirty ? "Save directions" : "Saved"}
+                  {saving ? "saving…" : dirty ? "save directions" : "saved"}
                 </button>
               </div>
             </div>
             <p className="flex items-start gap-2 px-1 text-[10px] font-extralight text-muted-foreground/60">
               <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-              Text inside uploaded files is treated as material to read, never as instructions to follow. Only this field changes behaviour.
+              text inside uploaded files is treated as material to read, never as instructions to follow. only this field changes behaviour.
             </p>
           </div>
         )}
       </div>
+      {preview && <FilePreview file={preview} onClose={() => setPreview(null)} />}
     </div>
   );
 };

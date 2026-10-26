@@ -11,7 +11,6 @@
 // asherin already uses, so a safety event reaches the bell the operator is
 // already watching rather than a second inbox nobody opens.
 
-import { supabase } from "@/integrations/supabase/client";
 import type { VisionEvent } from "../vision/types";
 import { EVENT_LABEL } from "../vision/eventEngine";
 
@@ -70,51 +69,39 @@ class InAppProvider implements NotificationProvider {
 class OperatorInboxProvider implements NotificationProvider {
   channel: NotifyChannel = "operator_inbox";
   private lastFailure: string | null = null;
+  /** one bell entry per incident, so a repeating detector cannot flood it. */
+  private delivered = new Set<string>();
 
   readiness() {
     return this.lastFailure
       ? { ready: false, detail: this.lastFailure }
-      : { ready: true, detail: "writes to the notification bell for the signed-in operator" };
+      : { ready: true, detail: "writes to the notification bell on this device" };
   }
 
   async send(n: SafetyNotification): Promise<NotifyResult> {
+    const key = `arvision:${n.incidentId ?? n.eventId}`;
+    if (this.delivered.has(key)) {
+      return { channel: "operator_inbox", ok: true, detail: "already on the notification bell for this incident" };
+    }
     try {
-      const { data: auth } = await supabase.auth.getUser();
-      const userId = auth.user?.id;
-      if (!userId) {
-        const detail = "no operator is signed in, so there is no inbox to write to";
-        this.lastFailure = detail;
-        return { channel: "operator_inbox", ok: false, detail };
-      }
-      const { error } = await supabase.from("intel_notifications").insert({
-        user_id: userId,
-        kind: "arvision_safety",
-        severity: severityFor(n.confidence, n.eventType),
+      const { pushNotification } = await import("@/components/dashboard/NotificationInbox");
+      const severity = severityFor(n.confidence, n.eventType);
+      const shown = pushNotification({
         title: n.title,
-        body: n.body,
-        source: n.cameraLabel,
-        subject_name: n.zoneLabel ?? n.cameraLabel,
-        // one row per incident, so a repeating detector cannot flood the bell.
-        idempotency_key: `arvision:${n.incidentId ?? n.eventId}`,
-        sections: [
-          {
-            heading: "measurement",
-            body: n.body,
-          },
-          {
-            heading: "evidence",
-            body: n.evidenceState,
-          },
-        ],
+        message: `${n.cameraLabel}${n.zoneLabel ? ` · ${n.zoneLabel}` : ""} — ${n.body}`,
+        type: severity === "critical" ? "error" : severity === "notable" ? "warning" : "info",
+        actionLabel: "open asherin.arvision",
+        actionView: "asherin-arvision",
       });
-      if (error) {
-        this.lastFailure = `the notification store refused the write: ${error.message}`;
+      if (!shown) {
+        this.lastFailure = "do not disturb is on, so the bell held this back";
         return { channel: "operator_inbox", ok: false, detail: this.lastFailure };
       }
+      this.delivered.add(key);
       this.lastFailure = null;
-      return { channel: "operator_inbox", ok: true, detail: "delivered to the operator's notification bell" };
+      return { channel: "operator_inbox", ok: true, detail: "delivered to the notification bell on this device" };
     } catch (e) {
-      this.lastFailure = `the notification store could not be reached: ${(e as Error).message}`;
+      this.lastFailure = `the notification bell could not be reached: ${(e as Error).message}`;
       return { channel: "operator_inbox", ok: false, detail: this.lastFailure };
     }
   }

@@ -18,7 +18,7 @@ export default function ForHub() {
       slug: "research",
       h1: "people who already chat with a model",
       description:
-        "you already talk to a model. this seat keeps sources next to the answer — public-index search, a map, a vault, memory.",
+        "you already talk to a model. this workspace keeps sources next to the answer — public-index search, a map, a vault, memory — on your device.",
     },
     {
       slug: "journalists",
@@ -28,7 +28,7 @@ export default function ForHub() {
     {
       slug: "companies",
       h1: "companies",
-      description: "one seat for a desk: chat, public-index search, a map, a vault, memory, and a team workspace.",
+      description: "one workspace for a desk: chat, public-index search, a map, a vault and memory, on your device.",
     },
     {
       slug: "investigators",
@@ -38,7 +38,7 @@ export default function ForHub() {
     {
       slug: "analysts",
       h1: "data analytics people",
-      description: "same seat as the other four desks. bring your own key and asherin runs on it.",
+      description: "the same workspace as the other four desks. bring your own key and asherin runs on it.",
     },
   ];
   const runLook = async () => {
@@ -107,12 +107,12 @@ export default function ForHub() {
             who asherin is for
           </h1>
           <p className="mt-6 max-w-xl text-base font-extralight leading-relaxed text-muted-foreground">
-            five desks. same seat: sourced chat, public-index search, a map, a vault, memory. bring your own key
+            five desks. one workspace: sourced chat, public-index search, a map, a vault, memory. bring your own key
             and asherin runs on it.
           </p>
           <p className="mt-4 max-w-xl text-base font-extralight leading-relaxed text-muted-foreground">
             this page is the look, not a spa-empty homepage. people who already chat with a model, journalists,
-            companies, private investigators, and data analytics people share one seat. the first click is look —
+            companies, private investigators, and data analytics people open the same workspace. the first click is look —
             wikipedia + wayback — not a paywall.
           </p>
           <div className="mt-10 rounded-2xl border border-border/20 bg-card/25 backdrop-blur-md px-6 py-5">

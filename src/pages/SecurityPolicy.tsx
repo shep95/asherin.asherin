@@ -59,8 +59,8 @@ const SecurityPolicy = () => {
                 request, the observed response, and what an attacker gains. One issue per report.
               </p>
               <p>
-                This channel is monitored for security reports only. Account, billing, and product questions sent here
-                are not triaged as security.
+                This channel is monitored for security reports only. Product questions sent here are not triaged as
+                security.
               </p>
               <p>
                 Honest limitation, checked 13 August 2026: mail delivery to that address depends on MX records on the
@@ -94,7 +94,7 @@ const SecurityPolicy = () => {
 
             <Section title="Rules of engagement">
               <p>
-                Test only against accounts you own or have explicit permission to use. Do not access, modify, exfiltrate,
+                Test only against devices and installations you own or have explicit permission to use. Do not access, modify, exfiltrate,
                 or retain another person's data, if you encounter it, stop, and say so in the report.
               </p>
               <p>
@@ -120,7 +120,7 @@ const SecurityPolicy = () => {
             <Section title="Rewards">
               <p>
                 Asherin does not currently operate a paid bounty programme. Valid reports receive public credit below on
-                request, and material findings may receive a discretionary account credit.
+                request.
               </p>
             </Section>
 

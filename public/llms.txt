@@ -1,14 +1,14 @@
 # asherin
 
-> asherin is a sourced research workspace. speaker: asherin. one account opens the chat and every room behind it. bring your own model key and asherin runs on it; you pay that vendor for inference.
+> asherin is a sourced research workspace that runs in the browser, on the device. its ai is shepherd. there is no account: the app opens every room. bring your own model key or a local runtime; you pay that vendor for inference.
 
-what a signed-in account can open today: chat (the mouth), asherin.search (public-index search — not a wiretap), asherin.eye (satellite globe, public flights, quakes and public-agency layers), asherin.defender (owned-device defence), asherin.arvision (camera intelligence HUD on this device), asherin.sentinel, asherin.health, asherin.data, asherin.cyber, asherin.knowledge, library, projects, memory, guardian vault, whiteboard, connect, team.
+the rooms today: chat (the mouth), asherin.search (public-index search — not a wiretap), asherin.adam (a live globe on this device: imagery, terrain, earthquakes, recent satellite passes), asherin.defender (owned-device defence), asherin.arvision (camera intelligence HUD on this device), asherin.sentinel, asherin.health, asherin.data, asherin.cyber, asherin.knowledge, library, projects, memory, guardian vault, whiteboard, connect.
 
 ## honest limits
 
 - asherin reads live public sources and cites them. when it does not find one, it says so.
 - asherin.search queries public indexes (wayback, nvd, github, wiki, and the rest of the public stack). it does not intercept login IPs, SMS, DMs, or private mail.
-- asherin.eye uses public agency stills and public registers. it does not hijack doorbell or flock cameras, and satellite tiles are near-daily mosaics, not live seconds.
+- asherin.adam is a live globe on this device: imagery, terrain, earthquakes, satellite passes. it does not hijack doorbell or flock cameras, and tiles are near-daily mosaics, not live seconds.
 - forecasts are probabilistic. they are not predictions of record.
 - nothing here is legal, medical or financial advice.
 

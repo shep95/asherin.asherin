@@ -1,13 +1,15 @@
 import { useState } from "react";
 import {
   Mail, Calendar, HardDrive, Image, Youtube, MapPin, Users,
-  Search, Activity, Globe, Shield, RefreshCw, Network, Zap,
-  Heart, CreditCard, Briefcase, Brain, Lock,
+  Search, Activity, Globe, Shield, Network, Zap,
+  Heart, CreditCard, Briefcase, Brain,
   Eye, ShieldCheck, TrendingUp, BarChart3, Clock,
   FileText, Sparkles, Database, ScrollText, ShieldAlert, Radar, MessageSquare, Video, Fingerprint, Ghost, Voicemail,
+  HeartPulse,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { useIsV2 } from "@/lib/dashboardUiContext";
 import NexusChatPanel from "./NexusChatPanel";
 import MultiAccountManager from "./MultiAccountManager";
 import LocationProphet from "./modules/LocationProphet";
@@ -40,8 +42,6 @@ import MeetVault from "./modules/MeetVault";
 import GhostLedgerPanel from "./modules/GhostLedgerPanel";
 import OverwatchTab from "./modules/OverwatchTab";
 import VitalsTab from "./modules/VitalsTab";
-import { HeartPulse } from "lucide-react";
-import { GOOGLE_REDIRECT_URI } from "@/lib/googleRedirect";
 
 type GoogleModule =
   | "overview" | "substrate" | "mesh" | "dossiers" | "location" | "email" | "subscriptions" | "health"
@@ -49,127 +49,102 @@ type GoogleModule =
   | "overwatch" | "vitals" | "automation" | "security" | "postmark" | "voiceprint" | "ghostmail" | "guardian" | "sentinel" | "messages" | "meet" | "scenarios" | "gmail" | "drive" | "photos" | "youtube"
   | "search" | "fit" | "chrome" | "connected";
 
-
-/** A directorate is an analytic function, not a product category. */
-type Directorate = "COLLECTION" | "ANALYSIS" | "FORECAST" | "COUNTERINTEL";
+/** a directorate is an analytic function, not a product category. */
+type Directorate = "collection" | "analysis" | "forecast" | "counterintel";
 
 interface ModuleDef {
   id: GoogleModule;
   label: string;
-  /** Operational codename shown above the plain-language label. */
+  /** the short desk name shown above the plain-language label. */
   codename: string;
   icon: React.ElementType;
-  /** What the desk is chartered to produce — a mandate, not a sales line. */
+  /** what the desk reads and produces when it has data — a mandate, not a sales line. */
   mandate: string;
   directorate: Directorate;
 }
 
-const DIRECTORATE_ORDER: Directorate[] = ["COLLECTION", "ANALYSIS", "FORECAST", "COUNTERINTEL"];
+const DIRECTORATE_ORDER: Directorate[] = ["collection", "analysis", "forecast", "counterintel"];
 
 const DIRECTORATE_BLURB: Record<Directorate, string> = {
-  COLLECTION: "Ingest and fuse raw account traffic into one addressable ledger",
-  ANALYSIS: "Resolve entities, score relationships and read behavioural pattern",
-  FORECAST: "Project forward from measured cadence — movement, spend, trajectory",
-  COUNTERINTEL: "Exposure surface, credential threat chains and permission audit",
+  collection: "read raw account traffic into one addressable ledger",
+  analysis: "resolve entities, score relationships and read behavioural pattern",
+  forecast: "project forward from measured cadence — movement, spend, trajectory",
+  counterintel: "exposure surface, credential threat chains and permission audit",
 };
 
+// mandates state what each desk computes from the data it is given. none of
+// them promise a server, a push notification, an email or a companion app:
+// on this device those paths do not exist (see ./offline.ts).
 const nexusModules: ModuleDef[] = [
-  { id: "substrate", codename: "SUBSTRATE", label: "Intelligence Substrate", icon: Database, mandate: "Every connected surface harvested into one searchable ledger with findings, briefs and exportable reports", directorate: "COLLECTION" },
-  { id: "mesh", codename: "MESH", label: "Account Mesh", icon: Network, mandate: "Voiceprint, place cartography, attention ledger and drafting — composes, never transmits", directorate: "COLLECTION" },
-  { id: "email", codename: "COURIER", label: "Correspondence Desk", icon: Mail, mandate: "Inbound triage, thread priority and reply drafting in the operator's own register", directorate: "COLLECTION" },
-  { id: "messages", codename: "SIGNAL", label: "Phone Message Intelligence", icon: MessageSquare, mandate: "Google Voice texts, MMS and voicemail mirrored from the mailbox plus on-device Android SMS — folded per correspondent, joined to the address book and read for intent, obligation and pressure", directorate: "COLLECTION" },
-  { id: "meet", codename: "VAULT", label: "Meet Records", icon: Video, mandate: "Meetings reconstructed from your calendar and conference records; a recording or transcript is listed only when the Drive recordings folder actually returns one — Asherin does not capture or store meetings itself", directorate: "COLLECTION" },
-  { id: "content", codename: "ARCHIVE", label: "Document & Media Intel", icon: FileText, mandate: "Document intelligence, image content read and file custody mapping", directorate: "COLLECTION" },
+  { id: "substrate", codename: "substrate", label: "intelligence substrate", icon: Database, mandate: "every connected surface indexed into one searchable ledger with findings, a brief and an exportable report", directorate: "collection" },
+  { id: "mesh", codename: "mesh", label: "account mesh", icon: Network, mandate: "voiceprint, place cartography, attention ledger and drafting — composes, never transmits", directorate: "collection" },
+  { id: "email", codename: "courier", label: "correspondence desk", icon: Mail, mandate: "inbox counters and the most recent messages from the connected mailbox", directorate: "collection" },
+  { id: "messages", codename: "signal", label: "phone message intelligence", icon: MessageSquare, mandate: "google voice texts, mms and voicemail mirrored into the mailbox, folded per correspondent and read for intent, obligation and pressure", directorate: "collection" },
+  { id: "meet", codename: "vault", label: "meet records", icon: Video, mandate: "meetings reconstructed from calendar and conference records; a recording is listed only when the drive recordings folder returns one", directorate: "collection" },
+  { id: "content", codename: "archive", label: "document & media intel", icon: FileText, mandate: "drive files scored for exposure, duplication, decay and subject matter", directorate: "collection" },
 
-  { id: "vitals", codename: "ORGANISM", label: "Organism Vitals", icon: HeartPulse, mandate: "The living layer: every collector writes what it sensed into one shared bloodstream, one memory of entities and one confidence per subject. Correlates across organs so several sensations in one hour become one story, recognises self from not-self and learns it, decays beliefs nobody re-witnessed, ships every story with the falsifier that would kill it, and grades its own past calls to set future confidence", directorate: "ANALYSIS" },
-  { id: "contacts", codename: "LATTICE", label: "Contact Intelligence", icon: Users, mandate: "Correspondent fusion, reciprocity scoring, psycholinguistic profile and fade detection", directorate: "ANALYSIS" },
-  { id: "dossiers", codename: "SENTINEL", label: "Correspondent Dossiers", icon: ScrollText, mandate: "Standing deep-intelligence report on every person who has ever mailed, called or shared a card with you — historical backfill plus automatic build on each new inbound contact", directorate: "ANALYSIS" },
-  { id: "twin", codename: "EFFIGY", label: "Behavioural Twin", icon: Brain, mandate: "A model of the operator's decision pattern, built from observed choices only", directorate: "ANALYSIS" },
-  { id: "productivity", codename: "CADENCE", label: "Attention Ledger", icon: BarChart3, mandate: "Focus blocks, context-switch cost and collaboration load across the working week", directorate: "ANALYSIS" },
-  { id: "health", codename: "VITALS", label: "Physiological Signals", icon: Heart, mandate: "Biometric drift and anomaly flags against the operator's own rolling baseline", directorate: "ANALYSIS" },
-  { id: "subscriptions", codename: "LEDGER", label: "Recurring Spend", icon: CreditCard, mandate: "Every recurring charge surfaced with cadence, drift and dormant-service waste", directorate: "ANALYSIS" },
+  { id: "vitals", codename: "organism", label: "organism vitals", icon: HeartPulse, mandate: "one shared ledger of what every collector sensed, correlated across organs, with a falsifier on every story and a grade on its own past calls", directorate: "analysis" },
+  { id: "contacts", codename: "lattice", label: "contact intelligence", icon: Users, mandate: "correspondent fusion, reciprocity scoring, lexical profile and fade detection, held in a vault on this device", directorate: "analysis" },
+  { id: "dossiers", codename: "sentinel", label: "correspondent dossiers", icon: ScrollText, mandate: "a standing report on every person who has mailed, called or shared a card with you, built one subject at a time", directorate: "analysis" },
+  { id: "twin", codename: "effigy", label: "behavioural twin", icon: Brain, mandate: "counts of what the connected account holds — unread mail, events, contacts, steps — nothing predicted", directorate: "analysis" },
+  { id: "productivity", codename: "cadence", label: "attention ledger", icon: BarChart3, mandate: "meeting distribution by hour, today's schedule and inbox load across the week", directorate: "analysis" },
+  { id: "health", codename: "vitals", label: "physiological signals", icon: Heart, mandate: "steps, heart rate and calories from google fit against the operator's own rolling average", directorate: "analysis" },
+  { id: "subscriptions", codename: "ledger", label: "recurring spend", icon: CreditCard, mandate: "every recurring charge reconstructed from receipt mail with cadence, drift and lapsed merchants", directorate: "analysis" },
 
-  { id: "location", codename: "WAYPOINT", label: "Movement Forecast", icon: MapPin, mandate: "Place cartography and next-position projection from measured travel cadence", directorate: "FORECAST" },
-  { id: "calendar", codename: "HORIZON", label: "Schedule Engine", icon: Calendar, mandate: "Commitment extraction and placement against observed energy and load curves", directorate: "FORECAST" },
-  { id: "career", codename: "ASCENT", label: "Trajectory Analysis", icon: Briefcase, mandate: "Role movement, compensation band and professional trajectory indicators", directorate: "FORECAST" },
-  { id: "predictions", codename: "AUGUR", label: "Life Projection", icon: Sparkles, mandate: "Travel, relocation, relationship and purchase signals with stated confidence", directorate: "FORECAST" },
-  { id: "scenarios", codename: "WARGAME", label: "Scenario Engine", icon: Activity, mandate: "Counterfactual simulation across career, finance and health decision branches", directorate: "FORECAST" },
+  { id: "location", codename: "waypoint", label: "movement forecast", icon: MapPin, mandate: "venues and next-presence projection from the location strings on calendar events", directorate: "forecast" },
+  { id: "calendar", codename: "horizon", label: "schedule engine", icon: Calendar, mandate: "upcoming events, attendee counts and all-day load from the connected calendar", directorate: "forecast" },
+  { id: "career", codename: "ascent", label: "trajectory analysis", icon: Briefcase, mandate: "recruiter mail and résumé files found in the connected account", directorate: "forecast" },
+  { id: "predictions", codename: "augur", label: "life projection", icon: Sparkles, mandate: "a seven-day projection of committed hours and inbound mail, with its failure condition attached", directorate: "forecast" },
+  { id: "scenarios", codename: "wargame", label: "scenario engine", icon: Activity, mandate: "counterfactual branches across career, finance and health — only from measured inputs, never a synthetic one", directorate: "forecast" },
 
-  { id: "overwatch", codename: "OVERWATCH", label: "Account Overwatch", icon: ShieldCheck, mandate: "The OP layer: each browser you sign in on and grant permission to reports what it can actually observe into one account-scoped ledger. Correlates network, radio and credential findings across the browsers that reported, states absence as a finding, caps confidence by how many reported, and audits every automatic action before it runs — it cannot poll a phone that has not reported in, and Google exposes no device-location API to read one", directorate: "COUNTERINTEL" },
-  { id: "guardian", codename: "GUARDIAN", label: "Rideshare & Message Guardian", icon: ShieldAlert, mandate: "Background assessment of the assigned rideshare driver before boarding, plus forensic read of pasted phone-message threads — pushed to device and email", directorate: "COUNTERINTEL" },
-  { id: "sentinel", codename: "SENTINEL", label: "Bluetooth & Area Sentinel", icon: Radar, mandate: "Logs nearby Bluetooth radios, flags the ones recurring across separate times and places as a following pattern, and warns on entry into areas with reported crime or documented group activity — pushed to device and email", directorate: "COUNTERINTEL" },
-  { id: "security", codename: "BULWARK", label: "Exposure & Threat", icon: Shield, mandate: "Breach exposure, phishing pressure, credential threat chaining and file audit", directorate: "COUNTERINTEL" },
-  { id: "postmark", codename: "POSTMARK", label: "Envelope Forensics", icon: Fingerprint, mandate: "Header-only read of every inbound message: relay chain, authentication verdicts, origin network and geography, composing client and sender local time", directorate: "COUNTERINTEL" },
-  { id: "voiceprint", codename: "VOICEPRINT", label: "Voice Envelope Forensics", icon: Voicemail, mandate: "Line attribution, authenticity of every Google Voice notification, and per-correspondent cadence, burst and overnight behaviour — hours stated in your own timezone, read from envelopes only", directorate: "COUNTERINTEL" },
-  { id: "ghostmail", codename: "GHOSTMAIL", label: "Ledger × Asherin Engine", icon: Ghost, mandate: "Runs every domain and link inside your email and phone ledger through the Asherin Engine — origin network, TLS posture, mail exchangers, lookalike and concealed-destination verdicts per correspondent", directorate: "COUNTERINTEL" },
-  { id: "automation", codename: "RELAY", label: "Standing Orders", icon: Zap, mandate: "Conditional handling rules — triage, scheduling and location triggers", directorate: "COUNTERINTEL" },
+  { id: "overwatch", codename: "overwatch", label: "account overwatch", icon: ShieldCheck, mandate: "each browser you grant permission to reports what it can observe into one account ledger; absence is stated as a finding and confidence is capped by how many reported", directorate: "counterintel" },
+  { id: "guardian", codename: "guardian", label: "rideshare & message guardian", icon: ShieldAlert, mandate: "assessment of an assigned rideshare driver before boarding, plus a forensic read of pasted phone-message threads", directorate: "counterintel" },
+  { id: "sentinel", codename: "sentinel", label: "bluetooth & area sentinel", icon: Radar, mandate: "logs nearby bluetooth radios, flags the ones recurring across separate times and places, and warns on entry to areas with reported risk", directorate: "counterintel" },
+  { id: "security", codename: "bulwark", label: "exposure & threat", icon: Shield, mandate: "security mail, shared files and permission audit read from the connected account", directorate: "counterintel" },
+  { id: "postmark", codename: "postmark", label: "envelope forensics", icon: Fingerprint, mandate: "header-only read of inbound mail: relay chain, authentication verdicts, origin network, composing client, sender local time", directorate: "counterintel" },
+  { id: "voiceprint", codename: "voiceprint", label: "voice envelope forensics", icon: Voicemail, mandate: "line attribution, authenticity of every google voice notification, and per-correspondent cadence — hours in your own timezone, envelopes only", directorate: "counterintel" },
+  { id: "ghostmail", codename: "ghostmail", label: "ledger × engine", icon: Ghost, mandate: "every domain and link in your mail and phone ledger probed for origin network, tls posture, mail exchangers and concealed destinations", directorate: "counterintel" },
+  { id: "automation", codename: "relay", label: "standing orders", icon: Zap, mandate: "conditional handling rules — triage, scheduling and location triggers", directorate: "counterintel" },
 ];
 
 interface FeedDef { id: GoogleModule; label: string; icon: React.ElementType; note: string }
 
 const dataModules: FeedDef[] = [
-  { id: "gmail", label: "Mail", icon: Mail, note: "Message corpus" },
-  { id: "drive", label: "Drive", icon: HardDrive, note: "File custody" },
-  { id: "photos", label: "Photos", icon: Image, note: "Image content" },
-  { id: "youtube", label: "YouTube", icon: Youtube, note: "Watch pattern" },
-  { id: "search", label: "Query Log", icon: Search, note: "Interest profile" },
-  { id: "fit", label: "Fitness", icon: Activity, note: "Biometric feed" },
-  { id: "chrome", label: "Browser", icon: Globe, note: "Navigation trace" },
-  { id: "connected", label: "OAuth Grants", icon: Network, note: "Permission audit" },
+  { id: "gmail", label: "mail", icon: Mail, note: "message corpus" },
+  { id: "drive", label: "drive", icon: HardDrive, note: "file custody" },
+  { id: "photos", label: "photos", icon: Image, note: "image content" },
+  { id: "youtube", label: "youtube", icon: Youtube, note: "watch pattern" },
+  { id: "search", label: "query log", icon: Search, note: "interest profile" },
+  { id: "fit", label: "fitness", icon: Activity, note: "biometric feed" },
+  { id: "chrome", label: "browser", icon: Globe, note: "navigation trace" },
+  { id: "connected", label: "oauth grants", icon: Network, note: "permission audit" },
 ];
 
 const CAPABILITIES = [
-  { icon: Eye, title: "Entity Resolution", desc: "One human, many identifiers — addresses, handles and numbers folded into a single resolved record" },
-  { icon: Network, title: "Relationship Lattice", desc: "Contact graph inferred from correspondence volume, reciprocity and shared calendar presence" },
-  { icon: TrendingUp, title: "Behavioural Baseline", desc: "A 168-cell weekly histogram per subject; anomalies are measured against it, never asserted" },
-  { icon: MapPin, title: "Place Cartography", desc: "Frequented locations, routes and dwell time reconstructed from location history" },
-  { icon: Shield, title: "Permission Audit", desc: "Third-party OAuth grants enumerated with scope breadth and revocation posture" },
-  { icon: Clock, title: "Standing Collection", desc: "Foreground sweeps while open, scheduled server sweeps while closed — the ledger stays current" },
+  { icon: Eye, title: "entity resolution", desc: "one human, many identifiers — addresses, handles and numbers folded into a single resolved record" },
+  { icon: Network, title: "relationship lattice", desc: "contact graph inferred from correspondence volume, reciprocity and shared calendar presence" },
+  { icon: TrendingUp, title: "behavioural baseline", desc: "a 168-cell weekly histogram per subject; anomalies are measured against it, never asserted" },
+  { icon: MapPin, title: "place cartography", desc: "frequented locations, routes and dwell time reconstructed from the location field on calendar events" },
+  { icon: Shield, title: "permission audit", desc: "third-party oauth grants enumerated with scope breadth and revocation posture" },
+  { icon: Clock, title: "reads on request", desc: "a desk reads only while it is open and you ask; nothing runs when this tab is closed and nothing is scheduled elsewhere" },
 ];
 
 const GoogleIntelligenceView = () => {
+  const v2 = useIsV2();
   const [activeModule, setActiveModule] = useState<GoogleModule>("overview");
-  // The directorate is stored, not derived, so the sub-strip survives jumping
+  // the directorate is stored, not derived, so the sub-strip survives jumping
   // to a raw data feed (which belongs to no directorate) and returning.
-  const [directorate, setDirectorate] = useState<Directorate>("COLLECTION");
-  // A desk selected from the overview grid must pull its directorate with it,
+  const [directorate, setDirectorate] = useState<Directorate>("collection");
+  // a desk selected from the overview grid must pull its directorate with it,
   // otherwise the sub-strip would show a group the open desk is not in.
   const activeDirectorate =
     nexusModules.find((m) => m.id === activeModule)?.directorate ?? directorate;
 
-  const [isConnecting, setIsConnecting] = useState(false);
-
   const activeLabel = activeModule === "overview"
-    ? "Station Overview"
+    ? "station overview"
     : nexusModules.find((m) => m.id === activeModule)?.label
       ?? dataModules.find((m) => m.id === activeModule)?.label
       ?? activeModule;
-
-  const handleConnect = async () => {
-    setIsConnecting(true);
-    try {
-      const { supabase } = await import("@/integrations/supabase/client");
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const res = await supabase.functions.invoke("google-oauth", {
-        // One canonical, Google-registered redirect for every origin; the
-        // launching origin travels in `state` so the popup can relay the code.
-        body: {
-          action: "get_auth_url",
-          redirect_uri: GOOGLE_REDIRECT_URI,
-          origin: window.location.origin,
-        },
-      });
-      if (res.data?.url) {
-        const { openGoogleConsent } = await import("@/lib/googleConsent");
-        await openGoogleConsent(res.data.url);
-      }
-    } catch (err) {
-      console.error("[cloud-mesh] authorize failed:", err);
-    } finally {
-      setIsConnecting(false);
-    }
-  };
 
   const renderModule = () => {
     switch (activeModule) {
@@ -207,73 +182,76 @@ const GoogleIntelligenceView = () => {
     }
   };
 
+  const tabClass = (on: boolean) =>
+    `rounded-none border-b px-3 py-2 font-mono text-[10px] tracking-[0.12em] transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-foreground/40 ${
+      on ? "border-foreground/60 text-foreground" : "border-transparent text-muted-foreground/70 hover:text-foreground/80"
+    }`;
+
   return (
     <div className="flex flex-1 flex-col h-full overflow-hidden">
-      {/* ── Station header ─────────────────────────────────────────────── */}
+      {/* ── station header ─────────────────────────────────────────────── */}
       <header className="flex-shrink-0 border-b border-border/20 bg-card/20 backdrop-blur-md">
-        {/* Classification rule — sets the register before any content reads. */}
-        <div className="flex items-center justify-between gap-4 border-b border-border/10 px-6 py-1.5">
-          <span className="font-mono text-[9px] uppercase tracking-[0.32em] text-muted-foreground/50">
-            Restricted · Operator Eyes Only · Maximum Tier
+        {/* the standing rule: where the data lives. truncates at phone width
+            rather than pushing the page wider than the screen. */}
+        <div className="flex items-center justify-between gap-4 border-b border-border/10 px-4 sm:px-6 py-1.5 min-w-0">
+          <span className="min-w-0 truncate font-mono text-[9px] tracking-[0.2em] sm:tracking-[0.32em] text-muted-foreground/50">
+            held on this device · read only when you ask
           </span>
-          <span className="hidden sm:inline font-mono text-[9px] uppercase tracking-[0.32em] text-muted-foreground/40">
-            Held on device · Never resold
+          <span className="hidden sm:inline font-mono text-[9px] tracking-[0.32em] text-muted-foreground/40">
+            nothing leaves unasked
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/30 bg-foreground/[0.04]">
-              <span className="text-sm text-foreground/70" aria-hidden="true">◈</span>
-            </div>
-            <div className="space-y-0.5">
-              <h1 className="text-base font-extralight tracking-[0.18em] uppercase text-foreground">
-                Cloud Intelligence Mesh
-              </h1>
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground/60">
-                Asherin Station · {nexusModules.length} desks · {dataModules.length} feeds
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 sm:px-6 py-3 sm:py-4 min-w-0">
+          {/* under the v.2 shell the room title is already in the shell header;
+              the room keeps only its count line so the title is not said twice. */}
+          <div className="flex min-w-0 items-center gap-3.5">
+            {!v2 && (
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/30 bg-foreground/[0.04]">
+                <span className="text-sm text-foreground/70" aria-hidden="true">◈</span>
+              </div>
+            )}
+            <div className="min-w-0 space-y-0.5">
+              {!v2 && (
+                <h1 className="truncate text-base font-light tracking-tight text-foreground">asherin.google</h1>
+              )}
+              <p className="truncate font-mono text-[10px] tracking-[0.16em] text-muted-foreground/60">
+                {nexusModules.length} desks · {dataModules.length} feeds
               </p>
             </div>
           </div>
 
+          {/* no authorize button: the exchange it used to start has no device
+              answer. the status is a real control — it opens the overview,
+              where the gap is explained. */}
           <button
-            onClick={handleConnect}
-            disabled={isConnecting}
-            className="flex items-center gap-2 rounded-lg border border-border/40 bg-foreground/[0.06] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground/[0.12] disabled:opacity-50 focus-visible:outline focus-visible:outline-1 focus-visible:outline-foreground/40"
+            type="button"
+            onClick={() => setActiveModule("overview")}
+            aria-label="collection offline on this device — open the overview for why"
+            className="flex min-w-0 max-w-full items-center gap-2 rounded-lg border border-border/30 bg-foreground/[0.03] px-3 py-1.5 font-mono text-[10px] tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-foreground/40"
           >
-            {isConnecting
-              ? <RefreshCw className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
-              : <Lock className="h-3.5 w-3.5" />}
-            {isConnecting ? "Authorizing" : "Authorize Account"}
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/50" aria-hidden="true" />
+            <span className="truncate">collection offline · no account connected</span>
           </button>
         </div>
       </header>
 
       <ScrollArea className="flex-1">
-        <div className="p-6 space-y-8">
+        <div className="p-4 sm:p-6 space-y-8">
           <Tabs value={activeModule} onValueChange={(v) => setActiveModule(v as GoogleModule)}>
-            {/* TWO-LEVEL DESK SELECTOR.
-                A flat strip of twenty-five codenames is a wall, not a
-                navigation: the operator has to read every label to find one
-                desk, and nothing on screen says which desks answer the same
-                analytic question. The strip is now the four directorates, and
-                only the selected directorate's desks are offered underneath —
-                the same grouping the overview already publishes, so the two
-                surfaces stop disagreeing about how the shop is organised. */}
+            {/* two-level desk selector: the four directorates, then only the
+                selected directorate's desks underneath — the same grouping the
+                overview publishes, so the two surfaces agree. */}
             <div className="space-y-0 border-b border-border/20">
-              <div role="tablist" aria-label="Directorate" className="flex flex-wrap gap-x-1 gap-y-1">
+              <div role="tablist" aria-label="directorate" className="flex flex-wrap gap-x-1 gap-y-1">
                 <button
                   type="button"
                   role="tab"
                   aria-selected={activeModule === "overview"}
                   onClick={() => setActiveModule("overview")}
-                  className={`rounded-none border-b px-3 py-2 font-mono text-[10px] uppercase tracking-[0.16em] transition-colors ${
-                    activeModule === "overview"
-                      ? "border-foreground/60 text-foreground"
-                      : "border-transparent text-muted-foreground/70 hover:text-foreground/80"
-                  }`}
+                  className={tabClass(activeModule === "overview")}
                 >
-                  Overview
+                  overview
                 </button>
                 {DIRECTORATE_ORDER.map((dir) => (
                   <button
@@ -287,11 +265,7 @@ const GoogleIntelligenceView = () => {
                       setDirectorate(dir);
                       if (first) setActiveModule(first.id);
                     }}
-                    className={`rounded-none border-b px-3 py-2 font-mono text-[10px] uppercase tracking-[0.16em] transition-colors ${
-                      activeDirectorate === dir && activeModule !== "overview"
-                        ? "border-foreground/60 text-foreground"
-                        : "border-transparent text-muted-foreground/70 hover:text-foreground/80"
-                    }`}
+                    className={tabClass(activeDirectorate === dir && activeModule !== "overview")}
                   >
                     {dir}
                   </button>
@@ -308,7 +282,7 @@ const GoogleIntelligenceView = () => {
                         type="button"
                         title={`${m.label} — ${m.mandate}`}
                         onClick={() => setActiveModule(m.id)}
-                        className={`rounded px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] transition-colors ${
+                        className={`rounded px-2.5 py-1 font-mono text-[10px] tracking-[0.12em] transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-foreground/40 ${
                           activeModule === m.id
                             ? "bg-foreground/[0.10] text-foreground"
                             : "text-muted-foreground/60 hover:text-foreground/80"
@@ -321,19 +295,18 @@ const GoogleIntelligenceView = () => {
               )}
             </div>
 
-
-            {/* ── Overview ─────────────────────────────────────────────── */}
+            {/* ── overview ─────────────────────────────────────────────── */}
             <TabsContent value="overview" className="mt-6 space-y-8">
               <MultiAccountManager />
 
-              {/* Desk directory, grouped by analytic function. */}
+              {/* desk directory, grouped by analytic function. */}
               {DIRECTORATE_ORDER.map((dir) => {
                 const desks = nexusModules.filter((m) => m.directorate === dir);
                 if (!desks.length) return null;
                 return (
                   <section key={dir} className="space-y-3">
-                    <div className="flex items-baseline gap-3 border-b border-border/15 pb-2">
-                      <h2 className="font-mono text-[10px] uppercase tracking-[0.28em] text-foreground/80">{dir}</h2>
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border/15 pb-2">
+                      <h2 className="font-mono text-[10px] tracking-[0.22em] text-foreground/80">{dir}</h2>
                       <p className="text-[11px] font-extralight text-muted-foreground/60 leading-relaxed">
                         {DIRECTORATE_BLURB[dir]}
                       </p>
@@ -342,16 +315,17 @@ const GoogleIntelligenceView = () => {
                       {desks.map((m, i) => (
                         <button
                           key={m.id}
+                          type="button"
                           onClick={() => setActiveModule(m.id)}
                           className="group flex items-start gap-4 bg-card/30 p-4 text-left transition-colors hover:bg-foreground/[0.05] focus-visible:outline focus-visible:outline-1 focus-visible:outline-foreground/40"
                         >
                           <span className="font-mono text-[10px] tabular-nums text-muted-foreground/35 pt-0.5 w-5 shrink-0">
                             {String(i + 1).padStart(2, "0")}
                           </span>
-                          <m.icon className="h-4 w-4 shrink-0 text-foreground/45 mt-0.5 group-hover:text-foreground/75 transition-colors" />
+                          <m.icon className="h-4 w-4 shrink-0 text-foreground/45 mt-0.5 group-hover:text-foreground/75 transition-colors" aria-hidden />
                           <div className="min-w-0 flex-1 space-y-1">
                             <div className="flex flex-wrap items-baseline gap-x-2">
-                              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-foreground">{m.codename}</span>
+                              <span className="font-mono text-[10px] tracking-[0.16em] text-foreground">{m.codename}</span>
                               <span className="text-[11px] font-extralight text-muted-foreground/70">{m.label}</span>
                             </div>
                             <p className="text-xs font-extralight leading-relaxed text-muted-foreground">{m.mandate}</p>
@@ -363,22 +337,23 @@ const GoogleIntelligenceView = () => {
                 );
               })}
 
-              {/* Raw feeds. */}
+              {/* raw feeds. */}
               <section className="space-y-3">
-                <div className="flex items-baseline gap-3 border-b border-border/15 pb-2">
-                  <h2 className="font-mono text-[10px] uppercase tracking-[0.28em] text-foreground/80">FEEDS</h2>
-                  <p className="text-[11px] font-extralight text-muted-foreground/60">Raw collection surfaces behind the desks</p>
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border/15 pb-2">
+                  <h2 className="font-mono text-[10px] tracking-[0.22em] text-foreground/80">feeds</h2>
+                  <p className="text-[11px] font-extralight text-muted-foreground/60">raw collection surfaces behind the desks</p>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-border/15 rounded-lg overflow-hidden border border-border/15">
                   {dataModules.map((m) => (
                     <button
                       key={m.id}
+                      type="button"
                       onClick={() => setActiveModule(m.id)}
                       className="flex items-center gap-2.5 bg-card/30 px-3 py-3 text-left transition-colors hover:bg-foreground/[0.05] focus-visible:outline focus-visible:outline-1 focus-visible:outline-foreground/40"
                     >
-                      <m.icon className="h-3.5 w-3.5 shrink-0 text-foreground/45" />
+                      <m.icon className="h-3.5 w-3.5 shrink-0 text-foreground/45" aria-hidden />
                       <span className="min-w-0">
-                        <span className="block truncate font-mono text-[10px] uppercase tracking-[0.14em] text-foreground">{m.label}</span>
+                        <span className="block truncate font-mono text-[10px] tracking-[0.12em] text-foreground">{m.label}</span>
                         <span className="block truncate text-[10px] font-extralight text-muted-foreground/60">{m.note}</span>
                       </span>
                     </button>
@@ -386,18 +361,18 @@ const GoogleIntelligenceView = () => {
                 </div>
               </section>
 
-              {/* Standing capabilities — method, stated plainly. */}
+              {/* method — how a conclusion is reached, stated plainly. */}
               <section className="space-y-3">
-                <div className="flex items-baseline gap-3 border-b border-border/15 pb-2">
-                  <h2 className="font-mono text-[10px] uppercase tracking-[0.28em] text-foreground/80">METHOD</h2>
-                  <p className="text-[11px] font-extralight text-muted-foreground/60">How the station reaches a conclusion</p>
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border/15 pb-2">
+                  <h2 className="font-mono text-[10px] tracking-[0.22em] text-foreground/80">method</h2>
+                  <p className="text-[11px] font-extralight text-muted-foreground/60">how the station reaches a conclusion</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {CAPABILITIES.map((c) => (
                     <div key={c.title} className="rounded-lg border border-border/20 bg-card/25 backdrop-blur-md p-4 space-y-2.5">
                       <div className="flex items-center gap-2.5">
-                        <c.icon className="h-3.5 w-3.5 text-foreground/50" />
-                        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-foreground">{c.title}</span>
+                        <c.icon className="h-3.5 w-3.5 text-foreground/50" aria-hidden />
+                        <span className="font-mono text-[10px] tracking-[0.14em] text-foreground">{c.title}</span>
                       </div>
                       <p className="text-xs font-extralight leading-relaxed text-muted-foreground">{c.desc}</p>
                     </div>
@@ -406,13 +381,13 @@ const GoogleIntelligenceView = () => {
               </section>
             </TabsContent>
 
-            {/* ── Desk panels ──────────────────────────────────────────── */}
+            {/* ── desk panels ──────────────────────────────────────────── */}
             {nexusModules.map((m) => (
               <TabsContent key={m.id} value={m.id} className="mt-6 space-y-4">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border/15 pb-2">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-foreground">{m.codename}</span>
+                  <span className="font-mono text-[10px] tracking-[0.22em] text-foreground">{m.codename}</span>
                   <span className="text-[11px] font-extralight text-muted-foreground/70">{m.label}</span>
-                  <span className="ml-auto font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground/40">{m.directorate}</span>
+                  <span className="ml-auto font-mono text-[9px] tracking-[0.16em] text-muted-foreground/40">{m.directorate}</span>
                 </div>
                 {renderModule()}
               </TabsContent>
@@ -421,29 +396,16 @@ const GoogleIntelligenceView = () => {
             {dataModules.map((m) => (
               <TabsContent key={m.id} value={m.id} className="mt-6 space-y-4">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border/15 pb-2">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-foreground">{m.label}</span>
+                  <span className="font-mono text-[10px] tracking-[0.22em] text-foreground">{m.label}</span>
                   <span className="text-[11px] font-extralight text-muted-foreground/70">{m.note}</span>
-                  <span className="ml-auto font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground/40">FEED</span>
+                  <span className="ml-auto font-mono text-[9px] tracking-[0.16em] text-muted-foreground/40">feed</span>
                 </div>
-                {renderModule() || (
-                  <div className="rounded-lg border border-dashed border-border/25 bg-card/10 p-10 text-center space-y-3">
-                    <m.icon className="h-8 w-8 text-muted-foreground/20 mx-auto" />
-                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50">
-                      Feed unauthorized — no collection on this surface
-                    </p>
-                    <button
-                      onClick={handleConnect}
-                      className="font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/70 underline underline-offset-4 hover:text-foreground transition-colors"
-                    >
-                      Authorize account
-                    </button>
-                  </div>
-                )}
+                {renderModule()}
               </TabsContent>
             ))}
           </Tabs>
 
-          {/* Station analyst — reads whichever desk is open. */}
+          {/* station analyst — reads whichever desk is open. */}
           <NexusChatPanel activeModule={activeModule} moduleLabel={activeLabel} />
         </div>
       </ScrollArea>

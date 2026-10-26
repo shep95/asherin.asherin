@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Database, RefreshCw, Search, ShieldAlert, Download, Loader2,
-  AlertTriangle, Inbox, X, FileText,
+  Inbox, X, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import OrganOffline from "../OrganOffline";
+import { NO_ACCOUNT_PATH, describeFailure } from "../offline";
 
 // ── Contracts mirror supabase/functions/google-substrate/index.ts ──────────
 
@@ -60,7 +62,7 @@ interface Brief {
 const SOURCES = ["all", "gmail", "sms", "calendar", "drive", "contacts", "tasks"] as const;
 
 const severityLabel = (s: number) =>
-  s >= 5 ? "CRITICAL" : s >= 4 ? "HIGH" : s >= 3 ? "ELEVATED" : s >= 2 ? "NOTED" : "BASELINE";
+  s >= 5 ? "critical" : s >= 4 ? "high" : s >= 3 ? "elevated" : s >= 2 ? "noted" : "baseline";
 
 const fmtWhen = (v: string | null) =>
   v ? new Date(v).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—";
@@ -107,7 +109,7 @@ const SubstrateExplorer = () => {
       setStatus(s as Status);
       setBrief(b as Brief);
     } catch (e) {
-      if (alive.current) setError((e as Error).message);
+      if (alive.current) setError(describeFailure(e, "substrate organ"));
     } finally {
       if (alive.current) setLoading(false);
     }
@@ -127,7 +129,7 @@ const SubstrateExplorer = () => {
       if (failed.length) toast.warning(`${failed.length} surface(s) failed — see Sources tab`);
       await load();
     } catch (e) {
-      toast.error(`Sweep failed: ${(e as Error).message}`);
+      toast.error(describeFailure(e, "substrate organ"));
     } finally {
       if (alive.current) setSweeping(false);
     }
@@ -144,7 +146,7 @@ const SubstrateExplorer = () => {
       });
       if (alive.current) setResults((r.results ?? []) as Signal[]);
     } catch (e) {
-      toast.error(`Search failed: ${(e as Error).message}`);
+      toast.error(describeFailure(e, "substrate organ"));
     } finally {
       if (alive.current) setSearching(false);
     }
@@ -154,7 +156,7 @@ const SubstrateExplorer = () => {
     // Optimistic: the row is judged closed the moment the human closes it.
     setBrief((b) => (b ? { ...b, insights: b.insights.filter((i) => i.id !== id) } : b));
     try { await call({ action: "dismiss", id }); }
-    catch (e) { toast.error((e as Error).message); void load(); }
+    catch (e) { toast.error(describeFailure(e, "substrate organ")); void load(); }
   }, [call, load]);
 
   const exportReport = useCallback(() => {
@@ -208,12 +210,9 @@ const SubstrateExplorer = () => {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 p-12 text-center">
-        <AlertTriangle className="h-8 w-8 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Could not reach the substrate: {error}</p>
-        <Button variant="outline" size="sm" onClick={() => void load()}>
-          <RefreshCw className="mr-2 h-4 w-4" /> Retry
-        </Button>
+      <div className="space-y-3">
+        <h2 className="text-lg font-light">intelligence substrate</h2>
+        <OrganOffline error={error} organ="substrate organ" onRetry={() => void load()} />
       </div>
     );
   }
@@ -230,45 +229,45 @@ const SubstrateExplorer = () => {
             <Database className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">Intelligence Substrate</h2>
+            <h2 className="text-lg font-light">intelligence substrate</h2>
             <p className="text-xs text-muted-foreground">
-              {status?.signals ?? 0} signals · {status?.insights ?? 0} findings · harvested {relAge(status?.lastIngest ?? null)}
+              {status?.signals ?? 0} signals · {status?.insights ?? 0} findings · last read {relAge(status?.lastIngest ?? null)}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={exportReport} disabled={!brief?.insights?.length}>
-            <Download className="mr-2 h-4 w-4" /> Export report
+            <Download className="mr-2 h-4 w-4" aria-hidden /> export report
           </Button>
           <Button size="sm" onClick={() => void sweep()} disabled={sweeping || !hasAccounts}>
             {sweeping
-              ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sweeping…</>
-              : <><RefreshCw className="mr-2 h-4 w-4" /> Run sweep</>}
+              ? <><Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> sweeping…</>
+              : <><RefreshCw className="mr-2 h-4 w-4" aria-hidden /> run sweep</>}
           </Button>
         </div>
       </div>
 
       {!hasAccounts && (
         <div className="rounded-xl border border-border/40 bg-card/30 p-6 text-center text-sm text-muted-foreground">
-          No Google account is connected. Connect one from the Overview tab, then run a sweep to build the ledger.
+          {NO_ACCOUNT_PATH}
         </div>
       )}
 
       {hasAccounts && isEmpty && (
         <div className="rounded-xl border border-border/40 bg-card/30 p-6 text-center">
-          <Inbox className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
+          <Inbox className="mx-auto mb-2 h-6 w-6 text-muted-foreground" aria-hidden />
           <p className="text-sm text-muted-foreground">
-            The ledger is empty. Run a sweep to harvest mail, calendar, files, contacts and tasks into a searchable index.
+            the ledger is empty. run a sweep to index mail, calendar, files, contacts and tasks.
           </p>
         </div>
       )}
 
       <Tabs defaultValue="brief" className="flex min-h-0 flex-1 flex-col">
         <TabsList>
-          <TabsTrigger value="brief">Brief</TabsTrigger>
-          <TabsTrigger value="findings">Findings {critical.length > 0 && `(${critical.length})`}</TabsTrigger>
-          <TabsTrigger value="explorer">Explorer</TabsTrigger>
-          <TabsTrigger value="sources">Sources</TabsTrigger>
+          <TabsTrigger value="brief">brief</TabsTrigger>
+          <TabsTrigger value="findings">findings {critical.length > 0 && `(${critical.length})`}</TabsTrigger>
+          <TabsTrigger value="explorer">explorer</TabsTrigger>
+          <TabsTrigger value="sources">sources</TabsTrigger>
         </TabsList>
 
         {/* ── BRIEF ─────────────────────────────────────────────────────── */}
@@ -277,7 +276,7 @@ const SubstrateExplorer = () => {
             <div className="space-y-3">
               {critical.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Nothing at elevated severity. The Findings tab holds the full baseline.
+                  nothing at elevated severity. the findings tab holds the full baseline.
                 </p>
               )}
               {critical.map((i) => (
@@ -295,7 +294,7 @@ const SubstrateExplorer = () => {
               {(brief?.recent?.length ?? 0) > 0 && (
                 <div className="rounded-xl border border-border/40 bg-card/30 p-4">
                   <h3 className="mb-2 flex items-center gap-2 text-sm font-medium">
-                    <FileText className="h-4 w-4" /> Most recent signals
+                    <FileText className="h-4 w-4" aria-hidden /> most recent signals
                   </h3>
                   <div className="space-y-1.5">
                     {brief!.recent.slice(0, 15).map((s) => (
@@ -344,7 +343,7 @@ const SubstrateExplorer = () => {
                 </div>
               ))}
               {!Object.keys(brief?.byDomain ?? {}).length && (
-                <p className="text-sm text-muted-foreground">No findings yet — run a sweep.</p>
+                <p className="text-sm text-muted-foreground">no findings yet — a sweep would derive them.</p>
               )}
             </div>
           </ScrollArea>
@@ -357,11 +356,11 @@ const SubstrateExplorer = () => {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 className="pl-9"
-                placeholder="Search every indexed signal…"
+                placeholder="search every indexed signal…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") void runSearch(); }}
-                aria-label="Search the substrate"
+                aria-label="search the substrate"
               />
             </div>
             <div className="flex gap-1">
@@ -376,18 +375,18 @@ const SubstrateExplorer = () => {
               ))}
             </div>
             <Button size="sm" onClick={() => void runSearch()} disabled={searching}>
-              {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+              {searching ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : "search"}
             </Button>
           </div>
 
           <ScrollArea className="min-h-0 flex-1 pr-3" aria-live="polite">
             {results === null && (
               <p className="text-sm text-muted-foreground">
-                Search by keyword, person, vendor or subject. Leave the box empty to browse the newest signals.
+                search by keyword, person, vendor or subject. leave the box empty to browse the newest signals.
               </p>
             )}
             {results?.length === 0 && (
-              <p className="text-sm text-muted-foreground">No signal matches that query in the current ledger.</p>
+              <p className="text-sm text-muted-foreground">no signal matches that query in the current ledger.</p>
             )}
             <div className="space-y-2">
               {(results ?? []).map((s) => (
@@ -419,14 +418,14 @@ const SubstrateExplorer = () => {
                   <div className="mt-1 flex flex-wrap gap-1">
                     {a.surfaces.length
                       ? a.surfaces.map((s) => <Badge key={s} variant="secondary">{s}</Badge>)
-                      : <span className="text-xs text-muted-foreground">No read scopes granted — reconnect with Read access.</span>}
+                      : <span className="text-xs text-muted-foreground">no read scopes granted on this account.</span>}
                   </div>
                 </div>
               ))}
               <div className="rounded-lg border border-border/40 bg-card/20 p-3">
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Last sweep per surface</h3>
+                <h3 className="mb-2 text-xs font-light tracking-wider text-muted-foreground">last sweep per surface</h3>
                 {(status?.sweeps ?? []).length === 0 && (
-                  <p className="text-xs text-muted-foreground">No sweep has run yet.</p>
+                  <p className="text-xs text-muted-foreground">no sweep has run yet.</p>
                 )}
                 {(status?.sweeps ?? []).map((s, idx) => (
                   <div key={`${s.source}-${idx}`} className="flex flex-wrap items-center gap-2 py-0.5 text-xs">

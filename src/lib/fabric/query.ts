@@ -7,7 +7,7 @@
 // holds in memory.
 //
 // Beyond that window the answer depends on a backend. Sentinel already persists
-// speech, sound, gap, radio and location rows to the account timeline, so those
+// speech, sound, gap, radio and location rows to the timeline on this device, so those
 // questions really can be asked of storage. ArVision tracks and camera events
 // are NOT persisted anywhere yet: they exist only for the life of the tab. This
 // module reports that difference instead of returning a thinner answer that
@@ -85,7 +85,7 @@ export function soundEventsAround(atMs: number, windowMs = 60_000): QueryResult<
 }
 
 /**
- * The persisted half of a rewind. Sentinel's account timeline is a real store
+ * The persisted half of a rewind. Sentinel's timeline on this device is a real store
  * with a real query, so this really does reach past the session — for audio,
  * radio and location only. A failure is returned as a failure.
  */
@@ -111,7 +111,7 @@ export async function rewindAccountTimeline(
       ok: false,
       scope: "account_timeline",
       data: [],
-      coverage: `the account timeline could not be read: ${e instanceof Error ? e.message : "the request failed"}. this is a backend failure, not an absence of events.`,
+      coverage: `the timeline on this device could not be read: ${e instanceof Error ? e.message : "the read failed"}. this is a storage failure, not an absence of events.`,
     };
   }
 }
@@ -120,8 +120,8 @@ export async function rewindAccountTimeline(
 export const QUERY_CAPABILITIES: Array<{ question: string; available: boolean; detail: string }> = [
   { question: "first visual appearance of a track", available: true, detail: "this session only — arvision tracks are not persisted" },
   { question: "which cameras observed a track", available: true, detail: "this session only, camera-local ids" },
-  { question: "radio sightings around a moment", available: true, detail: "this session in memory; sentinel also persists radio rows to the account timeline" },
-  { question: "sound and speech events around a moment", available: true, detail: "persisted by sentinel to the account timeline" },
+  { question: "radio sightings around a moment", available: true, detail: "this session in memory; sentinel also persists radio rows to the timeline on this device" },
+  { question: "sound and speech events around a moment", available: true, detail: "persisted by sentinel to the timeline on this device" },
   { question: "replay stored camera video around an incident", available: false, detail: "no recording backend is configured — the rolling frame buffer lives only in this tab" },
   { question: "cross-site search across multiple buildings", available: false, detail: "no multi-site store exists in this project" },
 ];

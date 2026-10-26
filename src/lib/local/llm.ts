@@ -109,6 +109,9 @@ function classify(status: number, body: string): LlmError {
   return new LlmError(text, status, "UNKNOWN");
 }
 
+/** a stream that sends nothing for this long is closed; the operator sees an error with a retry, not a caret forever */
+const STREAM_IDLE_MS = 60_000;
+
 async function readSse(resp: Response, onEvent: (data: string) => void, signal?: AbortSignal): Promise<void> {
   if (!resp.body) return;
   const reader = resp.body.getReader();
@@ -119,7 +122,18 @@ async function readSse(resp: Response, onEvent: (data: string) => void, signal?:
       await reader.cancel().catch(() => undefined);
       throw Object.assign(new Error("aborted"), { name: "AbortError" });
     }
-    const { done, value } = await reader.read();
+    let idle: ReturnType<typeof setTimeout> | undefined;
+    const { done, value } = await Promise.race([
+      reader.read(),
+      new Promise<never>((_, reject) => {
+        idle = setTimeout(() => reject(new LlmError("the model went quiet for a minute; the connection was closed.", 0, "NETWORK")), STREAM_IDLE_MS);
+      }),
+    ])
+      .catch(async (e) => {
+        await reader.cancel().catch(() => undefined);
+        throw e;
+      })
+      .finally(() => clearTimeout(idle));
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     let nl: number;
@@ -347,7 +361,7 @@ async function streamGemini(req: LlmRequest): Promise<string> {
 export async function streamLlm(req: LlmRequest): Promise<string> {
   const model = req.model || DEFAULT_MODEL[req.provider] || "";
   const r = { ...req, model };
-  if (!model) throw new LlmError(`pick a model for ${req.provider} in settings → ai keys.`, 400, "BAD_REQUEST");
+  if (!model) throw new LlmError(`pick a model for ${req.provider} in settings → intelligence.`, 400, "BAD_REQUEST");
   if (req.provider === "anthropic") return streamAnthropic(r);
   if (req.provider === "google") return streamGemini(r);
   const base = OPENAI_COMPAT_BASE[req.provider];

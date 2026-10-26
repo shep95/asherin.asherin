@@ -12,11 +12,13 @@ import {
   Layers,
   Leaf,
   Loader2,
+  MessageCircle,
   Pill,
   Radar,
   RotateCcw,
   Trash2,
   Upload,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,9 +60,8 @@ import {
   type MotionMetrics,
 } from "@/lib/health/signals";
 import { EMPTY_RECORD, clearRecord, exportRecord, importRecord, loadRecord, newId, recordCount, saveRecord, type HealthRecord } from "@/lib/health/store";
-
-import { supabase } from "@/integrations/supabase/client";
-import HealthAssistant from "./HealthAssistant";
+import { askHealthShepherd, resolveHealthShepherd } from "@/lib/health/shepherd";
+import HealthAssistant, { type AssistantTurn } from "./HealthAssistant";
 
 const DeepAnatomyPanel = lazy(() => import("./DeepAnatomyPanel"));
 const IntakePanel = lazy(() => import("./IntakePanel"));
@@ -71,33 +72,6 @@ const PainStudioPanel = lazy(() => import("./PainStudioPanel"));
 const HerbalPanel = lazy(() => import("./HerbalPanel"));
 const SharePanel = lazy(() => import("./SharePanel"));
 const PhotoReadPanel = lazy(() => import("./PhotoReadPanel"));
-
-/** the room runs on the person's own model key when they have one, exactly like every other asherin surface. */
-async function resolveByok(): Promise<Record<string, string> | undefined> {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return undefined;
-    const { data: pref } = await supabase
-      .from("user_model_preferences" as never)
-      .select("active_provider, active_model")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    const provider = (pref as { active_provider?: string } | null)?.active_provider;
-    const model = (pref as { active_model?: string } | null)?.active_model;
-    if (!provider || provider === "default" || !model || model === "default") return undefined;
-    const { data: keyRow } = await supabase
-      .from("user_api_keys" as never)
-      .select("api_key")
-      .eq("user_id", user.id)
-      .eq("provider", provider)
-      .eq("is_active", true)
-      .maybeSingle();
-    const apiKey = (keyRow as { api_key?: string } | null)?.api_key;
-    return apiKey ? { provider, model, apiKey } : undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 type Panel =
   | "deep"
@@ -110,9 +84,13 @@ type Panel =
   | "signals"
   | "share"
   | "photos"
-  | "findings";
+  | "findings"
+  | "shepherd";
 
-const PANELS: { id: Panel; label: string; icon: typeof Layers }[] = [
+/** the side column with shepherd and "looking at" exists from this width up; below it, both live in the rail as a panel. */
+const WIDE_QUERY = "(min-width: 1280px)";
+
+const PANELS: { id: Panel; label: string; icon: typeof Layers; narrowOnly?: boolean }[] = [
   { id: "record", label: "record", icon: ClipboardList },
   { id: "deep", label: "anatomy", icon: Boxes },
   { id: "intake", label: "intake", icon: Upload },
@@ -124,6 +102,7 @@ const PANELS: { id: Panel; label: string; icon: typeof Layers }[] = [
   { id: "photos", label: "photos", icon: ImagePlus },
   { id: "share", label: "share", icon: Download },
   { id: "findings", label: "read-out", icon: Eye },
+  { id: "shepherd", label: "shepherd", icon: MessageCircle, narrowOnly: true },
 ];
 
 const LAYER_LABEL: Record<LayerId, string> = {
@@ -144,6 +123,19 @@ const LAYER_LABEL: Record<LayerId, string> = {
   live: "live sensor",
 };
 
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(() => (typeof window !== "undefined" && window.matchMedia ? window.matchMedia(query).matches : false));
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia(query);
+    const onChange = () => setMatches(mq.matches);
+    onChange();
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, [query]);
+  return matches;
+}
+
 interface Props {
   userId?: string | null;
 }
@@ -156,6 +148,7 @@ export default function AsherinHealthView({ userId = null }: Props) {
   /** the territories the person is looking at right now, by label. */
   const [focus, setFocus] = useState<string[]>([]);
   const painCount = useRef<number | null>(null);
+  const wide = useMediaQuery(WIDE_QUERY);
   const [activeLayers, setActiveLayers] = useState<LayerId[]>([
     "lab",
     "medication",
@@ -170,6 +163,13 @@ export default function AsherinHealthView({ userId = null }: Props) {
     "live",
   ]);
 
+  // shepherd, in this room — the thread is owned here so the same conversation
+  // shows beside the record on a wide screen and as a panel on a phone.
+  const [turns, setTurns] = useState<AssistantTurn[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [unseen, setUnseen] = useState(0);
+  const [unavailable, setUnavailable] = useState<string | null>(null);
+
   // live sensors
   const [heart, setHeart] = useState<HeartMetrics | null>(null);
   const [motion, setMotion] = useState<MotionMetrics | null>(null);
@@ -179,11 +179,23 @@ export default function AsherinHealthView({ userId = null }: Props) {
   const heartSamples = useRef<HeartSample[]>([]);
   const bleRef = useRef<BleConnection | null>(null);
   const motionSeries = useRef<{ t: number; a: number }[]>([]);
+  const motionTimer = useRef<number | null>(null);
   const capabilities = useMemo(() => detectCapabilities(), []);
 
   useEffect(() => {
     setRecord(loadRecord(userId));
   }, [userId]);
+
+  // say up front whether shepherd can answer on this device, in the room's own words.
+  useEffect(() => {
+    let alive = true;
+    void resolveHealthShepherd().then((s) => {
+      if (alive) setUnavailable(s.ok === false ? s.reason : null);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const persist = useCallback(
     (next: HealthRecord) => {
@@ -196,6 +208,7 @@ export default function AsherinHealthView({ userId = null }: Props) {
   useEffect(
     () => () => {
       bleRef.current?.disconnect();
+      if (motionTimer.current !== null) window.clearTimeout(motionTimer.current);
     },
     [],
   );
@@ -229,7 +242,7 @@ export default function AsherinHealthView({ userId = null }: Props) {
   );
 
   /** one way for any panel to ask the room to look somewhere: the territory is
-   *  named, what the record says about it is read, and the assistant is asked. */
+   *  named, what the record says about it is read, and shepherd is asked. */
   const focusTerritories = useCallback(
     (keys: string[]) => {
       const labels = Array.from(new Set(keys.map((k) => territoryLabel(k))));
@@ -248,7 +261,7 @@ export default function AsherinHealthView({ userId = null }: Props) {
 
   const redFlags = useMemo(() => findings.filter((f) => f.redFlag), [findings]);
 
-  // the assistant sees a compact reading of the same record the room is drawing
+  // shepherd sees a compact reading of the same record the room is drawing
   // from — nothing else, so it can never answer from something invented.
   const assistantContext = useMemo(() => {
     const lines: string[] = [];
@@ -274,7 +287,45 @@ export default function AsherinHealthView({ userId = null }: Props) {
     return lines.join("\n");
   }, [record, heart, findings, panelHighlights, focus]);
 
-  // a new pain report speaks for itself: the assistant is raised without asking.
+  const contextRef = useRef(assistantContext);
+  contextRef.current = assistantContext;
+  const panelRef = useRef(panel);
+  panelRef.current = panel;
+  const wideRef = useRef(wide);
+  wideRef.current = wide;
+
+  const ask = useCallback(async (question: string, automatic: boolean) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setTurns((t) => [...t, { id: `${id}-q`, role: "you", text: question, automatic }]);
+    setBusy(true);
+    try {
+      const reply = await askHealthShepherd({ question, context: contextRef.current });
+      setTurns((t) => [...t, { id: `${id}-a`, role: "shepherd", text: reply }]);
+      setUnavailable(null);
+    } catch (e) {
+      const text = e instanceof Error ? e.message : "shepherd could not answer right now.";
+      setTurns((t) => [...t, { id: `${id}-a`, role: "shepherd", text, failed: true }]);
+    } finally {
+      setBusy(false);
+      // on a narrow screen the thread is a panel; count what arrived while it was closed.
+      if (!wideRef.current && panelRef.current !== "shepherd") setUnseen((n) => n + 1);
+    }
+  }, []);
+
+  // record changes speak for themselves: a new pain point or a new reading raises
+  // shepherd without the person having to ask what it means.
+  useEffect(() => {
+    if (!assistantTrigger) return;
+    const q = assistantTrigger;
+    setAssistantTrigger(null);
+    void ask(q, true);
+  }, [assistantTrigger, ask]);
+
+  useEffect(() => {
+    if (panel === "shepherd" || wide) setUnseen(0);
+  }, [panel, wide]);
+
+  // a new pain report speaks for itself: shepherd is raised without asking.
   useEffect(() => {
     // the first pass only takes a reading of what was already saved: loading a
     // stored record is not the person reporting something new.
@@ -314,7 +365,7 @@ export default function AsherinHealthView({ userId = null }: Props) {
       setBleName(connection.deviceName);
     } catch (e) {
       const message = e instanceof Error ? e.message : "the device could not be paired.";
-      if (!/cancel/i.test(message)) toast.error(message);
+      if (!/cancel/i.test(message)) toast.error(message.toLowerCase());
     } finally {
       setBleBusy(false);
     }
@@ -348,14 +399,48 @@ export default function AsherinHealthView({ userId = null }: Props) {
       motionSeries.current.push({ t: performance.now(), a: Math.hypot(a.x ?? 0, a.y ?? 0, a.z ?? 0) });
     };
     window.addEventListener("devicemotion", handler);
-    window.setTimeout(() => {
+    motionTimer.current = window.setTimeout(() => {
       window.removeEventListener("devicemotion", handler);
+      motionTimer.current = null;
       setMotionRunning(false);
       const metrics = computeMotionMetrics(motionSeries.current);
       setMotion(metrics);
       if (!metrics) toast.error("not enough motion samples arrived to measure steadiness on this device.");
     }, 12000);
   };
+
+  const lookingAt = (
+    <div className="space-y-4">
+      <SectionTitle>looking at</SectionTitle>
+      {focus.length === 0 && panelHighlights.length === 0 ? (
+        <p className="text-[11px] font-light leading-relaxed text-foreground/45">
+          choose a region from any layer, and what your record says about it is read here and put to shepherd.
+        </p>
+      ) : (
+        <>
+          {focus.length > 0 && (
+            <div className="space-y-2 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs font-light text-foreground/85">{focus.join(", ")}</p>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setFocus([])} aria-label="stop looking here">
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          )}
+          {panelHighlights.slice(0, 12).map((h, i) => (
+            <div key={`${h.label}-${i}`} className="space-y-1 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+              <p className="text-[11px] font-light text-foreground/80">{h.label}</p>
+              <p className="text-[10px] font-light leading-relaxed text-foreground/50">{h.reason}</p>
+              <p className="text-[9px] font-light text-foreground/30">{h.source}</p>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+
+  const assistant = <HealthAssistant turns={turns} busy={busy} onAsk={(q) => void ask(q, false)} unavailable={unavailable} />;
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden text-sm text-foreground/85">
@@ -386,18 +471,25 @@ export default function AsherinHealthView({ userId = null }: Props) {
       )}
 
       <div className="flex min-h-0 flex-1">
-        <nav className="flex w-[64px] shrink-0 flex-col items-center gap-1 border-r border-white/[0.06] py-3">
+        <nav className="flex w-[64px] shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-white/[0.06] py-3" aria-label="health layers">
           {PANELS.map((p) => (
             <button
               key={p.id}
               onClick={() => setPanel(p.id)}
+              aria-pressed={panel === p.id}
               className={cn(
-                "flex w-[52px] flex-col items-center gap-1 rounded-xl px-1 py-2 text-[9px] tracking-wide transition-colors",
+                "relative flex w-[52px] flex-col items-center gap-1 rounded-xl px-1 py-2 text-[9px] tracking-wide transition-colors",
                 panel === p.id ? "bg-white/[0.07] text-foreground/90" : "text-foreground/45 hover:bg-white/[0.04]",
+                p.narrowOnly && "xl:hidden",
               )}
             >
               <p.icon className="h-4 w-4" />
               {p.label}
+              {p.id === "shepherd" && unseen > 0 && (
+                <span className="absolute right-1 top-1 rounded-full bg-[#e78a2e]/80 px-1 text-[8px] font-light text-black" aria-label={`${unseen} new from shepherd`}>
+                  {unseen}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -405,8 +497,14 @@ export default function AsherinHealthView({ userId = null }: Props) {
         <section className="flex min-w-0 flex-1 flex-col">
           <ScrollArea className="flex-1">
             <div className="mx-auto w-full max-w-2xl space-y-4 p-4 sm:p-6">
-              {panel === "record" && <RecordPanel record={record} persist={persist} />}
-              {panel !== "record" && panel !== "findings" && panel !== "photos" && (
+              {panel === "record" && <RecordPanel record={record} persist={persist} scope={userId} />}
+              {panel === "shepherd" && (
+                <div className="space-y-5">
+                  <div className="h-[60vh] min-h-[320px]">{assistant}</div>
+                  {lookingAt}
+                </div>
+              )}
+              {panel !== "record" && panel !== "findings" && panel !== "photos" && panel !== "shepherd" && (
                 <Suspense
                   fallback={
                     <p className="flex items-center gap-2 text-[11px] font-light text-foreground/45">
@@ -422,9 +520,7 @@ export default function AsherinHealthView({ userId = null }: Props) {
                       onSelectTerritories={focusTerritories}
                     />
                   )}
-                  {panel === "intake" && (
-                    <IntakePanel record={record} persist={persist} onEvent={setAssistantTrigger} resolveByok={resolveByok} />
-                  )}
+                  {panel === "intake" && <IntakePanel record={record} persist={persist} onEvent={setAssistantTrigger} />}
                   {panel === "pain" && (
                     <PainStudioPanel
                       record={record}
@@ -483,12 +579,7 @@ export default function AsherinHealthView({ userId = null }: Props) {
                     </p>
                   }
                 >
-                  <PhotoReadPanel
-                    record={record}
-                    persist={persist}
-                    resolveByok={resolveByok}
-                    onAsk={setAssistantTrigger}
-                  />
+                  <PhotoReadPanel record={record} persist={persist} onAsk={setAssistantTrigger} />
                 </Suspense>
               )}
               {panel === "findings" && (
@@ -504,43 +595,9 @@ export default function AsherinHealthView({ userId = null }: Props) {
         </section>
 
         <aside className="hidden w-[380px] shrink-0 flex-col gap-3 border-l border-white/[0.06] p-3 xl:flex">
-          <div className="h-[58%] min-h-[280px] shrink-0">
-            <HealthAssistant
-              context={assistantContext}
-              trigger={assistantTrigger}
-              onTriggerHandled={() => setAssistantTrigger(null)}
-              resolveByok={resolveByok}
-            />
-          </div>
+          <div className="h-[58%] min-h-[280px] shrink-0">{assistant}</div>
           <ScrollArea className="min-h-0 flex-1">
-            <div className="space-y-4 pr-2">
-              <SectionTitle>looking at</SectionTitle>
-              {focus.length === 0 && panelHighlights.length === 0 ? (
-                <p className="text-[11px] font-light leading-relaxed text-foreground/45">
-                  choose a region from any layer, and what your record says about it is read here and put to the assistant.
-                </p>
-              ) : (
-                <>
-                  {focus.length > 0 && (
-                    <div className="space-y-2 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-xs font-light text-foreground/85">{focus.join(", ")}</p>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setFocus([])}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  {panelHighlights.slice(0, 12).map((h, i) => (
-                    <div key={`${h.label}-${i}`} className="space-y-1 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
-                      <p className="text-[11px] font-light text-foreground/80">{h.label}</p>
-                      <p className="text-[10px] font-light leading-relaxed text-foreground/50">{h.reason}</p>
-                      <p className="text-[9px] font-light text-foreground/30">{h.source}</p>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
+            <div className="pr-2">{lookingAt}</div>
           </ScrollArea>
         </aside>
       </div>
@@ -552,10 +609,11 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <p className="text-[10px] uppercase tracking-[0.22em] text-foreground/35">{children}</p>;
 }
 
-function RecordPanel({ record, persist }: { record: HealthRecord; persist: (r: HealthRecord) => void }) {
+function RecordPanel({ record, persist, scope }: { record: HealthRecord; persist: (r: HealthRecord) => void; scope: string | null }) {
   const [labText, setLabText] = useState("");
   const [medName, setMedName] = useState("");
   const [geneName, setGeneName] = useState("");
+  const [eraseArmed, setEraseArmed] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const applyLabs = () => {
@@ -564,7 +622,9 @@ function RecordPanel({ record, persist }: { record: HealthRecord; persist: (r: H
       toast.error("no recognised analytes were found in that text.");
       return;
     }
-    const merged = [...record.labs.filter((l) => !values.some((v) => v.key === l.key)), ...values];
+    // an undated paste replaces the undated value for the same analyte; dated values
+    // from intake are history and stay.
+    const merged = [...record.labs.filter((l) => l.takenAt || !values.some((v) => v.key === l.key)), ...values];
     persist({ ...record, labs: merged });
     setLabText("");
     toast.success(
@@ -599,32 +659,37 @@ function RecordPanel({ record, persist }: { record: HealthRecord; persist: (r: H
           value={labText}
           onChange={(e) => setLabText(e.target.value)}
           placeholder={"paste results, one per line\nhaemoglobin 13.1 g/dL\nferritin 18\nhba1c 5.9"}
+          aria-label="paste bloodwork results"
           className="min-h-[92px] rounded-xl border-white/[0.08] bg-white/[0.03] text-xs"
         />
         <Button size="sm" className="h-8 w-full text-[11px]" onClick={applyLabs}>
           read these values
         </Button>
         <div className="flex flex-wrap gap-1">
-          {record.labs.map((l) => {
+          {record.labs.map((l, i) => {
             const def = labDef(l.key);
             if (!def) return null;
             const out = l.value > def.high || l.value < def.low;
             return (
               <button
-                key={l.key}
-                onClick={() => persist({ ...record, labs: record.labs.filter((x) => x.key !== l.key) })}
+                key={`${l.key}-${l.takenAt ?? "now"}-${i}`}
+                onClick={() => persist({ ...record, labs: record.labs.filter((_, j) => j !== i) })}
+                aria-label={`remove ${def.label} ${l.value}`}
+                title="remove this value"
                 className={cn(
-                  "rounded-lg border px-2 py-1 text-[10px] font-light",
+                  "flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-light",
                   out ? "border-amber-300/25 bg-amber-300/[0.07] text-amber-100/80" : "border-white/[0.07] text-foreground/50",
                 )}
               >
                 {def.label} {l.value}
+                {l.takenAt ? <span className="text-foreground/30">· {l.takenAt.slice(0, 10)}</span> : null}
+                <X className="h-2.5 w-2.5 opacity-50" />
               </button>
             );
           })}
         </div>
         <p className="text-[10px] font-light text-foreground/30">
-          {LAB_DEFS.length} analytes are recognised. anything else is left alone rather than guessed.
+          {LAB_DEFS.length} analytes are recognised. anything else is left alone rather than guessed. out-of-range values read amber.
         </p>
       </div>
 
@@ -638,6 +703,7 @@ function RecordPanel({ record, persist }: { record: HealthRecord; persist: (r: H
             onChange={(e) => setMedName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addMedication()}
             placeholder="name of a medicine"
+            aria-label="name of a medicine"
             list="health-drug-list"
             className="h-8 rounded-xl border-white/[0.08] bg-white/[0.03] text-xs"
           />
@@ -651,13 +717,12 @@ function RecordPanel({ record, persist }: { record: HealthRecord; persist: (r: H
           </Button>
         </div>
         {record.medications.map((m) => (
-          <button
+          <EntryRow
             key={m.id}
-            onClick={() => persist({ ...record, medications: record.medications.filter((x) => x.id !== m.id) })}
-            className="flex w-full items-center gap-2 rounded-lg border border-white/[0.07] px-2 py-1.5 text-left text-[11px] font-light text-foreground/70"
-          >
-            <Pill className="h-3 w-3 text-foreground/40" /> {m.name}
-          </button>
+            icon={<Pill className="h-3 w-3 text-foreground/40" />}
+            label={m.name}
+            onDelete={() => persist({ ...record, medications: record.medications.filter((x) => x.id !== m.id) })}
+          />
         ))}
         {interactions.map((i) => (
           <p
@@ -682,6 +747,7 @@ function RecordPanel({ record, persist }: { record: HealthRecord; persist: (r: H
             onChange={(e) => setGeneName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addGene()}
             placeholder="variant or gene"
+            aria-label="variant or gene"
             list="health-gene-list"
             className="h-8 rounded-xl border-white/[0.08] bg-white/[0.03] text-xs"
           />
@@ -695,13 +761,7 @@ function RecordPanel({ record, persist }: { record: HealthRecord; persist: (r: H
           </Button>
         </div>
         {record.genes.map((g) => (
-          <button
-            key={g.id}
-            onClick={() => persist({ ...record, genes: record.genes.filter((x) => x.id !== g.id) })}
-            className="w-full rounded-lg border border-white/[0.07] px-2 py-1.5 text-left text-[11px] font-light text-foreground/70"
-          >
-            {g.name}
-          </button>
+          <EntryRow key={g.id} label={g.name} onDelete={() => persist({ ...record, genes: record.genes.filter((x) => x.id !== g.id) })} />
         ))}
       </div>
 
@@ -745,7 +805,7 @@ function RecordPanel({ record, persist }: { record: HealthRecord; persist: (r: H
           persist({
             ...record,
             surgeries: on
-              ? [...record.surgeries, { id: newId("surg"), label: key, territoryKeys: [] }]
+              ? [...record.surgeries, { id: newId("surg"), label: key, territoryKeys: SURGERY_PRESETS.find((s) => s.label === key)?.territoryKeys ?? [] }]
               : record.surgeries.filter((s) => s.label !== key),
           })
         }
@@ -760,7 +820,10 @@ function RecordPanel({ record, persist }: { record: HealthRecord; persist: (r: H
           persist({
             ...record,
             family: on
-              ? [...record.family, { id: newId("fam"), condition: key, relation: "parent", territoryKeys: [] }]
+              ? [
+                  ...record.family,
+                  { id: newId("fam"), condition: key, relation: "parent", territoryKeys: FAMILY_PRESETS.find((f) => f.condition === key)?.territoryKeys ?? [] },
+                ]
               : record.family.filter((f) => f.condition !== key),
           })
         }
@@ -787,7 +850,8 @@ function RecordPanel({ record, persist }: { record: HealthRecord; persist: (r: H
       <div className="space-y-2">
         <SectionTitle>this record</SectionTitle>
         <p className="text-[10px] font-light leading-relaxed text-foreground/40">
-          {recordCount(record)} entries, held on this device only. nothing here is uploaded by this room.
+          {recordCount(record)} entries, held in this browser's storage only. nothing here is uploaded by this room; what you
+          ask shepherd goes to the model provider you connected, and nowhere else.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -827,20 +891,48 @@ function RecordPanel({ record, persist }: { record: HealthRecord; persist: (r: H
               toast.success("record restored from your file.");
             }}
           />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 gap-1.5 text-[11px] text-foreground/50"
-            onClick={() => {
-              clearRecord(null);
-              persist(EMPTY_RECORD);
-              toast.success("record cleared from this device.");
-            }}
-          >
-            <Trash2 className="h-3 w-3" /> erase
-          </Button>
+          {!eraseArmed ? (
+            <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-[11px] text-foreground/50" onClick={() => setEraseArmed(true)}>
+              <Trash2 className="h-3 w-3" /> erase
+            </Button>
+          ) : (
+            <>
+              <Button
+                size="sm"
+                className="h-8 gap-1.5 bg-amber-500 text-[11px] text-black hover:bg-amber-400"
+                onClick={() => {
+                  clearRecord(scope);
+                  persist(EMPTY_RECORD);
+                  setEraseArmed(false);
+                  toast.success("record cleared from this device.");
+                }}
+              >
+                <Trash2 className="h-3 w-3" /> yes, erase everything
+              </Button>
+              <Button variant="outline" size="sm" className="h-8 text-[11px]" onClick={() => setEraseArmed(false)}>
+                cancel
+              </Button>
+            </>
+          )}
         </div>
+        {eraseArmed && (
+          <p className="text-[10px] font-light leading-relaxed text-amber-100/70">
+            this deletes every entry in this browser and cannot be undone. export a copy first if you want to keep it.
+          </p>
+        )}
       </div>
+    </div>
+  );
+}
+
+function EntryRow({ label, onDelete, icon }: { label: string; onDelete: () => void; icon?: React.ReactNode }) {
+  return (
+    <div className="flex w-full items-center gap-2 rounded-lg border border-white/[0.07] px-2 py-1.5 text-left text-[11px] font-light text-foreground/70">
+      {icon}
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <button onClick={onDelete} aria-label={`remove ${label}`} title="remove" className="text-foreground/30 hover:text-foreground/80">
+        <X className="h-3 w-3" />
+      </button>
     </div>
   );
 }
@@ -868,6 +960,7 @@ function ChipSection({
             <button
               key={o.value}
               onClick={() => onToggle(o.value, !on)}
+              aria-pressed={on}
               className={cn(
                 "rounded-lg border px-2 py-1 text-[10px] font-light transition-colors",
                 on ? "border-white/15 bg-white/[0.07] text-foreground/80" : "border-white/[0.06] text-foreground/40 hover:text-foreground/60",
@@ -981,6 +1074,7 @@ function FindingsPanel({
               <button
                 key={l}
                 onClick={() => setActiveLayers(on ? activeLayers.filter((x) => x !== l) : [...activeLayers, l])}
+                aria-pressed={on}
                 className={cn(
                   "rounded-lg border px-2 py-1 text-[10px] font-light",
                   on ? "border-white/15 bg-white/[0.07] text-foreground/80" : "border-white/[0.06] text-foreground/35",

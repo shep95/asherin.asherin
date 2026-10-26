@@ -17,6 +17,9 @@ const PAGE_SIZES = {
   paperback: { w: 432, h: 648, label: "6×9\" Paperback" },
 };
 
+/** bounds: a model turn carries at most promptChars of source; one source row and one file have their own caps. */
+export const EBOOK_LIMITS = { promptChars: 150_000, uploadChars: 400_000, fileBytes: 4 * 1024 * 1024, grammarChars: 100_000 } as const;
+
 const DEFAULT_METADATA: EBookMetadata = {
   title: "", subtitle: "", author: "", description: "",
   dedication: "", copyright: "", aboutAuthor: "",
@@ -54,6 +57,9 @@ const EBookGeneratorView = () => {
   const [exporting, setExporting] = useState(false);
   const [expandedChapter, setExpandedChapter] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [armedDelete, setArmedDelete] = useState<string | null>(null);
   const [fixingGrammar, setFixingGrammar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -71,12 +77,14 @@ const EBookGeneratorView = () => {
   const loadSessions = async () => {
     if (!user) return;
     setSessionsLoading(true);
-    const { data } = await supabase
+    setLoadError(null);
+    const { data, error } = await supabase
       .from("ebook_sessions")
       .select("*")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false });
 
+    if (error) setLoadError(error.message);
     if (data) {
       setSessions(data.map(s => ({
         id: s.id,
@@ -91,7 +99,8 @@ const EBookGeneratorView = () => {
         chapters: (s.chapters as unknown as EBookChapter[]) || [],
         status: s.status,
         createdAt: new Date(s.created_at),
-        updatedAt: new Date(s.updated_at),
+        // rows written before updated_at was stamped fall back to their birth date instead of "invalid date"
+        updatedAt: new Date(s.updated_at ?? s.created_at),
       })));
     }
     setSessionsLoading(false);
@@ -122,13 +131,18 @@ const EBookGeneratorView = () => {
   // ── Create new session ──
   const createSession = async () => {
     if (!user) return;
-    const { data } = await supabase
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
       .from("ebook_sessions")
-      .insert({ user_id: user.id, title: "Untitled Book", settings: DEFAULT_SETTINGS as any, chapters: [] as any })
+      .insert({ user_id: user.id, title: "untitled book", status: "draft", updated_at: now, settings: DEFAULT_SETTINGS as any, chapters: [] as any })
       .select()
       .single();
 
-    if (data) {
+    if (error || !data) {
+      toast({ title: "book not created", description: error?.message ?? "the local store refused the write", variant: "destructive" });
+      return;
+    }
+    {
       const session: EBookSession = {
         id: data.id, title: data.title, subtitle: "", author: "", description: "",
         dedication: "", copyright: "", aboutAuthor: "",
@@ -137,7 +151,7 @@ const EBookGeneratorView = () => {
       };
       setSessions(prev => [session, ...prev]);
       openSession(session);
-      toast({ title: "New book created" });
+      toast({ title: "new book" });
     }
   };
 
@@ -157,24 +171,36 @@ const EBookGeneratorView = () => {
     loadTextUploads(session.id);
   };
 
-  // ── Delete session ──
+  // ── Delete session — two taps: the first arms, the second deletes. there is no undo for a book. ──
   const deleteSession = async (id: string) => {
-    await supabase.from("ebook_text_uploads").delete().eq("session_id", id);
-    await supabase.from("ebook_sessions").delete().eq("id", id);
+    if (armedDelete !== id) {
+      setArmedDelete(id);
+      window.setTimeout(() => setArmedDelete((cur) => (cur === id ? null : cur)), 3500);
+      return;
+    }
+    setArmedDelete(null);
+    const uploads = await supabase.from("ebook_text_uploads").delete().eq("session_id", id);
+    const row = await supabase.from("ebook_sessions").delete().eq("id", id);
+    const err = uploads.error ?? row.error;
+    if (err) {
+      toast({ title: "book kept", description: err.message, variant: "destructive" });
+      return;
+    }
     setSessions(prev => prev.filter(s => s.id !== id));
     if (activeSessionId === id) {
       setActiveSessionId(null);
       setShowSessionList(true);
     }
-    toast({ title: "Book deleted" });
+    toast({ title: "book removed" });
   };
 
   // ── Auto-save session (debounced) ──
   const saveSession = useCallback(async () => {
     if (!activeSessionId || !user) return;
     setSaving(true);
-    await supabase.from("ebook_sessions").update({
-      title: metadata.title || "Untitled Book",
+    const { error } = await supabase.from("ebook_sessions").update({
+      updated_at: new Date().toISOString(),
+      title: metadata.title || "untitled book",
       subtitle: metadata.subtitle,
       author: metadata.author,
       description: metadata.description,
@@ -186,10 +212,12 @@ const EBookGeneratorView = () => {
       status: chapters.length > 0 ? "structured" : "draft",
     }).eq("id", activeSessionId);
     setSaving(false);
+    setSaveError(error ? error.message : null);
+    if (error) return;
 
     // Update local sessions list
     setSessions(prev => prev.map(s => s.id === activeSessionId ? {
-      ...s, title: metadata.title || "Untitled Book", subtitle: metadata.subtitle,
+      ...s, title: metadata.title || "untitled book", subtitle: metadata.subtitle,
       author: metadata.author, description: metadata.description,
       settings, chapters, updatedAt: new Date(),
     } : s));
@@ -206,24 +234,33 @@ const EBookGeneratorView = () => {
   // ── Add text upload (from file or paste) ──
   const addTextUpload = async (fileName: string, content: string) => {
     if (!activeSessionId || !user || !content.trim()) return;
+    if (content.length > EBOOK_LIMITS.uploadChars) {
+      toast({ title: "text not added", description: `${fileName} is ${(content.length / 1000).toFixed(0)}k characters; one source holds at most ${EBOOK_LIMITS.uploadChars / 1000}k. split it.`, variant: "destructive" });
+      return;
+    }
     const wc = content.trim().split(/\s+/).filter(Boolean).length;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("ebook_text_uploads")
       .insert({ session_id: activeSessionId, user_id: user.id, file_name: fileName, content, word_count: wc })
       .select()
       .single();
 
+    if (error) toast({ title: "text not added", description: error.message, variant: "destructive" });
     if (data) {
       setTextUploads(prev => [...prev, {
         id: data.id, sessionId: data.session_id, fileName: data.file_name,
         content: data.content, wordCount: data.word_count, createdAt: new Date(data.created_at),
       }]);
-      toast({ title: `Added "${fileName}"`, description: `${wc.toLocaleString()} words` });
+      toast({ title: `added ${fileName}`, description: `${wc.toLocaleString()} words` });
     }
   };
 
   const removeTextUpload = async (id: string) => {
-    await supabase.from("ebook_text_uploads").delete().eq("id", id);
+    const { error } = await supabase.from("ebook_text_uploads").delete().eq("id", id);
+    if (error) {
+      toast({ title: "source kept", description: error.message, variant: "destructive" });
+      return;
+    }
     setTextUploads(prev => prev.filter(u => u.id !== id));
   };
 
@@ -231,6 +268,10 @@ const EBookGeneratorView = () => {
     const files = e.target.files;
     if (!files) return;
     Array.from(files).forEach(file => {
+      if (file.size > EBOOK_LIMITS.fileBytes) {
+        toast({ title: "file too large", description: `${file.name} is ${(file.size / 1024 / 1024).toFixed(1)} mb; the limit is ${EBOOK_LIMITS.fileBytes / 1024 / 1024} mb of text.`, variant: "destructive" });
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (ev) => {
         const text = ev.target?.result as string || "";
@@ -249,11 +290,21 @@ const EBookGeneratorView = () => {
 
   // ── AI Structure ──
   const allRawText = textUploads.map(u => u.content).join("\n\n---\n\n");
+  const sourceTruncated = allRawText.length > EBOOK_LIMITS.promptChars;
+
+  // a failed pass must never leave the operator on a spinner with no way out:
+  // the step goes back to settings, the reason is said once, and the sources stay.
+  const failStructure = useCallback((reason: string) => {
+    setProgress("");
+    setProcessing(false);
+    setStep("settings");
+    toast({ title: "book not structured", description: reason, variant: "destructive" });
+  }, [toast]);
 
   const structureBook = useCallback(async () => {
     if (!allRawText.trim() || !metadata.title.trim()) return;
     setProcessing(true);
-    setProgress("Analyzing content structure…");
+    setProgress(sourceTruncated ? `reading the first ${EBOOK_LIMITS.promptChars / 1000}k characters…` : "reading the sources…");
     setChapters([]);
 
     const chapterCountInstruction = settings.chapterCount === "auto"
@@ -292,7 +343,7 @@ CHAPTER SPLITTING:
 7. ${chapterCountInstruction}
 8. Split the corrected text into chapters at natural topic boundaries that ALREADY exist in the source (existing headings, section breaks, or clear topic shifts). Do not invent transitions.
 9. Each chapter title should be drawn from or directly summarize the source's existing heading for that section. Use a short, neutral title — do not embellish.
-10. ${settings.includeChapterSummaries ? "Write a 2-3 sentence summary for each chapter that paraphrases (does not editorialize) what the chapter contains." : "No summaries."}${diagramInstruction}
+10. ${settings.includeChapterSummaries ? `Write a 2-3 sentence summary for each chapter, in a ${toneMap[settings.tone] ?? toneMap.formal} register, that paraphrases (does not editorialize) what the chapter contains.` : "No summaries."}${diagramInstruction}
 
 OUTPUT FORMAT: Return ONLY a valid JSON array. Each element:
 {
@@ -306,20 +357,16 @@ ${settings.includeDiagrams ? 'For diagram chapters, use "type": "diagram" and in
 Do NOT wrap in markdown. Return ONLY the JSON array.
 
 RAW TEXT TO STRUCTURE:
-${allRawText}`,
+${allRawText.slice(0, EBOOK_LIMITS.promptChars)}`,
         }],
         mode: "chat",
         onDelta: (chunk) => {
           result += chunk;
-          if (result.length > 500) setProgress("Organizing chapters…");
-          if (result.length > 2000) setProgress("Writing chapter content…");
-          if (result.length > 5000) setProgress("Refining and polishing…");
+          setProgress(`${(result.length / 1000).toFixed(0)}k characters back so far…`);
         },
         onReplace: (text) => {
           result = text;
-          if (result.length > 500) setProgress("Organizing chapters…");
-          if (result.length > 2000) setProgress("Writing chapter content…");
-          if (result.length > 5000) setProgress("Refining and polishing…");
+          setProgress(`${(result.length / 1000).toFixed(0)}k characters back so far…`);
         },
         onDone: () => {
           try {
@@ -357,7 +404,8 @@ ${allRawText}`,
                   } catch { /* final fallback below */ }
                 }
               }
-              setProgress("Failed to parse — trying again…");
+              failStructure("shepherd did not answer with chapters. send it again or build the book by hand.");
+              return;
             }
           } catch {
             // Truncation recovery on parse error
@@ -374,7 +422,7 @@ ${allRawText}`,
                   if (parsed.length > 0) {
                     const newChapters = parsed.map((ch, i) => ({ ...ch, id: `ch-${i}-${Date.now()}` }));
                     setChapters(newChapters);
-                    setProgress(`Recovered ${parsed.length} chapters (response may have been truncated). You can regenerate for more.`);
+                    setProgress(`${parsed.length} chapters recovered — the answer was cut short, so the last chapter may be incomplete.`);
                     setStep("preview");
                     setProcessing(false);
                     return;
@@ -382,30 +430,35 @@ ${allRawText}`,
                 } catch { /* truly broken */ }
               }
             }
-            setProgress("Error parsing AI response. Please try again.");
+            failStructure("shepherd's answer could not be read as chapters. send it again or build the book by hand.");
+            return;
           }
           setProcessing(false);
         },
       });
-    } catch {
-      setProcessing(false);
-      setProgress("Error connecting to AI. Please try again.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "no answer";
+      failStructure(`shepherd could not run: ${msg.charAt(0).toLowerCase()}${msg.slice(1)}`);
     }
-  }, [allRawText, metadata, settings]);
+  }, [allRawText, metadata, settings, sourceTruncated, failStructure]);
 
   // ── Fix Grammar on all chapters ──
 
   const fixAllGrammar = useCallback(async () => {
     if (chapters.length === 0) return;
-    setFixingGrammar(true);
-    setProgress("Aureon is fixing grammar across all chapters…");
-
     const chaptersPayload = chapters.map((ch, i) => ({
       index: i,
       title: ch.title,
       content: ch.content,
       summary: ch.summary || "",
     }));
+    const payloadJson = JSON.stringify(chaptersPayload);
+    if (payloadJson.length > EBOOK_LIMITS.grammarChars) {
+      toast({ title: "too long for one pass", description: `the chapters are ${(payloadJson.length / 1000).toFixed(0)}k characters; one grammar pass takes ${EBOOK_LIMITS.grammarChars / 1000}k. fix chapters one at a time in the editor.`, variant: "destructive" });
+      return;
+    }
+    setFixingGrammar(true);
+    setProgress("shepherd is reading the chapters…");
 
     let result = "";
     try {
@@ -434,20 +487,16 @@ OUTPUT FORMAT: Return ONLY a valid JSON array with the same number of elements (
 Do NOT wrap in markdown. Return ONLY the JSON array.
 
 CHAPTERS TO FIX:
-${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
+${payloadJson}`,
         }],
         mode: "chat",
         onDelta: (chunk) => {
           result += chunk;
-          if (result.length > 500) setProgress("Correcting grammar…");
-          if (result.length > 3000) setProgress("Polishing sentences…");
-          if (result.length > 8000) setProgress("Final review…");
+          setProgress(`${(result.length / 1000).toFixed(0)}k characters back so far…`);
         },
         onReplace: (text) => {
           result = text;
-          if (result.length > 500) setProgress("Correcting grammar…");
-          if (result.length > 3000) setProgress("Polishing sentences…");
-          if (result.length > 8000) setProgress("Final review…");
+          setProgress(`${(result.length / 1000).toFixed(0)}k characters back so far…`);
         },
         onDone: () => {
           try {
@@ -461,24 +510,28 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
                 summary: parsed[i]?.summary || ch.summary,
               })));
               setProgress("");
-              toast({ title: "Grammar fixed", description: `All ${chapters.length} chapters have been corrected.` });
+              toast({ title: "grammar pass done", description: `${chapters.length} chapters corrected. the text is yours to review.` });
             } else {
-              setProgress("Failed to parse corrected text.");
+              setProgress("");
+              toast({ title: "chapters unchanged", description: "shepherd did not answer with corrected chapters.", variant: "destructive" });
             }
           } catch {
-            setProgress("Error parsing AI response.");
+            setProgress("");
+            toast({ title: "chapters unchanged", description: "shepherd's answer could not be read as chapters.", variant: "destructive" });
           }
           setFixingGrammar(false);
         },
       });
-    } catch {
+    } catch (e) {
       setFixingGrammar(false);
-      setProgress("Error connecting to AI.");
+      setProgress("");
+      const msg = e instanceof Error ? e.message : "no answer";
+      toast({ title: "chapters unchanged", description: `shepherd could not run: ${msg.charAt(0).toLowerCase()}${msg.slice(1)}`, variant: "destructive" });
     }
   }, [chapters, toast]);
 
   const addChapter = () => {
-    setChapters(prev => [...prev, { id: `ch-new-${Date.now()}`, title: `Chapter ${prev.length + 1}`, content: "", summary: "" }]);
+    setChapters(prev => [...prev, { id: `ch-new-${Date.now()}`, title: `chapter ${prev.length + 1}`, content: "", summary: "" }]);
   };
 
   const updateChapter = (id: string, field: keyof EBookChapter | "diagramDescription", value: string) => {
@@ -581,7 +634,7 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
     a.href = canvas.toDataURL("image/png");
     a.click();
 
-    toast({ title: "Cover downloaded", description: "Your book cover has been saved as PNG." });
+    toast({ title: "cover saved", description: "the cover is a png on this device." });
   }, [settings, metadata, wallpaperSrc, toast]);
 
   // ── PDF Export ──
@@ -665,7 +718,7 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
       // Copyright
       if (settings.includeCopyright) {
         addPage(); pdf.setFont("helvetica", "normal"); pdf.setFontSize(10); pdf.setTextColor(180);
-        const ct = metadata.copyright || `© ${new Date().getFullYear()} ${metadata.author || "Author"}. All rights reserved.`;
+        const ct = metadata.copyright || `© ${new Date().getFullYear()} ${metadata.author || "the author"}. all rights reserved.`;
         pdf.text(pdf.splitTextToSize(ct, contentW), margin.left, ps.h * 0.6);
       }
 
@@ -680,7 +733,7 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
       if (settings.includeTableOfContents) {
         addPage(); drawPageNumber(pageNum);
         pdf.setFont("helvetica", "bold"); pdf.setFontSize(24); pdf.setTextColor(230);
-        pdf.text("Table of Contents", margin.left, margin.top + 30);
+        pdf.text("contents", margin.left, margin.top + 30);
         let tocY = margin.top + 80;
         chapters.forEach((ch, i) => {
           pdf.setFont("helvetica", "normal"); pdf.setFontSize(12); pdf.setTextColor(200);
@@ -697,7 +750,7 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
         if (isDiagram) {
           // Diagram page layout
           pdf.setFont("helvetica", "normal"); pdf.setFontSize(10); pdf.setTextColor(160);
-          const dl = "DIAGRAM"; pdf.text(dl, (ps.w - pdf.getTextWidth(dl)) / 2, margin.top + 40);
+          const dl = "diagram"; pdf.text(dl, (ps.w - pdf.getTextWidth(dl)) / 2, margin.top + 40);
           pdf.setFont("helvetica", "bold"); pdf.setFontSize(chapterTitleSize); pdf.setTextColor(240);
           const dtl = pdf.splitTextToSize(chapter.title, contentW);
           let dy = margin.top + 75;
@@ -752,7 +805,7 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
         } else {
           // Standard text chapter
           pdf.setFont("helvetica", "normal"); pdf.setFontSize(12); pdf.setTextColor(160);
-          const cn = `CHAPTER ${chIdx + 1}`; pdf.text(cn, (ps.w - pdf.getTextWidth(cn)) / 2, margin.top + 60);
+          const cn = `chapter ${chIdx + 1}`; pdf.text(cn, (ps.w - pdf.getTextWidth(cn)) / 2, margin.top + 60);
           pdf.setFont("helvetica", "bold"); pdf.setFontSize(chapterTitleSize); pdf.setTextColor(240);
           const ctl = pdf.splitTextToSize(chapter.title, contentW);
           let cy = margin.top + 95;
@@ -783,7 +836,7 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
       if (settings.includeAboutAuthor && metadata.aboutAuthor.trim()) {
         addPage(); drawPageNumber(pageNum);
         pdf.setFont("helvetica", "bold"); pdf.setFontSize(20); pdf.setTextColor(230);
-        pdf.text("About the Author", margin.left, margin.top + 40);
+        pdf.text("about the author", margin.left, margin.top + 40);
         pdf.setFont("helvetica", "normal"); pdf.setFontSize(bodyFontSize); pdf.setTextColor(200);
         let ay = margin.top + 80;
         pdf.splitTextToSize(metadata.aboutAuthor, contentW).forEach((l: string) => {
@@ -792,10 +845,13 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
         });
       }
 
-      pdf.save(`${metadata.title.replace(/[^a-zA-Z0-9]/g, "_")}_ebook.pdf`);
-    } catch (e) { console.error("PDF export error:", e); }
+      pdf.save(`${(metadata.title || "book").replace(/[^a-zA-Z0-9]/g, "_")}_book.pdf`);
+      toast({ title: "pdf saved", description: `${pageNum} pages, ${chapters.length} chapters.` });
+    } catch (e) {
+      toast({ title: "pdf not written", description: e instanceof Error ? e.message : "the renderer stopped", variant: "destructive" });
+    }
     setExporting(false);
-  }, [chapters, metadata, settings, wallpaperSrc]);
+  }, [chapters, metadata, settings, wallpaperSrc, toast]);
 
   // ── Stats ──
   const totalChapterWords = chapters.reduce((sum, ch) => sum + ch.content.split(/\s+/).filter(Boolean).length, 0);
@@ -810,30 +866,36 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
             <div className="flex items-center gap-3">
               <BookOpen className="h-5 w-5 text-accent" />
               <div>
-                <h1 className="text-lg font-extralight text-foreground">asherin.ebooks</h1>
-                <p className="text-[10px] font-extralight text-muted-foreground/60 uppercase hidden sm:block">long-form publishing room</p>
+                <h1 className="text-lg font-extralight text-foreground">books</h1>
+                <p className="text-[10px] font-extralight text-muted-foreground/60 hidden sm:block">long form, chapters. kept on this device.</p>
               </div>
             </div>
             <button onClick={createSession}
               className="flex items-center gap-2 rounded-lg bg-accent/20 px-4 py-2 text-xs text-accent hover:bg-accent/30 transition-colors">
-              <Plus className="h-3.5 w-3.5" /> New Book
+              <Plus className="h-3.5 w-3.5" /> new book
             </button>
           </div>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6">
           <div className="max-w-2xl mx-auto space-y-3">
+            {loadError && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-xs font-light text-destructive/80">
+                the books table could not be read: {loadError}
+                <button onClick={loadSessions} className="ml-2 underline">try again</button>
+              </div>
+            )}
             {sessionsLoading ? (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="h-6 w-6 text-accent animate-spin" />
+              <div className="flex items-center justify-center gap-2 py-20 text-xs font-light text-muted-foreground/60">
+                <Loader2 className="h-4 w-4 text-accent animate-spin" /> opening your books…
               </div>
             ) : sessions.length === 0 ? (
               <div className="text-center py-20 space-y-4">
                 <BookOpen className="h-12 w-12 text-muted-foreground/20 mx-auto" />
-                <p className="text-sm font-light text-muted-foreground/50">No books yet. Create your first one.</p>
+                <p className="text-sm font-light text-muted-foreground/50">no books yet.</p>
                 <button onClick={createSession}
                   className="inline-flex items-center gap-2 rounded-lg bg-accent/20 px-5 py-2.5 text-xs text-accent hover:bg-accent/30 transition-colors">
-                  <Plus className="h-3.5 w-3.5" /> Create Book
+                  <Plus className="h-3.5 w-3.5" /> start a book
                 </button>
               </div>
             ) : (
@@ -852,7 +914,7 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
                       <div className="flex items-center gap-3 mt-1">
                         <span className="text-[9px] font-light text-muted-foreground/40">{session.chapters.length} chapters</span>
                         <span className="text-[9px] font-light text-muted-foreground/40">
-                          {session.status === "structured" ? "✓ Structured" : "Draft"}
+                          {session.status === "structured" ? "chapters set" : "draft"}
                         </span>
                         <span className="text-[9px] font-light text-muted-foreground/40 flex items-center gap-1">
                           <Clock className="h-2.5 w-2.5" />
@@ -861,8 +923,10 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
                       </div>
                     </div>
                     <button onClick={e => { e.stopPropagation(); deleteSession(session.id); }}
-                      className="opacity-0 group-hover:opacity-100 text-muted-foreground/30 hover:text-destructive transition-all p-1.5">
+                      aria-label={armedDelete === session.id ? "tap again to delete this book" : `delete ${session.title}`}
+                      className={`inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-[10px] transition-all md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 ${armedDelete === session.id ? "text-destructive md:opacity-100" : "text-muted-foreground/40 hover:text-destructive"}`}>
                       <Trash2 className="h-3.5 w-3.5" />
+                      {armedDelete === session.id ? "sure?" : null}
                     </button>
                   </div>
                 </div>
@@ -876,10 +940,10 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
 
   // ── RENDER: Book Editor ──
   const steps: { id: EBookStep; label: string; icon: React.ElementType }[] = [
-    { id: "upload", label: "Content", icon: Upload },
-    { id: "settings", label: "Settings", icon: Settings2 },
-    { id: "processing", label: "Generate", icon: Sparkles },
-    { id: "preview", label: "Preview", icon: Eye },
+    { id: "upload", label: "sources", icon: Upload },
+    { id: "settings", label: "settings", icon: Settings2 },
+    { id: "processing", label: "build", icon: Sparkles },
+    { id: "preview", label: "chapters", icon: Eye },
   ];
 
   const canProceed = () => {
@@ -891,14 +955,14 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
   const buildManually = useCallback(() => {
     if (textUploads.length === 0) return;
     const newChapters: EBookChapter[] = textUploads.map((u, i) => {
-      const rawTitle = (u.fileName || `Chapter ${i + 1}`)
+      const rawTitle = (u.fileName || `chapter ${i + 1}`)
         .replace(/\.[^/.]+$/, "")
-        .replace(/^pasted_text_\d+$/, `Chapter ${i + 1}`)
+        .replace(/^pasted_text_\d+$/, `chapter ${i + 1}`)
         .replace(/[_-]+/g, " ")
         .trim();
       return {
         id: `ch-${i}-${Date.now()}`,
-        title: rawTitle || `Chapter ${i + 1}`,
+        title: rawTitle || `chapter ${i + 1}`,
         content: u.content,
         type: "text" as const,
       };
@@ -929,31 +993,31 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
     <div className="space-y-6">
       {/* Metadata */}
       <div className="space-y-3">
-        <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 uppercase">Book Details</p>
+        <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60">the book</p>
         <input value={metadata.title} onChange={e => setMetadata(prev => ({ ...prev, title: e.target.value }))}
-          placeholder="Book Title *" className="w-full bg-card/30 border border-border/20 rounded-xl px-4 py-3 text-sm font-light text-foreground placeholder:text-muted-foreground/30 outline-none focus:border-accent/30" />
+          placeholder="title (required)" aria-label="book title" className="w-full bg-card/30 border border-border/20 rounded-xl px-4 py-3 text-sm font-light text-foreground placeholder:text-muted-foreground/30 outline-none focus:border-accent/30" />
         <input value={metadata.subtitle} onChange={e => setMetadata(prev => ({ ...prev, subtitle: e.target.value }))}
-          placeholder="Subtitle (optional)" className="w-full bg-card/30 border border-border/20 rounded-xl px-4 py-3 text-sm font-light text-foreground placeholder:text-muted-foreground/30 outline-none focus:border-accent/30" />
+          placeholder="subtitle (optional)" aria-label="subtitle" className="w-full bg-card/30 border border-border/20 rounded-xl px-4 py-3 text-sm font-light text-foreground placeholder:text-muted-foreground/30 outline-none focus:border-accent/30" />
         <div className="grid grid-cols-2 gap-3">
           <input value={metadata.author} onChange={e => setMetadata(prev => ({ ...prev, author: e.target.value }))}
-            placeholder="Author Name" className="bg-card/30 border border-border/20 rounded-xl px-4 py-3 text-sm font-light text-foreground placeholder:text-muted-foreground/30 outline-none focus:border-accent/30" />
+            placeholder="author" aria-label="author" className="bg-card/30 border border-border/20 rounded-xl px-4 py-3 text-sm font-light text-foreground placeholder:text-muted-foreground/30 outline-none focus:border-accent/30" />
           <input value={metadata.copyright} onChange={e => setMetadata(prev => ({ ...prev, copyright: e.target.value }))}
-            placeholder="Copyright Notice" className="bg-card/30 border border-border/20 rounded-xl px-4 py-3 text-sm font-light text-foreground placeholder:text-muted-foreground/30 outline-none focus:border-accent/30" />
+            placeholder="copyright line" aria-label="copyright line" className="bg-card/30 border border-border/20 rounded-xl px-4 py-3 text-sm font-light text-foreground placeholder:text-muted-foreground/30 outline-none focus:border-accent/30" />
         </div>
         <textarea value={metadata.description} onChange={e => setMetadata(prev => ({ ...prev, description: e.target.value }))}
-          placeholder="Book Description — what's this book about? (helps AI organize content)" rows={3}
+          placeholder="what the book is about — shepherd uses this to find the chapter breaks" aria-label="description" rows={3}
           className="w-full bg-card/30 border border-border/20 rounded-xl px-4 py-3 text-sm font-light text-foreground placeholder:text-muted-foreground/30 outline-none focus:border-accent/30 resize-none" />
       </div>
 
       {/* Text Uploads */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 uppercase">Source Text Files</p>
+          <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60">sources</p>
           <div className="flex items-center gap-2">
             <span className="text-[9px] text-muted-foreground/40">{totalWords.toLocaleString()} words · ~{estimatedPages} pages</span>
             <button onClick={() => fileInputRef.current?.click()}
               className="flex items-center gap-1.5 rounded-lg border border-border/20 px-3 py-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors">
-              <Upload className="h-3 w-3" /> Upload Files
+              <Upload className="h-3 w-3" /> open text files
             </button>
           </div>
         </div>
@@ -967,7 +1031,7 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
                 <FileText className="h-3.5 w-3.5 text-accent/50 flex-shrink-0" />
                 <span className="flex-1 text-xs font-light text-foreground truncate">{u.fileName}</span>
                 <span className="text-[9px] text-muted-foreground/40 flex-shrink-0">{u.wordCount.toLocaleString()} words</span>
-                <button onClick={() => removeTextUpload(u.id)} className="text-muted-foreground/30 hover:text-destructive transition-colors">
+                <button onClick={() => removeTextUpload(u.id)} aria-label={`remove ${u.fileName}`} className="inline-flex min-h-8 min-w-8 items-center justify-center text-muted-foreground/40 hover:text-destructive transition-colors">
                   <X className="h-3 w-3" />
                 </button>
               </div>
@@ -978,7 +1042,7 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
         {/* Paste area */}
         <div className="space-y-2">
           <textarea value={pasteText} onChange={e => setPasteText(e.target.value)}
-            placeholder="Paste additional text here and click 'Add Text' to append to your book sources…"
+            aria-label="paste text" placeholder="or paste text here and tap “add text”…"
             rows={6}
             className="w-full bg-card/30 border border-border/20 rounded-xl px-4 py-3 text-xs font-light text-foreground placeholder:text-muted-foreground/30 outline-none focus:border-accent/30 resize-none" />
           {pasteText.trim() && (
@@ -986,7 +1050,7 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
               <span className="text-[9px] text-muted-foreground/40">{pasteText.trim().split(/\s+/).filter(Boolean).length.toLocaleString()} words</span>
               <button onClick={handlePasteSubmit}
                 className="flex items-center gap-1.5 rounded-lg bg-accent/15 px-3 py-1.5 text-[10px] text-accent hover:bg-accent/25 transition-colors">
-                <Plus className="h-3 w-3" /> Add Text
+                <Plus className="h-3 w-3" /> add text
               </button>
             </div>
           )}
@@ -999,29 +1063,29 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
     <div className="space-y-6">
       {/* Build mode toggle */}
       <div>
-        <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 uppercase mb-2">Build Mode</p>
+        <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 mb-2">how the chapters are made</p>
         <div className="grid grid-cols-2 gap-2">
           <button onClick={() => setSettings(prev => ({ ...prev, buildMode: "ai" }))}
             className={`rounded-xl border p-3 text-left transition-colors ${settings.buildMode !== "manual" ? "border-accent/40 bg-accent/10" : "border-border/20 bg-card/20 hover:border-border/40"}`}>
-            <p className="text-xs font-light text-foreground flex items-center gap-1.5"><Sparkles className="h-3 w-3" /> AI Structured</p>
-            <p className="text-[10px] font-light text-muted-foreground/60 mt-1">Aureon organizes your text into chapters, fixes grammar, and polishes.</p>
+            <p className="text-xs font-light text-foreground flex items-center gap-1.5"><Sparkles className="h-3 w-3" /> shepherd splits it</p>
+            <p className="text-[10px] font-light text-muted-foreground/60 mt-1">shepherd finds the chapter breaks and fixes grammar. your wording is kept.</p>
           </button>
           <button onClick={() => setSettings(prev => ({ ...prev, buildMode: "manual" }))}
             className={`rounded-xl border p-3 text-left transition-colors ${settings.buildMode === "manual" ? "border-accent/40 bg-accent/10" : "border-border/20 bg-card/20 hover:border-border/40"}`}>
-            <p className="text-xs font-light text-foreground flex items-center gap-1.5"><BookOpen className="h-3 w-3" /> Manual</p>
-            <p className="text-[10px] font-light text-muted-foreground/60 mt-1">Use your text exactly as-is. Each upload becomes a chapter. No AI.</p>
+            <p className="text-xs font-light text-foreground flex items-center gap-1.5"><BookOpen className="h-3 w-3" /> by hand</p>
+            <p className="text-[10px] font-light text-muted-foreground/60 mt-1">your text exactly as it is. each source becomes a chapter. shepherd is not called.</p>
           </button>
         </div>
       </div>
       <div>
-        <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 uppercase mb-2">Cover Wallpaper</p>
-        <div className="grid grid-cols-7 gap-2">
+        <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 mb-2">cover</p>
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
           {WALLPAPERS.map(wp => (
             <button key={wp.key} onClick={() => setSettings(prev => ({ ...prev, wallpaper: wp.key }))}
               className={`relative rounded-lg overflow-hidden border-2 transition-all aspect-[3/4] ${settings.wallpaper === wp.key ? "border-accent/50 ring-1 ring-accent/20" : "border-border/20 hover:border-border/40"}`}>
               <img src={wp.src} alt={wp.label} className="w-full h-full object-cover" />
               <span className="absolute inset-0 flex items-end justify-center pb-0.5 bg-gradient-to-t from-black/60 to-transparent">
-                <span className="text-[7px] font-light text-white/90">{wp.label}</span>
+                <span className="text-[8px] font-light lowercase text-white/90">{wp.label}</span>
               </span>
             </button>
           ))}
@@ -1030,45 +1094,45 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 uppercase mb-2">Page Size</p>
+          <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 mb-2">page size</p>
           <select value={settings.pageSize} onChange={e => setSettings(prev => ({ ...prev, pageSize: e.target.value as any }))}
             className="w-full bg-card/30 border border-border/20 rounded-xl px-3 py-2 text-xs font-light text-foreground outline-none">
             {Object.entries(PAGE_SIZES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
         </div>
         <div>
-          <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 uppercase mb-2">Font Size</p>
+          <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 mb-2">type size</p>
           <select value={settings.fontSize} onChange={e => setSettings(prev => ({ ...prev, fontSize: Number(e.target.value) as any }))}
             className="w-full bg-card/30 border border-border/20 rounded-xl px-3 py-2 text-xs font-light text-foreground outline-none">
             <option value={10}>10pt</option><option value={12}>12pt</option><option value={14}>14pt</option>
           </select>
         </div>
         <div>
-          <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 uppercase mb-2">Line Spacing</p>
+          <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 mb-2">line spacing</p>
           <select value={settings.lineSpacing} onChange={e => setSettings(prev => ({ ...prev, lineSpacing: Number(e.target.value) as any }))}
             className="w-full bg-card/30 border border-border/20 rounded-xl px-3 py-2 text-xs font-light text-foreground outline-none">
-            <option value={1}>Single</option><option value={1.5}>1.5×</option><option value={2}>Double</option>
+            <option value={1}>single</option><option value={1.5}>1.5×</option><option value={2}>double</option>
           </select>
         </div>
         <div>
-          <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 uppercase mb-2">Tone</p>
+          <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 mb-2">tone of the summaries</p>
           <select value={settings.tone} onChange={e => setSettings(prev => ({ ...prev, tone: e.target.value as any }))}
             className="w-full bg-card/30 border border-border/20 rounded-xl px-3 py-2 text-xs font-light text-foreground outline-none">
-            <option value="formal">Formal</option><option value="casual">Casual</option><option value="technical">Technical</option><option value="narrative">Narrative</option>
+            <option value="formal">formal</option><option value="casual">casual</option><option value="technical">technical</option><option value="narrative">narrative</option>
           </select>
         </div>
       </div>
 
       {settings.buildMode !== "manual" && (
         <div>
-          <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 uppercase mb-2">Chapter Count</p>
+          <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 mb-2">chapter count</p>
           <div className="flex items-center gap-3">
             <button onClick={() => setSettings(prev => ({ ...prev, chapterCount: "auto" }))}
               className={`rounded-lg px-4 py-2 text-xs font-light transition-colors ${settings.chapterCount === "auto" ? "bg-accent/20 text-accent" : "bg-card/30 text-muted-foreground border border-border/20"}`}>
-              Auto-detect
+              let shepherd decide
             </button>
             <input type="number" min={1} max={50} value={settings.chapterCount === "auto" ? "" : settings.chapterCount}
-              placeholder="Custom #"
+              placeholder="or a number" aria-label="chapter count"
               onChange={e => setSettings(prev => ({ ...prev, chapterCount: e.target.value ? Number(e.target.value) : "auto" }))}
               className="w-24 bg-card/30 border border-border/20 rounded-xl px-3 py-2 text-xs font-light text-foreground placeholder:text-muted-foreground/30 outline-none" />
           </div>
@@ -1077,45 +1141,45 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
 
       <div className="space-y-2">
         <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 uppercase mb-2">
-          {settings.buildMode === "manual" ? "Front & Back Matter" : "Content Processing"}
+          {settings.buildMode === "manual" ? "front and back matter" : "what shepherd may do"}
         </p>
         {(settings.buildMode === "manual"
           ? ([
-              ["includeTableOfContents", "Table of Contents"],
-              ["includeCopyright", "Copyright page"],
-              ["includeDedication", "Dedication page"],
-              ["includeAboutAuthor", "About the Author page"],
+              ["includeTableOfContents", "contents page"],
+              ["includeCopyright", "copyright page"],
+              ["includeDedication", "dedication page"],
+              ["includeAboutAuthor", "about the author page"],
             ] as const)
           : ([
-              ["rewriteForConsistency", "Rewrite for consistency"],
-              ["fixGrammar", "Fix grammar & spelling"],
-              ["removeDuplicates", "Remove duplicates"],
-              ["includeTableOfContents", "Table of Contents"],
-              ["includeChapterSummaries", "Chapter summaries"],
-              ["includeDiagrams", "Generate diagrams & workflow pages"],
-              ["includeCopyright", "Copyright page"],
-              ["includeDedication", "Dedication page"],
-              ["includeAboutAuthor", "About the Author page"],
+              ["fixGrammar", "fix grammar and spelling"],
+              ["removeDuplicates", "drop exact duplicate paragraphs"],
+              ["includeTableOfContents", "contents page"],
+              ["includeChapterSummaries", "chapter summaries"],
+              ["includeDiagrams", "diagram pages from the text"],
+              ["includeCopyright", "copyright page"],
+              ["includeDedication", "dedication page"],
+              ["includeAboutAuthor", "about the author page"],
             ] as const)
         ).map(([key, label]) => (
-          <label key={key} className="flex items-center gap-3 cursor-pointer group">
-            <div className={`w-8 h-4 rounded-full transition-colors relative ${settings[key] ? "bg-accent/60" : "bg-border/30"}`}
-              onClick={() => setSettings(prev => ({ ...prev, [key]: !prev[key] }))}>
-              <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-foreground transition-all ${settings[key] ? "left-4.5" : "left-0.5"}`} />
-            </div>
+          <button key={key} type="button" role="switch" aria-checked={!!settings[key]}
+            onClick={() => setSettings(prev => ({ ...prev, [key]: !prev[key] }))}
+            className="flex min-h-9 items-center gap-3 text-left group">
+            <span className={`relative inline-block h-4 w-8 rounded-full transition-colors ${settings[key] ? "bg-accent/60" : "bg-border/30"}`}>
+              <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-foreground transition-all ${settings[key] ? "left-[18px]" : "left-0.5"}`} />
+            </span>
             <span className="text-xs font-light text-muted-foreground group-hover:text-foreground transition-colors">{label}</span>
-          </label>
+          </button>
         ))}
       </div>
 
       {settings.includeDedication && (
         <textarea value={metadata.dedication} onChange={e => setMetadata(prev => ({ ...prev, dedication: e.target.value }))}
-          placeholder="Dedication text…" rows={2}
+          placeholder="dedication" aria-label="dedication" rows={2}
           className="w-full bg-card/30 border border-border/20 rounded-xl px-4 py-3 text-xs font-light text-foreground placeholder:text-muted-foreground/30 outline-none focus:border-accent/30 resize-none" />
       )}
       {settings.includeAboutAuthor && (
         <textarea value={metadata.aboutAuthor} onChange={e => setMetadata(prev => ({ ...prev, aboutAuthor: e.target.value }))}
-          placeholder="About the Author…" rows={3}
+          placeholder="about the author" aria-label="about the author" rows={3}
           className="w-full bg-card/30 border border-border/20 rounded-xl px-4 py-3 text-xs font-light text-foreground placeholder:text-muted-foreground/30 outline-none focus:border-accent/30 resize-none" />
       )}
     </div>
@@ -1128,27 +1192,25 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
         <BookOpen className="h-5 w-5 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
       </div>
       <div className="text-center space-y-2">
-        <p className="text-sm font-light text-foreground">Aureon is writing your book…</p>
-        <p className="text-xs font-light text-muted-foreground/60">{progress}</p>
-      </div>
-      <div className="w-64 h-1 bg-border/20 rounded-full overflow-hidden">
-        <div className="h-full bg-accent/50 rounded-full animate-pulse" style={{ width: "60%" }} />
+        <p className="text-sm font-light text-foreground">shepherd is splitting the text into chapters…</p>
+        <p className="text-xs font-light text-muted-foreground/60" role="status" aria-live="polite">{progress}</p>
+        <p className="text-[10px] font-light text-muted-foreground/40">the length of the answer is the only progress there is; nothing here is estimated.</p>
       </div>
     </div>
   );
 
   const renderPreviewStep = () => (
     <div className="space-y-4">
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Chapters", value: chapters.length },
-          { label: "Words", value: totalChapterWords.toLocaleString() },
-          { label: "Est. Pages", value: totalChapterPages },
-          { label: "Reading Time", value: `${Math.ceil(totalChapterWords / 200)}m` },
+          { label: "chapters", value: chapters.length },
+          { label: "words", value: totalChapterWords.toLocaleString() },
+          { label: "pages, about", value: totalChapterPages },
+          { label: "reading time", value: `${Math.ceil(totalChapterWords / 200)} min` },
         ].map(s => (
           <div key={s.label} className="rounded-xl border border-border/20 bg-card/20 p-3 text-center">
             <p className="text-lg font-extralight text-foreground">{s.value}</p>
-            <p className="text-[9px] font-light tracking-[0.1em] text-muted-foreground/50 uppercase">{s.label}</p>
+            <p className="text-[9px] font-light tracking-[0.1em] text-muted-foreground/50">{s.label}</p>
           </div>
         ))}
       </div>
@@ -1156,9 +1218,9 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
       {/* Source files summary */}
       <div className="rounded-xl border border-border/20 bg-card/10 p-3">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 uppercase">Source Files ({textUploads.length})</p>
+          <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60">sources ({textUploads.length})</p>
           <button onClick={() => { setStep("upload"); }}
-            className="text-[9px] text-accent/60 hover:text-accent transition-colors">+ Add More Text</button>
+            className="text-[9px] text-accent/60 hover:text-accent transition-colors">+ add more text</button>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {textUploads.map(u => (
@@ -1171,15 +1233,15 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 uppercase">Chapters</p>
+          <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60">chapters</p>
           <div className="flex items-center gap-2">
             <button onClick={fixAllGrammar} disabled={fixingGrammar || chapters.length === 0}
               className="flex items-center gap-1 rounded-lg border border-accent/20 bg-accent/10 px-2.5 py-1 text-[9px] text-accent hover:bg-accent/20 transition-colors disabled:opacity-40">
               {fixingGrammar ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Sparkles className="h-2.5 w-2.5" />}
-              {fixingGrammar ? "Fixing…" : "Fix All Grammar"}
+              {fixingGrammar ? "fixing…" : "fix grammar in every chapter"}
             </button>
             <button onClick={addChapter} className="flex items-center gap-1 rounded-lg border border-border/20 px-2 py-1 text-[9px] text-muted-foreground hover:text-foreground transition-colors">
-              <Plus className="h-2.5 w-2.5" /> Add Chapter
+              <Plus className="h-2.5 w-2.5" /> add chapter
             </button>
           </div>
         </div>
@@ -1192,30 +1254,30 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
               </span>
               <span className="flex-1 text-xs font-light text-foreground truncate">{ch.title}</span>
               {ch.type === "diagram" && (
-                <span className="text-[8px] font-light text-accent/50 bg-accent/10 rounded px-1.5 py-0.5">Diagram</span>
+                <span className="text-[8px] font-light text-accent/50 bg-accent/10 rounded px-1.5 py-0.5">diagram</span>
               )}
               <span className="text-[9px] text-muted-foreground/40">{ch.content.split(/\s+/).filter(Boolean).length} words</span>
               <div className="flex items-center gap-1">
-                <button onClick={e => { e.stopPropagation(); moveChapter(ch.id, "up"); }} className="text-muted-foreground/30 hover:text-foreground p-0.5"><ChevronUp className="h-3 w-3" /></button>
-                <button onClick={e => { e.stopPropagation(); moveChapter(ch.id, "down"); }} className="text-muted-foreground/30 hover:text-foreground p-0.5"><ChevronDown className="h-3 w-3" /></button>
-                <button onClick={e => { e.stopPropagation(); removeChapter(ch.id); }} className="text-muted-foreground/30 hover:text-destructive p-0.5"><Trash2 className="h-3 w-3" /></button>
+                <button aria-label="move chapter up" onClick={e => { e.stopPropagation(); moveChapter(ch.id, "up"); }} className="text-muted-foreground/40 hover:text-foreground p-1"><ChevronUp className="h-3 w-3" /></button>
+                <button aria-label="move chapter down" onClick={e => { e.stopPropagation(); moveChapter(ch.id, "down"); }} className="text-muted-foreground/40 hover:text-foreground p-1"><ChevronDown className="h-3 w-3" /></button>
+                <button aria-label="remove chapter" onClick={e => { e.stopPropagation(); removeChapter(ch.id); }} className="text-muted-foreground/40 hover:text-destructive p-1"><Trash2 className="h-3 w-3" /></button>
               </div>
               {expandedChapter === ch.id ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/40" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/40" />}
             </div>
             {expandedChapter === ch.id && (
               <div className="border-t border-border/10 p-3 space-y-2">
                 <input value={ch.title} onChange={e => updateChapter(ch.id, "title", e.target.value)}
-                  className="w-full bg-card/30 border border-border/20 rounded-lg px-3 py-2 text-xs font-light text-foreground outline-none" placeholder="Chapter Title" />
+                  className="w-full bg-card/30 border border-border/20 rounded-lg px-3 py-2 text-xs font-light text-foreground outline-none" placeholder="chapter title" aria-label="chapter title" />
                 {ch.summary !== undefined && (
                   <textarea value={ch.summary || ""} onChange={e => updateChapter(ch.id, "summary", e.target.value)}
-                    className="w-full bg-card/30 border border-border/20 rounded-lg px-3 py-2 text-[11px] font-light text-muted-foreground outline-none resize-none" rows={2} placeholder="Chapter Summary" />
+                    className="w-full bg-card/30 border border-border/20 rounded-lg px-3 py-2 text-[11px] font-light text-muted-foreground outline-none resize-none" rows={2} placeholder="chapter summary" aria-label="chapter summary" />
                 )}
                 {ch.type === "diagram" && (
                   <textarea value={ch.diagramDescription || ""} onChange={e => updateChapter(ch.id, "diagramDescription" as any, e.target.value)}
-                    className="w-full bg-accent/5 border border-accent/20 rounded-lg px-3 py-2 text-[11px] font-light text-accent/80 outline-none resize-none" rows={3} placeholder="Diagram flow description (e.g. [Step A] → [Step B] → [Step C])" />
+                    className="w-full bg-accent/5 border border-accent/20 rounded-lg px-3 py-2 text-[11px] font-light text-accent/80 outline-none resize-none" rows={3} placeholder="diagram flow, e.g. [step a] → [step b] → [step c]" aria-label="diagram flow" />
                 )}
                 <textarea value={ch.content} onChange={e => updateChapter(ch.id, "content", e.target.value)}
-                  className="w-full bg-card/30 border border-border/20 rounded-lg px-3 py-2 text-xs font-light text-foreground outline-none resize-none min-h-[200px]" placeholder={ch.type === "diagram" ? "Diagram explanation text…" : "Chapter Content"} />
+                  className="w-full bg-card/30 border border-border/20 rounded-lg px-3 py-2 text-xs font-light text-foreground outline-none resize-none min-h-[200px]" placeholder={ch.type === "diagram" ? "what the diagram shows" : "chapter text"} aria-label="chapter text" />
               </div>
             )}
           </div>
@@ -1224,18 +1286,18 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
 
       {/* Book Preview — Cover + Pages */}
       <div>
-        <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 uppercase mb-3">Book Preview</p>
+        <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 mb-3">how it will look</p>
         <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-thin">
           {/* Cover */}
           <div className="flex-shrink-0 relative rounded-xl overflow-hidden border border-border/20 w-[180px] aspect-[3/4] shadow-lg">
-            <img src={wallpaperSrc} alt="Cover" className="w-full h-full object-cover" />
+            <img src={wallpaperSrc} alt="" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-4 text-center">
-              <p className="text-sm font-light text-white/90 leading-tight">{metadata.title || "Untitled"}</p>
+              <p className="text-sm font-light text-white/90 leading-tight">{metadata.title || "untitled"}</p>
               {metadata.subtitle && <p className="text-[9px] font-light text-white/60 mt-1">{metadata.subtitle}</p>}
               {metadata.author && <p className="text-[8px] font-light text-white/50 mt-4 italic">{metadata.author}</p>}
             </div>
             <div className="absolute bottom-1.5 left-0 right-0 text-center">
-              <span className="text-[7px] font-light text-white/30 uppercase tracking-wider">Cover</span>
+              <span className="text-[7px] font-light text-white/30 tracking-wider">cover</span>
             </div>
           </div>
 
@@ -1254,7 +1316,7 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
                 <div className="relative z-10 flex flex-col h-full p-4">
                   {isDiagram ? (
                     <>
-                      <p className="text-[7px] font-normal text-accent/60 uppercase tracking-[0.15em] mb-1">Diagram</p>
+                      <p className="text-[7px] font-normal text-accent/60 tracking-[0.15em] mb-1">diagram</p>
                       <p className="text-[10px] font-semibold text-white/90 leading-tight mb-2 line-clamp-2">{ch.title}</p>
                       <div className="flex-1 flex flex-col items-center justify-center gap-2">
                         <div className="w-full rounded-lg border border-accent/20 bg-accent/5 p-2">
@@ -1262,7 +1324,7 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
                             {(ch.diagramDescription || "").split("→").slice(0, 4).map((node, ni) => (
                               <div key={ni} className="flex flex-col items-center">
                                 <div className="rounded-md bg-accent/15 border border-accent/20 px-2 py-0.5 text-[6px] text-accent/80 text-center truncate max-w-full">
-                                  {node.replace(/[\[\]]/g, "").trim().slice(0, 20) || "Process"}
+                                  {node.replace(/[\[\]]/g, "").trim().slice(0, 20) || "step"}
                                 </div>
                                 {ni < Math.min((ch.diagramDescription || "").split("→").length - 1, 3) && (
                                   <div className="w-px h-2 bg-accent/30" />
@@ -1275,7 +1337,7 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
                     </>
                   ) : (
                     <>
-                      <p className="text-[7px] font-normal text-white/40 uppercase tracking-[0.15em] mb-1">Chapter {i + 1}</p>
+                      <p className="text-[7px] font-normal text-white/40 tracking-[0.15em] mb-1">chapter {i + 1}</p>
                       <p className="text-[10px] font-semibold text-white/90 leading-tight mb-2 line-clamp-2">{ch.title}</p>
                       {ch.summary && (
                         <p className="text-[7px] italic text-white/40 leading-snug mb-2 line-clamp-2">{ch.summary}</p>
@@ -1294,7 +1356,7 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
         </div>
         <button onClick={downloadCover}
           className="mt-2 flex items-center gap-1.5 rounded-lg border border-border/20 bg-card/30 px-3 py-2 text-[10px] font-light text-muted-foreground hover:text-foreground hover:bg-card/50 transition-colors">
-          <Download className="h-3 w-3" /> Download Cover
+          <Download className="h-3 w-3" /> save the cover as png
         </button>
       </div>
     </div>
@@ -1306,14 +1368,15 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
       <div className="flex-shrink-0 border-b border-border/20 bg-card/20 backdrop-blur-sm px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={() => { saveSession(); setShowSessionList(true); }}
+            <button onClick={() => { saveSession(); setShowSessionList(true); }} aria-label="back to your books"
               className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-colors">
               <FolderOpen className="h-4 w-4" />
             </button>
-            <div>
-              <h1 className="text-lg font-extralight tracking-wide text-foreground">{metadata.title || "Untitled Book"}</h1>
-              <p className="text-[10px] font-extralight tracking-[0.15em] text-muted-foreground/60 uppercase hidden sm:block">
-                {saving ? "Saving…" : "Auto-saved"} · {textUploads.length} source{textUploads.length !== 1 ? "s" : ""} · {totalWords.toLocaleString()} words
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-extralight tracking-wide text-foreground">{metadata.title || "untitled book"}</h1>
+              <p className="text-[10px] font-extralight tracking-[0.15em] text-muted-foreground/60 hidden sm:block" role="status">
+                {saveError ? `not saved — ${saveError}` : saving ? "saving…" : "saved on this device"} · {textUploads.length} source{textUploads.length !== 1 ? "s" : ""} · {totalWords.toLocaleString()} words
+                {sourceTruncated ? ` · shepherd reads the first ${EBOOK_LIMITS.promptChars / 1000}k characters` : ""}
               </p>
             </div>
           </div>
@@ -1322,27 +1385,28 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
               <button onClick={exportPdf} disabled={chapters.length === 0 || exporting}
                 className="flex items-center gap-2 rounded-lg bg-accent/20 px-4 py-2 text-xs text-accent hover:bg-accent/30 transition-colors disabled:opacity-40">
                 {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                Export PDF
+                {exporting ? "writing…" : "compile pdf"}
               </button>
             )}
           </div>
         </div>
 
         {/* Steps */}
-        <div className="flex items-center gap-2 mt-4">
+        <div className="flex items-center gap-1 sm:gap-2 mt-4" role="tablist" aria-label="steps">
           {steps.map((s, i) => (
-            <div key={s.id} className="flex items-center gap-2">
-              {i > 0 && <div className={`w-8 h-px ${steps.findIndex(st => st.id === step) >= i ? "bg-accent/40" : "bg-border/20"}`} />}
+            <div key={s.id} className="flex items-center gap-1 sm:gap-2">
+              {i > 0 && <div className={`w-3 sm:w-8 h-px ${steps.findIndex(st => st.id === step) >= i ? "bg-accent/40" : "bg-border/20"}`} />}
               <button
                 onClick={() => {
                   if (s.id === "upload" || s.id === "settings") setStep(s.id);
                   if (s.id === "preview" && chapters.length > 0) setStep(s.id);
                 }}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-light transition-colors ${
+                role="tab" aria-selected={step === s.id} aria-label={s.label}
+                className={`flex items-center gap-1.5 rounded-lg px-2 sm:px-3 py-1.5 text-[10px] font-light transition-colors ${
                   step === s.id ? "bg-accent/20 text-accent" : "text-muted-foreground/50 hover:text-muted-foreground"
                 }`}>
                 <s.icon className="h-3 w-3" />
-                {s.label}
+                <span className={step === s.id ? "" : "hidden sm:inline"}>{s.label}</span>
               </button>
             </div>
           ))}
@@ -1365,22 +1429,22 @@ ${JSON.stringify(chaptersPayload).slice(0, 100000)}`,
           <div className="flex items-center justify-between max-w-3xl mx-auto">
             <button onClick={handleBack} disabled={step === "upload"}
               className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-20">
-              <ArrowLeft className="h-3.5 w-3.5" /> Back
+              <ArrowLeft className="h-3.5 w-3.5" /> back
             </button>
             {(step === "upload" || step === "settings") && (
               <button onClick={handleNext} disabled={!canProceed()}
                 className="flex items-center gap-2 rounded-lg bg-accent/20 px-5 py-2 text-xs text-accent hover:bg-accent/30 transition-colors disabled:opacity-40">
                 {step === "settings"
                   ? (settings.buildMode === "manual"
-                      ? <><BookOpen className="h-3.5 w-3.5" /> Build Book</>
-                      : <><Sparkles className="h-3.5 w-3.5" /> Generate Book</>)
-                  : <><ArrowRight className="h-3.5 w-3.5" /> Next</>}
+                      ? <><BookOpen className="h-3.5 w-3.5" /> build the book</>
+                      : <><Sparkles className="h-3.5 w-3.5" /> ask shepherd to split it</>)
+                  : <><ArrowRight className="h-3.5 w-3.5" /> next</>}
               </button>
             )}
             {step === "preview" && (
               <button onClick={() => setStep("settings")}
                 className="flex items-center gap-2 rounded-lg border border-border/20 px-4 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                <Sparkles className="h-3.5 w-3.5" /> Regenerate
+                <Sparkles className="h-3.5 w-3.5" /> build again
               </button>
             )}
           </div>

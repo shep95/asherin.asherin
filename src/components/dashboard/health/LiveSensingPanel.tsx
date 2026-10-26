@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { newId, type HealthRecord, type LiveSessionRecord } from "@/lib/health/store";
+import type { HealthRecord, LiveSessionRecord } from "@/lib/health/store";
 import type { HealthPanelProps } from "@/lib/health/panel";
 import { createDeviceRegistry, disconnectAll, type AdapterStatus, type DeviceRegistry } from "@/lib/health/live/devices";
 import { analyseEegChannel, analyseEeg, analyseTremor, estimateBreathingRate, estimateNoiseDose, computeHrv, type EegChannelResult, type MotionSample, type AudioSample } from "@/lib/health/live/analysis";
@@ -18,6 +18,8 @@ import { classifyAll, type ContactReading } from "@/lib/health/live/contact";
 import { compareSessionToBaseline, type BaselineComparison } from "@/lib/health/live/baseline";
 import { perModeTrend, dayOfWeekPattern, timeOfDayPattern, driftVsBaseline, type PerModeTrend, type BucketedPatternResult, type DriftResult } from "@/lib/health/live/patterns";
 import { capabilityReadout, type CapabilityEntry } from "@/lib/health/live/capabilities";
+
+const PATTERN_METRICS = ["rmssd", "meanBpm", "breathsPerMinute"];
 
 const MODES: { id: SessionMode; label: string }[] = [
   { id: "focus", label: "focus" },
@@ -237,10 +239,11 @@ export default function LiveSensingPanel({ record, persist, onEvent, onHighlight
         motion: registry.motion.getExposure(),
         audio: registry.audio.getExposure(),
       }),
+    // the statuses are the signal that an exposure may have changed; the registry itself is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [heartStatus, eegStatus, motionStatus, audioStatus, registry],
   );
 
-  const PATTERN_METRICS = ["rmssd", "meanBpm", "breathsPerMinute"];
   const patternMode = lastFinishedMode ?? mode;
   const trends: PerModeTrend[] = useMemo(
     () => PATTERN_METRICS.map((m) => perModeTrend(previousSessions, patternMode, m)).filter((t): t is PerModeTrend => t !== null),
@@ -559,7 +562,7 @@ function BaselineComparisonCard({ comparisons, mode }: { comparisons: BaselineCo
     <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
       <span className="text-[11px] uppercase tracking-wide text-white/40">pre/post session baseline{mode ? ` — ${mode}` : ""}</span>
       {comparisons === null ? (
-        <p className="mt-1 text-[11px] text-white/40">end a session to compare it against this person's own baseline.</p>
+        <p className="mt-1 text-[11px] text-white/40">end a session to compare it against your own earlier sessions.</p>
       ) : comparisons.length === 0 ? (
         <p className="mt-1 text-[11px] text-white/40">that session did not record any metric that can be compared to a baseline.</p>
       ) : (

@@ -1,4 +1,6 @@
-// asherin.data — shared types for the data intelligence platform.
+// asherin.data — shared types.
+// everything here describes data that lives on this device: parsed files,
+// their profiles, the stored versions, and the shape of an answer.
 
 export type DataCellValue = string | number | boolean | null;
 export type DataRow = Record<string, DataCellValue>;
@@ -72,14 +74,16 @@ export interface ParsedFile {
   truncated: boolean;
 }
 
+/* ── stored rows (indexeddb, this device only) ─────────────────────────── */
+
 export interface DataSourceRow {
   id: string;
   workspace_id: string;
   name: string;
   kind: string;
+  /** "url" for a public csv/json url the browser polls; null for a file. */
   connector: string | null;
   config: Record<string, unknown>;
-  sync_cadence: string;
   last_sync_at: string | null;
   last_sync_error: string | null;
   status: string;
@@ -91,15 +95,17 @@ export interface DataVersionRow {
   workspace_id: string;
   source_id: string;
   version: number;
-  storage_path: string | null;
   file_name: string | null;
   mime: string | null;
   byte_size: number;
   row_count: number;
   column_count: number;
+  columns: string[];
   quality: QualityReport | Record<string, never>;
   profile: DatasetProfile | Record<string, never>;
   note: string | null;
+  /** document sources keep their text here; tables keep rows in the kv store */
+  text: string | null;
   created_at: string;
 }
 
@@ -113,15 +119,37 @@ export interface DictionaryRow {
   updated_at: string;
 }
 
-export type Confidence = "very high" | "high" | "moderate" | "low";
+export type Confidence = "high" | "moderate" | "low";
 
-export interface AnswerCitation {
-  chunk_id?: string;
-  source_id?: string;
-  source_name?: string;
-  columns?: string[];
-  row_range?: [number, number];
-  excerpt?: string;
+/* ── the question pipeline ─────────────────────────────────────────────── */
+
+export type Aggregate = "sum" | "avg" | "count" | "min" | "max";
+
+export interface PlanFilter {
+  column: string;
+  op: "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "contains";
+  value: string | number;
+}
+
+/** a computation shepherd asks for; every field is checked against the real
+ *  columns before it runs, and the arithmetic runs on this device. */
+export interface QueryPlan {
+  aggregate: Aggregate;
+  measure: string | null;
+  dimension: string | null;
+  dateColumn: string | null;
+  grain: "day" | "month" | "year" | null;
+  filter: PlanFilter | null;
+  limit: number;
+}
+
+export interface ComputedTable {
+  columns: string[];
+  rows: DataRow[];
+  /** plain-english record of what was computed, e.g. "sum of revenue by region (top 12)" */
+  note: string;
+  /** rows that went into the computation after the filter */
+  rowsUsed: number;
 }
 
 export interface ChartSpec {
@@ -185,18 +213,19 @@ export interface AnswerBlocks {
   projection: string | null;
   clarification: string | null;
   confidence: Confidence;
+  /** computed on this device, not reported by the model */
   confidence_drivers: {
     completeness: number;
-    sample_size: number;
-    signal_clarity: number;
-    independent_points: number;
+    rows: number;
+    computed: boolean;
+    structured: boolean;
   };
   reasoning: {
-    domains_activated: string[];
-    retrieval: string;
-    weighting: string;
-    alternatives: string[];
+    plan: string;
+    grounding: string;
+    model: string;
   };
-  citations: AnswerCitation[];
+  /** the deterministic table the answer was narrated from, if a plan ran */
+  computed: ComputedTable | null;
   chart: ChartSpec | null;
 }

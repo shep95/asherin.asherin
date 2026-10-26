@@ -74,6 +74,11 @@ const COLUMN_DEFAULTS: Record<string, Row> = {
   notebooks: { tags: [], status: "draft", version: 1 },
   library_files: { text_status: "pending", text_chars: 0, folder: null },
   projects: { archived: false },
+  briefing_profiles: {
+    company_name: "", industry: "", competitors: [], key_markets: [], technology_stack: [],
+    investment_interests: [], tracked_people: [], regulatory_bodies: [], custom_topics: [],
+  },
+  briefing_reports: { title: "briefing", content: "", sources_checked: 0, critical_items: 0, significant_items: 0, monitoring_items: 0, provider: "", model: "" },
 };
 
 function likeToRegex(pattern: string, flags = ""): RegExp {

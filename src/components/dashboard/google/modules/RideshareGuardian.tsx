@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { Car, MessageSquare, ShieldAlert, Loader2, Trash2, Download, RefreshCw, Route, Plane } from "lucide-react";
 import TripRecorderTab from "./TripRecorderTab";
 import TransitTab from "./TransitTab";
+import OrganOffline from "../OrganOffline";
+import { describeFailure, isLocalOnlyError } from "../offline";
 
 /**
  * GUARDIAN — rideshare driver assessment and phone-message analysis.
@@ -107,7 +109,10 @@ const RideshareGuardian = () => {
   const [rides, setRides] = useState<Ride[]>([]);
   const [sources, setSources] = useState<MessageSource[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  // every control on this desk writes to the rideshare organ. when it has no
+  // device answer the controls are held and the reason sits on the panel.
+  const offline = isLocalOnlyError(loadError);
   const [capturing, setCapturing] = useState(false);
   const [sweeping, setSweeping] = useState<string | null>(null);
   const [analysing, setAnalysing] = useState(false);
@@ -144,7 +149,7 @@ const RideshareGuardian = () => {
       setSources((m.data?.sources || []) as MessageSource[]);
       if (s.data?.settings) setSettings(s.data.settings);
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : "Guardian could not be reached.");
+      setLoadError(e ?? new Error("the rideshare organ did not answer"));
     } finally {
       setLoading(false);
     }
@@ -163,10 +168,10 @@ const RideshareGuardian = () => {
         body: { action: "ride.sweep", ride_id: rideId, ...(byok ? { byok } : {}) },
         tool: "asherin-sentinel",
       });
-      toast.success("Deep assessment complete");
+      toast.success("deep assessment complete");
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Deep assessment failed");
+      toast.error(describeFailure(e, "rideshare organ"));
     } finally {
       setSweeping(null);
     }
@@ -174,7 +179,7 @@ const RideshareGuardian = () => {
 
   const capture = async () => {
     if (!form.trip_url && !form.driver_name && !form.plate) {
-      toast.error("Add a trip link, a driver name, or a plate.");
+      toast.error("add a trip link, a driver name, or a plate.");
       return;
     }
     setCapturing(true);
@@ -184,12 +189,12 @@ const RideshareGuardian = () => {
       });
       if (error) throw error;
       if (data?.link_note) toast.message(data.link_note);
-      toast.success("Ride card captured — running deep check");
+      toast.success("ride card captured — running deep check");
       setForm({ trip_url: "", driver_name: "", plate: "", vehicle: "", city: "", pickup_label: "" });
       await load();
       if (data?.ride?.id) void runSweep(data.ride.id);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Capture failed");
+      toast.error(describeFailure(e, "rideshare organ"));
     } finally {
       setCapturing(false);
     }
@@ -197,7 +202,7 @@ const RideshareGuardian = () => {
 
   const analyseThread = async () => {
     if (thread.trim().length < 20) {
-      toast.error("Paste more of the conversation — at least a few messages.");
+      toast.error("paste more of the conversation — at least a few messages.");
       return;
     }
     setAnalysing(true);
@@ -207,19 +212,22 @@ const RideshareGuardian = () => {
         body: { action: "message.ingest", raw: thread, channel: "sms_paste", ...(byok ? { byok } : {}) },
         tool: "asherin-sentinel",
       });
-      toast.success("Thread analysed");
+      toast.success("thread analysed");
       setThread("");
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Analysis failed");
+      toast.error(describeFailure(e, "rideshare organ"));
     } finally {
       setAnalysing(false);
     }
   };
 
+  // settings live on the organ. the switch moves only when the write lands,
+  // so a held switch never claims a setting the device could not keep.
   const saveSettings = async (next: typeof settings) => {
+    const { error } = await supabase.functions.invoke("rideshare-guardian", { body: { action: "settings.set", settings: next } });
+    if (error) { toast.error(describeFailure(error, "rideshare organ")); return; }
     setSettings(next);
-    await supabase.functions.invoke("rideshare-guardian", { body: { action: "settings.set", settings: next } });
   };
 
   /** Manual trigger for the same sweeper the scheduler runs — scoped by the
@@ -231,28 +239,27 @@ const RideshareGuardian = () => {
       if (error) throw error;
       const r = (data?.results?.[0] ?? {}) as { found?: number; swept?: number; status?: string };
       toast.success(
-        r.swept ? `${r.swept} ride${r.swept === 1 ? "" : "s"} assessed` : "Mailbox read",
+        r.swept ? `${r.swept} ride${r.swept === 1 ? "" : "s"} assessed` : "mailbox read",
         {
           description: r.swept
-            ? "The dossier is in your inbox and on your device."
+            ? "the dossier is in your inbox and on your device."
             : r.status === "no_rides"
-              ? "No Uber or Lyft trip mail in the window."
-              : `Scan finished (${r.status ?? "ok"}).`,
+              ? "no uber or lyft trip mail in the window."
+              : `scan finished (${r.status ?? "ok"}).`,
         },
       );
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "The mailbox could not be read.");
-
+      toast.error(describeFailure(e, "rideshare organ"));
     } finally {
       setScanning(false);
     }
   };
 
-
   const removeRide = async (id: string) => {
     setRides((prev) => prev.filter((r) => r.id !== id));
-    await supabase.functions.invoke("rideshare-guardian", { body: { action: "ride.delete", ride_id: id } });
+    const { error } = await supabase.functions.invoke("rideshare-guardian", { body: { action: "ride.delete", ride_id: id } });
+    if (error) { toast.error(describeFailure(error, "rideshare organ")); await load(); }
   };
 
   const downloadReport = (ride: Ride) => {
@@ -299,42 +306,47 @@ const RideshareGuardian = () => {
         <div className="flex items-center gap-2.5">
           <ShieldAlert className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
           <div>
-            <h2 className="text-sm font-extralight uppercase tracking-[0.2em] text-foreground">Guardian</h2>
-            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/60">
-              Driver assessment · Message forensics
+            <h2 className="text-sm font-extralight tracking-[0.2em] text-foreground">guardian</h2>
+            <p className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground/60">
+              driver assessment · message forensics
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/60">
-            Alerts: {push.state === "enabled" ? "device armed" : push.state}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground/60">
+            alerts: {push.state === "enabled" ? "device armed" : push.state}
           </span>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={async () => setPush(push.state === "enabled" ? await disablePush() : await enablePush())}
-          >
-            {push.state === "enabled" ? "Disarm device" : "Arm device"}
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => void load()} aria-label="Refresh Guardian">
-            <RefreshCw className="h-3.5 w-3.5" />
+          {push.state === "unsupported" ? (
+            <span className="text-[11px] text-muted-foreground">{push.reason}</span>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={offline}
+              onClick={async () => setPush(push.state === "enabled" ? await disablePush() : await enablePush())}
+            >
+              {push.state === "enabled" ? "disarm device" : "arm device"}
+            </Button>
+          )}
+          <Button size="sm" variant="ghost" onClick={() => void load()} aria-label="read guardian again">
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden />
           </Button>
         </div>
       </div>
 
-      {push.reason && push.state !== "enabled" && (
+      {push.reason && push.state !== "enabled" && !offline && (
         <p className="border-b border-border/20 px-5 py-2 text-xs text-muted-foreground" role="status">
-          {push.reason} Email alerts still work.
+          {push.reason.charAt(0).toLowerCase()}{push.reason.slice(1)}
         </p>
       )}
 
       <Tabs defaultValue="rides" className="flex flex-1 flex-col overflow-hidden">
-        <TabsList className="mx-5 mt-3 w-fit">
-          <TabsTrigger value="rides"><Car className="mr-1.5 h-3.5 w-3.5" />Rides</TabsTrigger>
-          <TabsTrigger value="transit"><Plane className="mr-1.5 h-3.5 w-3.5" />Transit</TabsTrigger>
-          <TabsTrigger value="recorder"><Route className="mr-1.5 h-3.5 w-3.5" />Trip recorder</TabsTrigger>
-          <TabsTrigger value="messages"><MessageSquare className="mr-1.5 h-3.5 w-3.5" />Phone messages</TabsTrigger>
-          <TabsTrigger value="settings">Alerting</TabsTrigger>
+        <TabsList className="mx-5 mt-3 h-auto w-fit max-w-full flex-wrap">
+          <TabsTrigger value="rides"><Car className="mr-1.5 h-3.5 w-3.5" aria-hidden />rides</TabsTrigger>
+          <TabsTrigger value="transit"><Plane className="mr-1.5 h-3.5 w-3.5" aria-hidden />transit</TabsTrigger>
+          <TabsTrigger value="recorder"><Route className="mr-1.5 h-3.5 w-3.5" aria-hidden />trip recorder</TabsTrigger>
+          <TabsTrigger value="messages"><MessageSquare className="mr-1.5 h-3.5 w-3.5" aria-hidden />phone messages</TabsTrigger>
+          <TabsTrigger value="settings">alerting</TabsTrigger>
         </TabsList>
 
         {/* ── TRANSIT (air · rail · coach · ferry · rotor) ───────────────── */}
@@ -353,36 +365,42 @@ const RideshareGuardian = () => {
           <ScrollArea className="h-full">
             <div className="space-y-5 px-5 py-4">
               <section className="rounded-lg border border-border/25 bg-card/20 p-4">
-                <h3 className="mb-1 text-xs font-light uppercase tracking-[0.18em] text-foreground">Capture the ride</h3>
+                <h3 className="mb-1 text-xs font-light tracking-[0.18em] text-foreground">capture the ride</h3>
                 <p className="mb-3 text-xs text-muted-foreground">
-                  Paste the trip-share link from your rideshare app, or type what the card shows.
-                  Guardian reads the card first, then runs the public-record check.
+                  paste the trip-share link from your rideshare app, or type what the card shows.
+                  guardian reads the card first, then runs the public-record check.
                 </p>
+                {offline && (
+                  <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground" role="status">
+                    the card read and the public-record check both ran on the rideshare organ, which has no device answer.
+                    the form is held until one exists.
+                  </p>
+                )}
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="sm:col-span-2">
-                    <Label htmlFor="g-trip" className="text-[11px] uppercase tracking-wider text-muted-foreground">Trip share link</Label>
-                    <Input id="g-trip" inputMode="url" placeholder="https://t.uber.com/…"
+                    <Label htmlFor="g-trip" className="text-[11px] tracking-wider text-muted-foreground">trip share link</Label>
+                    <Input id="g-trip" inputMode="url" placeholder="https://t.uber.com/…" disabled={offline}
                       value={form.trip_url} onChange={(e) => setForm({ ...form, trip_url: e.target.value })} />
                   </div>
                   <div>
-                    <Label htmlFor="g-name" className="text-[11px] uppercase tracking-wider text-muted-foreground">Driver name</Label>
-                    <Input id="g-name" value={form.driver_name} onChange={(e) => setForm({ ...form, driver_name: e.target.value })} />
+                    <Label htmlFor="g-name" className="text-[11px] tracking-wider text-muted-foreground">driver name</Label>
+                    <Input id="g-name" disabled={offline} value={form.driver_name} onChange={(e) => setForm({ ...form, driver_name: e.target.value })} />
                   </div>
                   <div>
-                    <Label htmlFor="g-plate" className="text-[11px] uppercase tracking-wider text-muted-foreground">Plate</Label>
-                    <Input id="g-plate" value={form.plate} onChange={(e) => setForm({ ...form, plate: e.target.value.toUpperCase() })} />
+                    <Label htmlFor="g-plate" className="text-[11px] tracking-wider text-muted-foreground">plate</Label>
+                    <Input id="g-plate" disabled={offline} value={form.plate} onChange={(e) => setForm({ ...form, plate: e.target.value.toUpperCase() })} />
                   </div>
                   <div>
-                    <Label htmlFor="g-vehicle" className="text-[11px] uppercase tracking-wider text-muted-foreground">Vehicle</Label>
-                    <Input id="g-vehicle" value={form.vehicle} onChange={(e) => setForm({ ...form, vehicle: e.target.value })} />
+                    <Label htmlFor="g-vehicle" className="text-[11px] tracking-wider text-muted-foreground">vehicle</Label>
+                    <Input id="g-vehicle" disabled={offline} value={form.vehicle} onChange={(e) => setForm({ ...form, vehicle: e.target.value })} />
                   </div>
                   <div>
-                    <Label htmlFor="g-city" className="text-[11px] uppercase tracking-wider text-muted-foreground">Pickup city</Label>
-                    <Input id="g-city" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+                    <Label htmlFor="g-city" className="text-[11px] tracking-wider text-muted-foreground">pickup city</Label>
+                    <Input id="g-city" disabled={offline} value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
                   </div>
                 </div>
-                <Button className="mt-3" onClick={capture} disabled={capturing}>
-                  {capturing ? <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />Capturing</> : "Run driver check"}
+                <Button className="mt-3" onClick={capture} disabled={capturing || offline}>
+                  {capturing ? <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden />capturing</> : "run driver check"}
                 </Button>
               </section>
 
@@ -391,15 +409,11 @@ const RideshareGuardian = () => {
                   <Skeleton className="h-24 w-full" />
                   <Skeleton className="h-24 w-full" />
                 </div>
-              ) : loadError ? (
-                <div className="rounded-lg border border-border/30 p-5 text-sm" role="alert">
-                  <p className="text-foreground">Guardian could not load your rides.</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{loadError}</p>
-                  <Button size="sm" variant="outline" className="mt-3" onClick={() => void load()}>Retry</Button>
-                </div>
+              ) : loadError !== null ? (
+                <OrganOffline error={loadError} organ="rideshare organ" onRetry={() => void load()} />
               ) : rides.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-border/30 p-6 text-center text-xs text-muted-foreground">
-                  No rides checked yet. Capture your next ride above and Guardian will assess the driver before you board.
+                  no rides checked yet. capture your next ride above and guardian will assess the driver before you board.
                 </p>
               ) : (
                 rides.map((ride) => {
@@ -412,7 +426,7 @@ const RideshareGuardian = () => {
                         <div>
                           <div className="flex items-center gap-2">
                             <VerdictChip verdict={deep?.verdict ?? ride.verdict} />
-                            <span className="text-sm text-foreground">{ride.driver_name || "Unnamed driver"}</span>
+                            <span className="text-sm text-foreground">{ride.driver_name || "unnamed driver"}</span>
                           </div>
                           <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
                             {[ride.plate, ride.vehicle, ride.city].filter(Boolean).join(" · ") || "no card detail"}
@@ -421,13 +435,13 @@ const RideshareGuardian = () => {
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Button size="sm" variant="outline" onClick={() => runSweep(ride.id)} disabled={sweeping === ride.id}>
-                            {sweeping === ride.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Re-run"}
+                            {sweeping === ride.id ? <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden /> : "re-run"}
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => downloadReport(ride)} aria-label="Download report">
-                            <Download className="h-3.5 w-3.5" />
+                          <Button size="sm" variant="ghost" onClick={() => downloadReport(ride)} aria-label="download report">
+                            <Download className="h-3.5 w-3.5" aria-hidden />
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => removeRide(ride.id)} aria-label="Delete ride">
-                            <Trash2 className="h-3.5 w-3.5" />
+                          <Button size="sm" variant="ghost" onClick={() => removeRide(ride.id)} aria-label="delete ride">
+                            <Trash2 className="h-3.5 w-3.5" aria-hidden />
                           </Button>
                         </div>
                       </header>
@@ -533,37 +547,45 @@ const RideshareGuardian = () => {
           <ScrollArea className="h-full">
             <div className="space-y-5 px-5 py-4">
               <section className="rounded-lg border border-border/25 bg-card/20 p-4">
-                <h3 className="mb-1 text-xs font-light uppercase tracking-[0.18em] text-foreground">Message thread analysis</h3>
+                <h3 className="mb-1 text-xs font-light tracking-[0.18em] text-foreground">message thread analysis</h3>
                 <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-                  Phones do not let any website read your text messages — that door is closed by the
-                  operating system, not by Asherin. Paste or forward a thread here and Guardian will
+                  phones do not let any website read your text messages — that door is closed by the
+                  operating system, not by asherin. paste or forward a thread here and guardian will
                   read it the same way it reads any other source: participants, intent, pressure
                   tactics, and what to do next.
                 </p>
-                <Label htmlFor="g-thread" className="sr-only">Message thread</Label>
+                {offline && (
+                  <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground" role="status">
+                    the thread read ran on the rideshare organ, which has no device answer. the paste box is held until one exists.
+                  </p>
+                )}
+                <Label htmlFor="g-thread" className="sr-only">message thread</Label>
                 <Textarea
                   id="g-thread"
                   rows={7}
-                  placeholder={"Paste the conversation, one message per line…"}
+                  disabled={offline}
+                  placeholder={"paste the conversation, one message per line…"}
                   value={thread}
                   onChange={(e) => setThread(e.target.value)}
                 />
-                <Button className="mt-3" onClick={analyseThread} disabled={analysing}>
-                  {analysing ? <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />Reading</> : "Analyse thread"}
+                <Button className="mt-3" onClick={analyseThread} disabled={analysing || offline}>
+                  {analysing ? <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden />reading</> : "analyse thread"}
                 </Button>
               </section>
 
               {loading ? (
                 <Skeleton className="h-24 w-full" />
+              ) : loadError !== null ? (
+                <OrganOffline error={loadError} organ="rideshare organ" onRetry={() => void load()} />
               ) : sources.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-border/30 p-6 text-center text-xs text-muted-foreground">
-                  No threads analysed yet.
+                  no threads analysed yet.
                 </p>
               ) : (
                 sources.map((s) => (
                   <article key={s.id} className="rounded-lg border border-border/25 bg-card/20 p-4">
                     <header className="flex items-center justify-between gap-3">
-                      <span className="text-sm text-foreground">{s.counterparty || "Unknown counterparty"}</span>
+                      <span className="text-sm text-foreground">{s.counterparty || "unknown counterparty"}</span>
                       <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/60">
                         risk {String(s.parsed?.risk || "unrated")} · {new Date(s.created_at).toLocaleDateString()}
                       </span>
@@ -593,62 +615,67 @@ const RideshareGuardian = () => {
         {/* ── SETTINGS ──────────────────────────────────────────────────── */}
         <TabsContent value="settings" className="flex-1 overflow-hidden">
           <div className="space-y-4 px-5 py-4">
+            {offline && (
+              <OrganOffline error={loadError} organ="rideshare organ" onRetry={() => void load()} />
+            )}
             <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Alert me at or above</Label>
+              <Label className="text-[11px] tracking-wider text-muted-foreground">alert me at or above</Label>
               <div className="mt-2 flex gap-2">
                 {(["THIN", "WATCH", "AVOID"] as Verdict[]).map((v) => (
                   <Button
                     key={v}
                     size="sm"
+                    disabled={offline}
                     variant={settings.alert_threshold === v ? "default" : "outline"}
                     onClick={() => saveSettings({ ...settings, alert_threshold: v })}
                   >
-                    {v}
+                    {v.toLowerCase()}
                   </Button>
                 ))}
               </div>
             </div>
             <div className="flex items-center justify-between rounded-lg border border-border/25 px-4 py-3">
               <div className="pr-4">
-                <p className="text-sm text-foreground">Autopilot — read rides from my mail</p>
+                <p className="text-sm text-foreground">autopilot — read rides from my mail</p>
                 <p className="text-xs text-muted-foreground">
-                  Scans your connected Google mailbox every 15 minutes for Uber and Lyft trip mail,
-                  rebuilds the ride card, and runs the full dossier without you pasting anything.
+                  a scheduled read of the connected mailbox for uber and lyft trip mail, rebuilding the ride card and
+                  running the dossier. the schedule ran on the organ, not on this device.
                 </p>
               </div>
               <Switch
                 checked={settings.autopilot_enabled}
+                disabled={offline}
                 onCheckedChange={(v) => saveSettings({ ...settings, autopilot_enabled: v })}
               />
             </div>
             {settings.autopilot_enabled && (
               <div className="flex items-center justify-between rounded-lg border border-border/25 px-4 py-3">
                 <div>
-                  <p className="text-sm text-foreground">Run a scan now</p>
+                  <p className="text-sm text-foreground">run a scan now</p>
                   <p className="text-xs text-muted-foreground">
                     {settings.last_scan_at
-                      ? `Last read ${new Date(settings.last_scan_at).toLocaleString()} — ${settings.last_scan_detail || settings.last_scan_status || "no detail"}`
-                      : "Your mailbox has not been read yet."}
+                      ? `last read ${new Date(settings.last_scan_at).toLocaleString()} — ${settings.last_scan_detail || settings.last_scan_status || "no detail"}`
+                      : "your mailbox has not been read yet."}
                   </p>
                 </div>
-                <Button size="sm" variant="outline" disabled={scanning} onClick={runScanNow}>
-                  {scanning ? "Scanning…" : "Scan mailbox"}
+                <Button size="sm" variant="outline" disabled={scanning || offline} onClick={runScanNow}>
+                  {scanning ? "scanning…" : "scan mailbox"}
                 </Button>
               </div>
             )}
             <div className="flex items-center justify-between rounded-lg border border-border/25 px-4 py-3">
               <div>
-                <p className="text-sm text-foreground">Device notifications</p>
-                <p className="text-xs text-muted-foreground">Arrives even when Asherin is closed.</p>
+                <p className="text-sm text-foreground">device notifications</p>
+                <p className="text-xs text-muted-foreground">web push, delivered by the organ when a verdict lands.</p>
               </div>
-              <Switch checked={settings.push_enabled} onCheckedChange={(v) => saveSettings({ ...settings, push_enabled: v })} />
+              <Switch checked={settings.push_enabled} disabled={offline} onCheckedChange={(v) => saveSettings({ ...settings, push_enabled: v })} />
             </div>
             <div className="flex items-center justify-between rounded-lg border border-border/25 px-4 py-3">
               <div>
-                <p className="text-sm text-foreground">Email the full report</p>
-                <p className="text-xs text-muted-foreground">Branded dossier sent to your account address.</p>
+                <p className="text-sm text-foreground">email the full report</p>
+                <p className="text-xs text-muted-foreground">the dossier, mailed by the organ to the connected address.</p>
               </div>
-              <Switch checked={settings.email_enabled} onCheckedChange={(v) => saveSettings({ ...settings, email_enabled: v })} />
+              <Switch checked={settings.email_enabled} disabled={offline} onCheckedChange={(v) => saveSettings({ ...settings, email_enabled: v })} />
             </div>
           </div>
 

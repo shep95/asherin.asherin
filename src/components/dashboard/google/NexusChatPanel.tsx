@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Brain, Lock, X, Maximize2, Minimize2, Sparkles } from "lucide-react";
+import { Send, Brain, X, Maximize2, Minimize2, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { streamChat } from "@/lib/ai";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { emitPull } from "@/lib/connect/emitPull";
 import { planStationCall } from "./stationTools";
+import { isLocalOnlyError } from "./offline";
 
 interface ToolRow {
   label: string;
@@ -26,13 +27,17 @@ interface NexusChatPanelProps {
   moduleLabel: string;
 }
 
-// What each tab is looking at, in one sentence. Descriptions state the read
+interface MeshReply {
+  error?: unknown;
+}
+
+// what each tab is looking at, in one sentence. descriptions state the read
 // the surface actually performs — no accuracy percentages, no claim that a
 // model can predict a decision it has never observed.
 const moduleContextMap: Record<string, string> = {
   overview: "station overview — which accounts the operator connected, at what scope, and when each was last read.",
   twin: "voice and rhythm — writing style learned from the operator's own sent mail, plus the day's digest.",
-  location: "location signals — recurring LOCATION strings the operator typed into their own calendar, and google fit points when that dataset exists. device locating is a gap: find hub has no supported third-party api, and the unofficial scrape is refused.",
+  location: "location signals — recurring location strings the operator typed into their own calendar, and google fit points when that dataset exists. device locating is a gap: find hub has no supported third-party api, and the unofficial scrape is refused.",
   email: "mail search over the operator's own connected mailboxes.",
   gmail: "mail headers from the operator's own mailboxes — senders, threads, cadence.",
   subscriptions: "recurring-charge confirmations found in the operator's own mail.",
@@ -49,6 +54,8 @@ const moduleContextMap: Record<string, string> = {
   connected: "oauth scope audit and the asherin audit log for this operator.",
 };
 
+const OFFLINE_DETAIL = "google organ offline on this device";
+
 const NexusChatPanel = ({ activeModule, moduleLabel }: NexusChatPanelProps) => {
   const [messages, setMessages] = useState<NexusMessage[]>([]);
   const [input, setInput] = useState("");
@@ -62,13 +69,16 @@ const NexusChatPanel = ({ activeModule, moduleLabel }: NexusChatPanelProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Auto-resize textarea
+  // auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + "px";
     }
   }, [input]);
+
+  // an in-flight stream must not outlive the panel.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const handleSend = useCallback(async () => {
     const trimmed = input.trim();
@@ -86,21 +96,23 @@ const NexusChatPanel = ({ activeModule, moduleLabel }: NexusChatPanelProps) => {
       setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, ...patch } : m)));
 
     // ── organ first ──────────────────────────────────────────────────────
-    // The analyst does not describe what the mesh would say. It calls the
-    // mesh, and whatever comes back — including an empty read or a refusal —
-    // is the only ground the answer stands on.
+    // the analyst does not describe what the mesh would say. it calls the
+    // mesh, and whatever comes back — an empty read, a refusal, or the
+    // device saying it has no such organ — is the only ground the answer
+    // stands on.
     const call = planStationCall(trimmed, activeModule);
     let evidence = "";
+    let organOffline = false;
     if (call) {
       patchAssistant({ tool: { label: call.label, status: "running" } });
       const started = performance.now();
       try {
-        const { data, error } = await supabase.functions.invoke("google-mesh", {
+        const { data, error } = await supabase.functions.invoke<MeshReply>("google-mesh", {
           body: { action: call.action, ...call.payload },
         });
         const latencyMs = Math.round(performance.now() - started);
         if (error) throw error;
-        const noAccount = (data as any)?.error === "no_account";
+        const noAccount = data?.error === "no_account";
         evidence = JSON.stringify(data).slice(0, 6000);
         patchAssistant({
           tool: {
@@ -118,31 +130,38 @@ const NexusChatPanel = ({ activeModule, moduleLabel }: NexusChatPanelProps) => {
           latencyMs,
           quote: noAccount ? "no google account connected" : `${evidence.length} chars returned`,
         });
-      } catch (e: any) {
+      } catch (e: unknown) {
         const latencyMs = Math.round(performance.now() - started);
-        patchAssistant({ tool: { label: call.label, status: "fail", latencyMs, detail: String(e?.message ?? "call failed").slice(0, 120) } });
+        organOffline = isLocalOnlyError(e);
+        const message = e instanceof Error ? e.message : String(e ?? "call failed");
+        const detail = organOffline ? OFFLINE_DETAIL : message.slice(0, 120);
+        patchAssistant({ tool: { label: call.label, status: organOffline ? "skip" : "fail", latencyMs, detail } });
         void emitPull({
           organ: "google",
           capability: call.action,
           fromSurface: "google-station",
-          status: "fail",
+          status: organOffline ? "skip" : "fail",
           latencyMs,
-          quote: String(e?.message ?? "call failed").slice(0, 160),
+          quote: organOffline ? OFFLINE_DETAIL : message.slice(0, 160),
         });
-        evidence = `THE CALL FAILED: ${String(e?.message ?? "unknown").slice(0, 200)}`;
+        evidence = organOffline
+          ? "THE GOOGLE ORGAN IS OFFLINE ON THIS DEVICE: no account is connected and no mesh action can run. nothing below was read."
+          : `THE CALL FAILED: ${message.slice(0, 200)}`;
       }
     }
 
-    const moduleContext = moduleContextMap[activeModule] || "asherin cloud intelligence station";
+    const moduleContext = moduleContextMap[activeModule] || "asherin google station";
 
     const systemContext = [
-      `you are asherin, the station analyst on the "${moduleLabel}" surface.`,
+      `you are shepherd, the station analyst on the "${moduleLabel}" surface of asherin.google.`,
       `what this surface reads: ${moduleContext}`,
       call
-        ? `the tool \`google-mesh:${call.action}\` was just run against the operator's own connected account(s). its raw payload follows between the fences. answer only from it.`
+        ? organOffline
+          ? `the tool \`google-mesh:${call.action}\` was attempted and the device answered that it has no google organ. its answer follows between the fences. you have read nothing from any account.`
+          : `the tool \`google-mesh:${call.action}\` was just run against the operator's own connected account(s). its raw payload follows between the fences. answer only from it.`
         : "no mesh tool ran for this turn. answer from the conversation only, and say plainly that you did not read their account for this answer.",
       call ? "```json\n" + evidence + "\n```" : "",
-      "rules: never invent a message, event, contact, file or position that is not in the payload. never attach an accuracy percentage to a location — calendar strings are a rhythm, not a measurement. if the operator asks you to find a phone, say device locating is a gap: find hub exposes no supported third-party api and asherin refuses the unofficial scrape. if the payload says no account is connected, tell them to connect google at read tier and stop.",
+      "rules: never invent a message, event, contact, file or position that is not in the payload. never attach an accuracy percentage to a location — calendar strings are a rhythm, not a measurement. if the operator asks you to find a phone, say device locating is a gap: find hub exposes no supported third-party api and asherin refuses the unofficial scrape. if the payload says no account is connected, or that the google organ is offline on this device, say so in one sentence and stop.",
       "keep the answer short and specific. all prose lowercase.",
     ].filter(Boolean).join("\n\n");
 
@@ -168,9 +187,10 @@ const NexusChatPanel = ({ activeModule, moduleLabel }: NexusChatPanelProps) => {
         },
         onDone: () => setIsStreaming(false),
       });
-    } catch (err: any) {
-      if (err.name !== "AbortError") {
-        patchAssistant({ content: "the station could not reach the model. the tool result above still stands." });
+    } catch (err: unknown) {
+      if (!(err instanceof Error) || err.name !== "AbortError") {
+        const why = err instanceof Error && err.message ? err.message : "the model could not be reached";
+        patchAssistant({ content: `${why.charAt(0).toLowerCase()}${why.slice(1)} — the tool result above still stands.` });
       }
       setIsStreaming(false);
     }
@@ -184,36 +204,45 @@ const NexusChatPanel = ({ activeModule, moduleLabel }: NexusChatPanelProps) => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      void handleSend();
     }
   };
+
+  const suggestions = [
+    activeModule === "overview" ? "which accounts are connected?" : `what does the ${moduleLabel} desk read?`,
+    "what can you see right now?",
+    "what is missing on this device?",
+  ];
 
   return (
     <div
       className={`rounded-2xl border border-border/20 bg-card/30 backdrop-blur-md overflow-hidden flex flex-col transition-all ${
-        expanded ? "fixed inset-4 z-50 shadow-2xl" : "h-[420px]"
+        expanded ? "fixed inset-2 sm:inset-4 z-50 shadow-2xl" : "h-[420px]"
       }`}
     >
-      {/* Chat Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/20 bg-card/20 shrink-0">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-foreground/50" />
-          <span className="text-xs font-light text-foreground">
-            Asherin · {moduleLabel}
+      {/* header */}
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border/20 bg-card/20 shrink-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <Sparkles className="h-4 w-4 shrink-0 text-foreground/50" aria-hidden />
+          <span className="truncate text-xs font-light text-foreground">
+            shepherd · {moduleLabel}
           </span>
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500/60" />
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           <button
+            type="button"
             onClick={() => setExpanded(!expanded)}
-            className="p-1 text-muted-foreground/40 hover:text-foreground transition-colors"
+            aria-label={expanded ? "shrink the analyst" : "expand the analyst"}
+            className="p-1 text-muted-foreground/40 hover:text-foreground transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-foreground/40"
           >
             {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
           </button>
           {messages.length > 0 && (
             <button
-              onClick={() => { setMessages([]); setIsStreaming(false); abortRef.current?.abort(); }}
-              className="p-1 text-muted-foreground/40 hover:text-foreground transition-colors"
+              type="button"
+              onClick={() => { abortRef.current?.abort(); setMessages([]); setIsStreaming(false); }}
+              aria-label="clear the conversation"
+              className="p-1 text-muted-foreground/40 hover:text-foreground transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-foreground/40"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -221,25 +250,22 @@ const NexusChatPanel = ({ activeModule, moduleLabel }: NexusChatPanelProps) => {
         </div>
       </div>
 
-      {/* Messages */}
+      {/* messages */}
       <ScrollArea className="flex-1 min-h-0">
         <div className="p-4 space-y-3">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 space-y-3">
-              <Brain className="h-8 w-8 text-muted-foreground/15" />
-              <p className="text-xs font-extralight text-muted-foreground/40 text-center max-w-[200px]">
-                Ask Asherin about your {moduleLabel} intelligence
+              <Brain className="h-8 w-8 text-muted-foreground/15" aria-hidden />
+              <p className="text-xs font-extralight text-muted-foreground/40 text-center max-w-[220px]">
+                ask shepherd about the {moduleLabel} desk. it answers only from what the desk actually returned.
               </p>
               <div className="flex flex-wrap gap-1.5 justify-center max-w-[280px]">
-                {[
-                  activeModule === "overview" ? "Summarize my collection" : `Analyze my ${moduleLabel} data`,
-                  activeModule === "health" ? "Am I getting sick?" : "What patterns do you see?",
-                  "What should I do next?",
-                ].map((q) => (
+                {suggestions.map((q) => (
                   <button
                     key={q}
+                    type="button"
                     onClick={() => setInput(q)}
-                    className="rounded-lg bg-foreground/5 px-2.5 py-1.5 text-[10px] font-light text-muted-foreground/60 hover:text-foreground hover:bg-foreground/10 transition-all"
+                    className="rounded-lg bg-foreground/5 px-2.5 py-1.5 text-[10px] font-light text-muted-foreground/60 hover:text-foreground hover:bg-foreground/10 transition-all focus-visible:outline focus-visible:outline-1 focus-visible:outline-foreground/40"
                   >
                     {q}
                   </button>
@@ -249,23 +275,24 @@ const NexusChatPanel = ({ activeModule, moduleLabel }: NexusChatPanelProps) => {
           ) : (
             messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[85%] space-y-1.5`}>
+                <div className="max-w-[85%] space-y-1.5">
                 {msg.tool && (
                   <div className="flex items-center gap-2 rounded-lg border border-border/10 bg-foreground/[0.03] px-2.5 py-1.5 text-[10px] font-extralight text-muted-foreground/60">
                     <span
-                      className={`h-1.5 w-1.5 rounded-full ${
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${
                         msg.tool.status === "ok"
                           ? "bg-emerald-500/70"
                           : msg.tool.status === "fail"
                             ? "bg-red-500/70"
                             : msg.tool.status === "skip"
                               ? "bg-amber-500/70"
-                              : "bg-foreground/40 animate-pulse"
+                              : "bg-foreground/40 animate-pulse motion-reduce:animate-none"
                       }`}
+                      aria-hidden
                     />
-                    <span>{msg.tool.label}</span>
-                    {msg.tool.latencyMs !== undefined && <span className="text-muted-foreground/35">{msg.tool.latencyMs}ms</span>}
-                    {msg.tool.detail && <span className="truncate text-muted-foreground/45">· {msg.tool.detail}</span>}
+                    <span className="shrink-0">{msg.tool.label}</span>
+                    {msg.tool.latencyMs !== undefined && <span className="shrink-0 text-muted-foreground/35">{msg.tool.latencyMs}ms</span>}
+                    {msg.tool.detail && <span className="min-w-0 truncate text-muted-foreground/45">· {msg.tool.detail}</span>}
                   </div>
                 )}
                 <div
@@ -280,14 +307,14 @@ const NexusChatPanel = ({ activeModule, moduleLabel }: NexusChatPanelProps) => {
                       {msg.content ? (
                         <ReactMarkdown>{msg.content}</ReactMarkdown>
                       ) : isStreaming ? (
-                        <div className="flex items-center gap-1.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-foreground/40 animate-pulse" />
-                          <span className="h-1.5 w-1.5 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: "150ms" }} />
-                          <span className="h-1.5 w-1.5 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: "300ms" }} />
+                        <div className="flex items-center gap-1.5" aria-label="shepherd is answering">
+                          <span className="h-1.5 w-1.5 rounded-full bg-foreground/40 animate-pulse motion-reduce:animate-none" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-foreground/40 animate-pulse motion-reduce:animate-none" style={{ animationDelay: "150ms" }} />
+                          <span className="h-1.5 w-1.5 rounded-full bg-foreground/40 animate-pulse motion-reduce:animate-none" style={{ animationDelay: "300ms" }} />
                         </div>
                       ) : null}
                       {isStreaming && msg.content && (
-                        <span className="inline-block w-0.5 h-3.5 bg-foreground/60 animate-pulse ml-0.5 align-text-bottom" />
+                        <span className="inline-block w-0.5 h-3.5 bg-foreground/60 animate-pulse motion-reduce:animate-none ml-0.5 align-text-bottom" />
                       )}
                     </div>
                   ) : (
@@ -302,7 +329,7 @@ const NexusChatPanel = ({ activeModule, moduleLabel }: NexusChatPanelProps) => {
         </div>
       </ScrollArea>
 
-      {/* Input */}
+      {/* input */}
       <div className="shrink-0 border-t border-border/20 bg-card/20 px-3 py-2.5">
         <div className="flex items-end gap-2">
           <textarea
@@ -310,31 +337,35 @@ const NexusChatPanel = ({ activeModule, moduleLabel }: NexusChatPanelProps) => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`Ask about ${moduleLabel}…`}
+            placeholder={`ask about ${moduleLabel}…`}
+            aria-label={`ask shepherd about ${moduleLabel}`}
             rows={1}
             className="flex-1 resize-none bg-transparent text-xs font-light text-foreground placeholder:text-muted-foreground/30 focus:outline-none leading-relaxed min-h-[32px] max-h-[120px] py-1.5"
           />
           {isStreaming ? (
             <button
+              type="button"
               onClick={handleStop}
-              className="shrink-0 rounded-lg bg-foreground/10 p-2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="stop"
+              className="shrink-0 rounded-lg bg-foreground/10 p-2 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-foreground/40"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           ) : (
             <button
-              onClick={handleSend}
+              type="button"
+              onClick={() => void handleSend()}
               disabled={!input.trim()}
-              className="shrink-0 rounded-lg bg-foreground/10 p-2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
+              aria-label="send"
+              className="shrink-0 rounded-lg bg-foreground/10 p-2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 focus-visible:outline focus-visible:outline-1 focus-visible:outline-foreground/40"
             >
               <Send className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
-        <div className="flex items-center gap-1.5 mt-1.5">
-          <Lock className="h-2.5 w-2.5 text-emerald-500/40" />
-          <span className="text-[9px] font-extralight text-muted-foreground/30">Encrypted · Context-aware of {moduleLabel}</span>
-        </div>
+        <p className="mt-1.5 truncate text-[9px] font-extralight text-muted-foreground/30">
+          sent straight from this device to the model key you connected · reading {moduleLabel}
+        </p>
       </div>
     </div>
   );

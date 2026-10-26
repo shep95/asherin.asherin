@@ -292,10 +292,10 @@ export function formatLocal(at: Date): string {
 }
 
 export const DOMAIN_META: Record<MoonEventDomain, { label: string; short: string }> = {
-  "wealth-equity":    { label: "Wealth · Equity",    short: "Equity" },
-  "wealth-liquidity": { label: "Wealth · Liquidity", short: "Liquidity" },
-  "love":             { label: "Love",               short: "Love" },
-  "power":            { label: "Power",              short: "Power" },
-  "mental-health":    { label: "Mental Health",      short: "Mental" },
-  "physical-health":  { label: "Physical Health",    short: "Health" },
+  "wealth-equity":    { label: "wealth · equity",    short: "equity" },
+  "wealth-liquidity": { label: "wealth · liquidity", short: "liquidity" },
+  "love":             { label: "love",               short: "love" },
+  "power":            { label: "power",              short: "power" },
+  "mental-health":    { label: "mental health",      short: "mental" },
+  "physical-health":  { label: "physical health",    short: "health" },
 };

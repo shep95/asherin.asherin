@@ -12,9 +12,9 @@ const PUBLISHED = "2026-06-19";
 
 const HowAureonUsesCseoResearch = () => (
   <ArticleShell
-    eyebrow="Meta · AI Search"
-    title="How Asherin Uses C-SEO Research"
-    dek="C-SEO (conversational SEO) is the academic name for the discipline of ranking inside AI search engines, Perplexity, ChatGPT Search, ClaudeBot. This is the breakdown of how Asherin's llms.txt, structured markup, and AI-crawler policy are built directly on the C-SEO Bench findings."
+    eyebrow="archived · publishing method"
+    title="how asherin used C-SEO research"
+    dek="C-SEO (conversational SEO) is the academic name for the discipline of ranking inside AI answers. this note described how asherin's llms.txt, structured markup and crawler policy followed the C-SEO Bench findings. the crawler policy has since reversed, so it is kept as a method note."
     publishedLabel="Jun 19 2026"
     readTime="10 min"
   >
@@ -36,10 +36,18 @@ const HowAureonUsesCseoResearch = () => (
       id="how-aureon-uses-c-seo-research"
       items={[
         { name: "Asherin", url: "/" },
-        { name: "Blog", url: "/blog" },
+        { name: "blog", url: "/blog" },
         { name: "How Asherin Uses C-SEO Research", url: "/blog/how-aureon-uses-c-seo-research" },
       ]}
     />
+    <p>
+      <strong>status.</strong> archived publishing note. asherin's robots.txt
+      now refuses ai-training and bulk crawlers, and the glossary cluster
+      this note pointed at no longer exists. llms.txt and the article, faq
+      and breadcrumb json-ld still ship. what follows is kept for the
+      method, not as a description of the current site.
+    </p>
+
     <h2>What C-SEO is, in one paragraph</h2>
     <p>
       C-SEO, conversational SEO, is the discipline of being cited
@@ -48,12 +56,7 @@ const HowAureonUsesCseoResearch = () => (
       verbatim citation inside an AI assistant's response. The academic
       name was formalized by the C-SEO Bench paper (June 2025), the
       first peer-reviewed benchmark of techniques that move citation
-      rate inside LLM answers. The category is documented in detail at
-      our{" "}
-      <a href="/glossary/conversational-seo" className="text-accent hover:underline">
-        conversational SEO glossary entry
-      </a>
-      .
+      rate inside LLM answers.
     </p>
 
     <h2>The C-SEO Bench findings, summarized</h2>
@@ -89,65 +92,63 @@ const HowAureonUsesCseoResearch = () => (
       AI layer rewards specificity and machine-readability.
     </p>
 
-    <h2>How Asherin implements these recommendations</h2>
+    <h2>how asherin applied these recommendations, and what changed</h2>
     <ol>
       <li>
-        <strong>llms.txt at /llms.txt.</strong> Asherin publishes a
-        full llms.txt at the well-known path. It lists every public
-        page with one-sentence descriptions, names the definitional
-        cluster (sovereign-ai, uncensored-ai, byok-ai,
-        digital-gnostic), and points to the cluster spine pages.
+        <strong>llms.txt at /llms.txt.</strong> still published. it
+        lists the public pages with one-line descriptions and states the
+        honest limits of each room. the glossary cluster it once pointed
+        at (sovereign-ai, uncensored-ai, byok-ai, digital-gnostic) was
+        removed; those paths now redirect to the blog.
       </li>
       <li>
-        <strong>LLM Guidance headers.</strong> Every long-form page
-        feature spine, blog satellite, glossary entry, renders a
-        visible summary block at the top with the title, principal claim,
-        named facts, and limitations.
+        <strong>a status column, not a guidance header.</strong> the
+        visible summary block this note proposed became the status
+        column every article carries: current, archived, research or
+        reference, with three boundary lines. it states limits before
+        claims.
       </li>
       <li>
-        <strong>Triple JSON-LD on every cluster page.</strong>{" "}
-        Article + FAQPage + BreadcrumbList. FAQ schema in particular
-        is the highest-leverage piece, it is the lowest-adoption
-        well-supported schema and is disproportionately cited.
+        <strong>triple JSON-LD on every article.</strong>{" "}
+        Article + FAQPage + BreadcrumbList still ship from each record.
       </li>
       <li>
-        <strong>AI-crawler allowlist in robots.txt.</strong> ClaudeBot,
-        GPTBot, PerplexityBot, OAI-SearchBot, ChatGPT-User and others
-        are explicitly allowed. The default-deny posture used by some
-        sites is exactly the wrong move for a platform that wants to
-        be cited.
+        <strong>crawler policy, reversed.</strong> this note once argued
+        for an ai-crawler allowlist. robots.txt now disallows GPTBot,
+        ClaudeBot, PerplexityBot, OAI-SearchBot, CCBot and the rest, and
+        the edge answers them with a 403. search engines may read the
+        public pages; model trainers and bulk scrapers may not. the
+        trade was made knowingly: being cited inside an answer engine
+        was not worth feeding the corpus.
       </li>
       <li>
-        <strong>Confidence-calibrated language.</strong> Every Asherin
-        claim is either a specific number or a named limitation. The
-        same{" "}
-        <a href="/blog/how-ai-predictive-forecasting-works" className="text-accent hover:underline">
+        <strong>confidence-calibrated language.</strong> a claim is a
+        specific number or a named limitation. the same{" "}
+        <a href="/blog/how-ai-predictive-forecasting-works">
           calibration discipline used in forecasting
         </a>{" "}
-        is applied to marketing and SEO copy.
+        is applied to the public copy.
       </li>
     </ol>
 
-    <h2>One thing the paper didn't recommend, but we do</h2>
+    <h2>one thing the paper didn't recommend</h2>
     <p>
-      Public verification. The C-SEO Bench paper didn't propose
-      publishing a hit-or-miss track record on the platform's own
-      forecasts and claims. We do, because the AI-citation layer
-      can reward pages that survive an evidence check. Forecasts should
-      carry a verification plan, reports should carry a named limitation,
-      and glossary entries should cite their sources.
+      public verification. the C-SEO Bench paper didn't propose
+      publishing a hit-or-miss record on a platform's own forecasts and
+      claims. this note proposed it; no such ledger was ever published,
+      and the forecasting room that would have fed it is retired. what
+      survives is the rule: a forecast carries a verification plan, a
+      report carries a named limitation.
     </p>
 
-    <h2>A named limitation</h2>
+    <h2>a named limitation</h2>
     <p>
       C-SEO is an emerging discipline, and the citation-rate
-      measurements in the literature are observational, not causal.
-      Asherin's full implementation has been live for less than a
-      quarter at this writing; a longitudinal evaluation will be
-      published when there are enough citation events in our own
-      analytics to attribute to specific techniques. The current
-      design is built on the strongest available signal, not on a
-      claim of definitive proof.
+      measurements in the literature are observational, not causal. no
+      longitudinal evaluation of this site was ever run, and with the
+      crawler policy reversed none will be. the method is kept here
+      because the structural half of it, machine-readable summaries and
+      honest limits, is good practice for human readers too.
     </p>
 
     <FaqJsonLd
@@ -167,7 +168,7 @@ const HowAureonUsesCseoResearch = () => (
         },
         {
           q: "Should I block AI crawlers in robots.txt?",
-          a: "Not if you want to be cited inside AI answers. Asherin explicitly allowlists ClaudeBot, GPTBot, PerplexityBot, OAI-SearchBot, ChatGPT-User and other AI crawlers. Default-deny is exactly the wrong posture for a platform optimizing for AI citation.",
+          a: "only if being cited inside AI answers matters less to you than keeping your copy out of training corpora. asherin made that trade: robots.txt now disallows GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot and the rest, while search engines may still read the public pages.",
         },
       ]}
     />
@@ -175,19 +176,14 @@ const HowAureonUsesCseoResearch = () => (
     <RelatedLinks
       links={[
         {
-          to: "/glossary/conversational-seo",
-          label: "Conversational SEO, definition",
-          description: "The academic term and what it covers.",
-        },
-        {
           to: "/blog/how-ai-predictive-forecasting-works",
-          label: "How AI predictive forecasting works",
-          description: "The same calibration discipline applied to predictions instead of marketing copy.",
+          label: "how AI predictive forecasting works",
+          description: "the same calibration discipline applied to predictions instead of copy.",
         },
         {
-          to: "/glossary/operator-stack",
-          label: "Operator stack, definition",
-          description: "Asherin's internal vocabulary, now publicly defined.",
+          to: "/blog/how-we-make-aureon-sound-human",
+          label: "how we make shepherd sound human",
+          description: "the voice the public copy is written in.",
         },
       ]}
     />

@@ -8,11 +8,12 @@ import {
 } from "@/lib/cloudIntel/subscriptions";
 import {
   fmtMoney, relativeDay, silenceFinding, sortFindings, benfordConformance,
-  confidenceFrom, round, type Finding,
+  confidenceFrom, type Finding,
 } from "@/lib/cloudIntel/logic";
 import FindingCard from "../intel/FindingCard";
 import { TrendStat } from "../intel/TrendStat";
 import Treemap from "../intel/Treemap";
+import { CONNECT_UNAVAILABLE, describeFailure } from "../offline";
 
 // LEDGER — recurrence and spend reconstruction.
 // The module no longer reports "how many billing emails arrived". It reports
@@ -34,8 +35,8 @@ const SubscriptionOracle = () => {
   const toggleWatch = (domain: string) => {
     setStarred((prev) => {
       const next = new Set(prev);
-      next.has(domain) ? next.delete(domain) : next.add(domain);
-      localStorage.setItem("ledger_watch", JSON.stringify([...next]));
+      if (next.has(domain)) next.delete(domain); else next.add(domain);
+      try { localStorage.setItem("ledger_watch", JSON.stringify([...next])); } catch { /* private mode */ }
       return next;
     });
   };
@@ -48,9 +49,8 @@ const SubscriptionOracle = () => {
       // sample, and an annual renewal is invisible under a one-year window.
       const data = await fetchGoogleData("gmail_inbox", { maxResults: 200, q: RECEIPT_QUERY });
       setEmails(data.messages || []);
-    } catch (err: any) {
-      console.error("[Ledger] receipt sweep failed:", err);
-      setError(err?.message || "Receipt sweep failed.");
+    } catch (err: unknown) {
+      setError(describeFailure(err, "mail organ"));
     } finally {
       setLoading(false);
     }
@@ -79,10 +79,10 @@ const SubscriptionOracle = () => {
   const findings = useMemo<Finding[]>(() => {
     if (!isConnected) {
       return [silenceFinding({
-        module: "Ledger", id: "ledger-unlinked", subject: "Receipt mail",
-        expected: "A linked mailbox typically yields 20–200 receipts across 18 months",
-        cause: ["No Google account is linked to the mesh, so no mailbox can be swept for receipts."],
-        action: "Link an account under Account Mesh to begin spend reconstruction.", connected: false,
+        module: "ledger", id: "ledger-unlinked", subject: "receipt mail",
+        expected: "a linked mailbox typically yields 20–200 receipts across 18 months",
+        cause: ["no google account is connected, so no mailbox can be swept for receipts."],
+        action: "no connect path exists on this device yet — see the station overview for what it would take.", connected: false,
       })];
     }
     if (!ledgers.length) {
@@ -279,26 +279,27 @@ const SubscriptionOracle = () => {
             <Wallet className="h-6 w-6 text-foreground/70" />
           </div>
           <div className="flex-1 space-y-2">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-extralight tracking-wide text-foreground">Ledger</h2>
-                <p className="text-[9px] tracking-[0.22em] text-muted-foreground/40 font-light">RECURRENCE &amp; SPEND RECONSTRUCTION</p>
+                <h2 className="text-lg font-extralight tracking-wide text-foreground">recurring spend</h2>
+                <p className="text-[9px] tracking-[0.22em] text-muted-foreground/40 font-light">recurrence &amp; spend reconstruction</p>
               </div>
               {isConnected && (
                 <button
-                  onClick={loadData}
+                  type="button"
+                  onClick={() => void loadData()}
                   disabled={loading}
                   className="flex items-center gap-1 rounded-lg bg-foreground/10 px-3 py-1.5 text-[10px] font-light text-foreground hover:bg-foreground/20 transition-all disabled:opacity-50"
                 >
-                  <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-                  Sweep
+                  <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden />
+                  sweep
                 </button>
               )}
             </div>
             <p className="text-sm font-extralight leading-relaxed text-muted-foreground">
               {isConnected
-                ? `Reconstructing standing authorisations from ${emails.length} receipt messages — merchant, amount, cadence, and the next projected debit.`
-                : "Link an account to reconstruct what you are paying, to whom, and what renews next."}
+                ? `reconstructing standing authorisations from ${emails.length} receipt messages — merchant, amount, cadence, and the next projected debit.`
+                : CONNECT_UNAVAILABLE}
             </p>
           </div>
         </div>
@@ -307,33 +308,33 @@ const SubscriptionOracle = () => {
       {error && (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 flex items-start gap-2">
           <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />
-          <p className="text-[11px] font-extralight text-muted-foreground">{error} — showing the last successful sweep.</p>
+          <p className="text-[11px] font-extralight text-muted-foreground">{error} {ledgers.length ? "— the last successful sweep is still shown." : ""}</p>
         </div>
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <TrendStat
-          label="Monthly run-rate"
+          label="monthly run-rate"
           value={fmtMoney(spend.monthlyCents, spend.currency)}
           series={monthlySeries.filter((_, i) => i > 0)}
           hint={`${spend.activeCount} proven recurring merchants`}
           loading={loading}
         />
         <TrendStat
-          label="Annual commitment"
+          label="annual commitment"
           value={fmtMoney(spend.annualCents, spend.currency)}
-          hint="Projected from current cadences"
+          hint="projected from current cadences"
           loading={loading}
         />
         <TrendStat
-          label="Renewing ≤30d"
+          label="renewing ≤30d"
           value={spend.upcoming.length}
           population={ledgers.map((l) => l.charges.length)}
-          hint={spend.upcoming[0] ? `Next: ${spend.upcoming[0].ledger.merchant} in ${spend.upcoming[0].inDays}d` : "No dated renewal in window"}
+          hint={spend.upcoming[0] ? `next: ${spend.upcoming[0].ledger.merchant} in ${spend.upcoming[0].inDays}d` : "no dated renewal in window"}
           loading={loading}
         />
         <TrendStat
-          label="Merchants tracked"
+          label="merchants tracked"
           value={ledgers.length}
           hint={`${spend.lapsedCount} lapsed · ${spend.unpricedCount} uncosted`}
           loading={loading}
@@ -341,7 +342,7 @@ const SubscriptionOracle = () => {
       </div>
 
       <section className="space-y-2">
-        <h3 className="text-[9px] tracking-[0.22em] text-muted-foreground/40 font-light">SYNTHESIS</h3>
+        <h3 className="text-[9px] tracking-[0.22em] text-muted-foreground/40 font-light">synthesis</h3>
         {findings.map((f) => (
           <FindingCard key={f.id} finding={f} defaultOpen={f.severity === "critical" || f.severity === "elevated"} />
         ))}

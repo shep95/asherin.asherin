@@ -13,6 +13,7 @@ import {
 import { useGoogleApi } from "@/hooks/useGoogleApi";
 import { runDriftAlarm, type DriftResult, type DriftBreak } from "@/lib/cloudIntel/driftAlarm";
 import { toast } from "sonner";
+import { CONNECT_UNAVAILABLE, describeFailure } from "../offline";
 
 type Verdict = "clean" | "watch" | "suspect" | "hostile";
 
@@ -78,19 +79,21 @@ const EmailForensics = () => {
   const [filter, setFilter] = useState("");
   const [onlyFlagged, setOnlyFlagged] = useState(false);
   const [ranAt, setRanAt] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [drift, setDrift] = useState<DriftResult | null>(null);
   const [driftBusy, setDriftBusy] = useState(false);
 
   const run = useCallback(async (scopeId: string) => {
     const s = SCOPES.find((x) => x.id === scopeId) ?? SCOPES[0];
     setLoading(true);
+    setError(null);
     try {
       const data = await fetchGoogleData("gmail_forensics", { maxResults: s.depth, q: s.q, geo: true });
       const msgs: Report[] = data?.messages || [];
       setReports(msgs);
       setAgg(data?.aggregate || null);
       setRanAt(Date.now());
-      if (!msgs.length) toast.info("No messages matched this scope.");
+      if (!msgs.length) toast.info("no messages matched this scope.");
 
       // Baseline comparison runs after the sweep lands and never blocks it:
       // a drift-store failure must not cost the operator their forensics.
@@ -105,14 +108,13 @@ const EmailForensics = () => {
           .finally(() => setDriftBusy(false));
       }
     } catch (e: unknown) {
-      console.error("gmail_forensics failed:", e);
-      toast.error(e instanceof Error ? e.message : "Header sweep failed.");
+      setError(describeFailure(e, "mail organ"));
     } finally {
       setLoading(false);
     }
   }, [fetchGoogleData]);
 
-  useEffect(() => { if (isConnected) run(scope); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [isConnected, scope]);
+  useEffect(() => { if (isConnected) void run(scope); }, [isConnected, scope, run]);
 
   const visible = useMemo(() => {
     const needle = filter.trim().toLowerCase();
@@ -127,8 +129,9 @@ const EmailForensics = () => {
   if (!isConnected) {
     return (
       <div className="rounded-2xl border border-border/20 bg-card/30 backdrop-blur-md p-8 text-center">
-        <Fingerprint className="mx-auto mb-3 h-8 w-8 text-foreground/40" />
-        <p className="text-sm text-foreground/70">Connect a mailbox to read message envelopes.</p>
+        <Fingerprint className="mx-auto mb-3 h-8 w-8 text-foreground/40" aria-hidden />
+        <p className="text-sm text-foreground/70">envelope forensics reads the headers of a connected mailbox.</p>
+        <p className="mx-auto mt-2 max-w-md text-xs text-muted-foreground">{CONNECT_UNAVAILABLE}</p>
       </div>
     );
   }
@@ -143,22 +146,29 @@ const EmailForensics = () => {
               <Fingerprint className="h-5 w-5 text-foreground/70" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold tracking-wide">POSTMARK · Envelope Forensics</h3>
+              <h3 className="text-sm font-light tracking-wide">postmark · envelope forensics</h3>
               <p className="text-xs text-foreground/55 max-w-xl leading-relaxed">
-                Relay chain, authentication verdicts, origin network and composing client — read from headers only.
-                Message bodies are never fetched.
+                relay chain, authentication verdicts, origin network and composing client — read from headers only.
+                message bodies are never fetched.
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={() => run(scope)}
             disabled={loading}
             className="inline-flex items-center gap-2 rounded-lg border border-border/30 px-3 py-1.5 text-xs hover:bg-foreground/5 disabled:opacity-50"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-            {loading ? "Reading envelopes…" : "Re-sweep"}
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden />
+            {loading ? "reading envelopes…" : "re-sweep"}
           </button>
         </div>
+
+        {error && (
+          <p role="alert" className="flex items-start gap-2 rounded-xl border border-border/25 bg-card/20 px-3 py-2 text-[11px] text-muted-foreground">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden /> {error}
+          </p>
+        )}
 
         <div className="flex flex-wrap gap-2">
           {SCOPES.map((s) => (
@@ -339,9 +349,9 @@ const EmailForensics = () => {
       )}
 
       {/* ── Message ledger ────────────────────────────────────────────── */}
-      {!loading && !reports.length && (
+      {!loading && !error && ranAt !== null && !reports.length && (
         <div className="rounded-2xl border border-border/20 bg-card/30 p-8 text-center text-sm text-foreground/60">
-          Nothing matched this scope. Try a different scope or re-sweep.
+          nothing matched this scope. try a different scope or re-sweep.
         </div>
       )}
 

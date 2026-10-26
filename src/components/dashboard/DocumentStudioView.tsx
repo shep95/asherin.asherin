@@ -8,6 +8,7 @@
 import { Suspense, lazy, useState } from "react";
 import { FileText, Presentation, BookOpen, Loader2 } from "lucide-react";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { useIsV2 } from "@/lib/dashboardUiContext";
 
 const PdfGeneratorView = lazy(() => import("./PdfGeneratorView"));
 const SlideshowGeneratorView = lazy(() => import("./SlideshowGeneratorView"));
@@ -28,13 +29,15 @@ interface Props {
 
 export default function DocumentStudioView({ initialKind = "page" }: Props) {
   const [kind, setKind] = useState<DocumentKind>(initialKind);
+  // in v.2 the shell already prints "asherin.pages" above this row; a second copy is noise.
+  const isV2 = useIsV2();
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/15 px-4 py-2.5 sm:px-6">
-        <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground/40">
-          asherin.pages
-        </span>
+      <div role="tablist" aria-label="output kind" className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/15 px-4 py-2.5 sm:px-6">
+        {!isV2 && (
+          <span className="mr-1 font-mono text-[10px] tracking-[0.3em] text-muted-foreground/40">asherin.pages</span>
+        )}
         {KINDS.map((k) => {
           const active = k.id === kind;
           return (

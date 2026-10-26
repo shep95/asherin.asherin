@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeWithByokRetry } from "@/lib/byokInvoke";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,8 @@ import {
   MessageSquare, RefreshCw, Loader2, Search, Brain, ArrowLeft,
   ArrowDownLeft, ArrowUpRight, Phone, Voicemail, PhoneMissed, Smartphone,
 } from "lucide-react";
+import OrganOffline from "../OrganOffline";
+import { describeFailure, isLocalOnlyError } from "../offline";
 
 /**
  * SIGNAL — phone-message intelligence.
@@ -127,6 +129,11 @@ function markerBadges(t: Thread) {
 
 const PhoneMessages = () => {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  // the ledger lives on the phone-messages organ. with no device answer the
+  // sync controls are held and the panel says why, instead of an empty list
+  // inviting a "first sync" that would fail.
+  const offline = isLocalOnlyError(loadError);
   const [syncing, setSyncing] = useState(false);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [totals, setTotals] = useState<Totals | null>(null);
@@ -141,6 +148,7 @@ const PhoneMessages = () => {
 
   const load = useCallback(async (windowDays = days) => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await invokeWithByokRetry<{ threads: Thread[]; totals: Totals }>("phone-messages", {
         body: { action: "threads", days: windowDays },
@@ -148,13 +156,13 @@ const PhoneMessages = () => {
       setThreads(data?.threads ?? []);
       setTotals(data?.totals ?? null);
     } catch (e) {
-      toast.error("Could not read the message ledger", { description: String((e as Error).message).slice(0, 160) });
+      setLoadError(e ?? new Error("the message ledger did not answer"));
     } finally {
       setLoading(false);
     }
   }, [days]);
 
-  useEffect(() => { void load(days); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [days]);
+  useEffect(() => { void load(days); }, [days, load]);
 
   const sync = useCallback(async () => {
     setSyncing(true);
@@ -169,7 +177,7 @@ const PhoneMessages = () => {
       });
       await load(days);
     } catch (e) {
-      toast.error("Sync failed", { description: String((e as Error).message).slice(0, 160) });
+      toast.error(describeFailure(e, "phone-messages organ"));
     } finally {
       setSyncing(false);
     }
@@ -186,7 +194,7 @@ const PhoneMessages = () => {
       });
       setOpenThread({ summary: data?.summary ?? null, messages: data?.messages ?? [] });
     } catch (e) {
-      toast.error("Could not open the thread", { description: String((e as Error).message).slice(0, 160) });
+      toast.error(describeFailure(e, "phone-messages organ"));
     } finally {
       setThreadLoading(false);
     }
@@ -202,7 +210,7 @@ const PhoneMessages = () => {
       });
       setAssessment(data?.assessment ?? null);
     } catch (e) {
-      toast.error("Analysis failed", { description: String((e as Error).message).slice(0, 160) });
+      toast.error(describeFailure(e, "phone-messages organ"));
     } finally {
       setAssessing(false);
     }
@@ -224,7 +232,7 @@ const PhoneMessages = () => {
       <div className="flex h-full min-h-0 flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => { setOpenPeer(null); setOpenThread(null); setAssessment(null); }}>
-            <ArrowLeft className="mr-1 h-4 w-4" /> All threads
+            <ArrowLeft className="mr-1 h-4 w-4" aria-hidden /> all threads
           </Button>
           <div className="min-w-0">
             <div className="truncate text-sm font-medium">{s?.name || openPeer}</div>
@@ -233,8 +241,8 @@ const PhoneMessages = () => {
             </div>
           </div>
           <Button className="ml-auto" size="sm" onClick={analyze} disabled={assessing}>
-            {assessing ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Brain className="mr-1 h-4 w-4" />}
-            Read this thread
+            {assessing ? <Loader2 className="mr-1 h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Brain className="mr-1 h-4 w-4" aria-hidden />}
+            read this thread
           </Button>
         </div>
 
@@ -278,7 +286,7 @@ const PhoneMessages = () => {
           <div className="space-y-2 p-3">
             {threadLoading && Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10 w-2/3" />)}
             {!threadLoading && !openThread?.messages.length && (
-              <p className="py-8 text-center text-xs text-muted-foreground">No messages in this window.</p>
+              <p className="py-8 text-center text-xs text-muted-foreground">no messages in this window.</p>
             )}
             {(openThread?.messages ?? []).slice().reverse().map((m) => {
               const out = m.direction === "out";
@@ -308,9 +316,9 @@ const PhoneMessages = () => {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name, number or message text"
+            placeholder="search name, number or message text"
             className="h-9 pl-7 text-xs"
-            aria-label="Search phone messages"
+            aria-label="search phone messages"
           />
         </div>
         <Tabs value={String(days)} onValueChange={(v) => setDays(Number(v))}>
@@ -321,51 +329,58 @@ const PhoneMessages = () => {
           </TabsList>
         </Tabs>
         <Button size="sm" variant="outline" onClick={() => void load(days)} disabled={loading}>
-          <RefreshCw className={`mr-1 h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
+          <RefreshCw className={`mr-1 h-4 w-4 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden /> read again
         </Button>
-        <Button size="sm" onClick={sync} disabled={syncing}>
-          {syncing ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Phone className="mr-1 h-4 w-4" />}
-          Sync Voice &amp; SMS
+        <Button size="sm" onClick={sync} disabled={syncing || offline}>
+          {syncing ? <Loader2 className="mr-1 h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Phone className="mr-1 h-4 w-4" aria-hidden />}
+          sync voice &amp; sms
         </Button>
       </div>
 
       {totals && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
-            { label: "Messages", value: totals.messages },
-            { label: "Correspondents", value: totals.correspondents },
-            { label: "Google Voice", value: totals.voice },
-            { label: "Device SMS", value: totals.device },
+            { label: "messages", value: totals.messages },
+            { label: "correspondents", value: totals.correspondents },
+            { label: "google voice", value: totals.voice },
+            { label: "device sms", value: totals.device },
           ].map((k) => (
             <div key={k.label} className="rounded-md border border-border/60 bg-muted/20 px-3 py-2">
-              <div className="text-lg font-semibold tabular-nums">{k.value}</div>
-              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{k.label}</div>
+              <div className="text-lg font-light tabular-nums">{k.value}</div>
+              <div className="text-[10px] tracking-wide text-muted-foreground">{k.label}</div>
             </div>
           ))}
         </div>
+      )}
+
+      {!loading && loadError !== null && (
+        <OrganOffline error={loadError} organ="phone-messages organ" onRetry={() => void load(days)} />
       )}
 
       <ScrollArea className="min-h-0 flex-1 rounded-md border border-border/60">
         <div className="divide-y divide-border/50">
           {loading && Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="m-3 h-12" />)}
 
-          {!loading && !threads.length && (
+          {!loading && loadError === null && !threads.length && (
             <div className="space-y-2 p-8 text-center">
-              <MessageSquare className="mx-auto h-6 w-6 text-muted-foreground" />
-              <p className="text-sm">No phone messages in the ledger yet.</p>
+              <MessageSquare className="mx-auto h-6 w-6 text-muted-foreground" aria-hidden />
+              <p className="text-sm">no phone messages in the ledger yet.</p>
               <p className="mx-auto max-w-md text-xs text-muted-foreground">
-                Google Voice mirrors every text, MMS and voicemail into the linked mailbox — run a sync
-                to pull them in. Android device SMS arrives through the companion app.
+                google voice mirrors every text, mms and voicemail into the linked mailbox — a sync pulls them in.
               </p>
               <Button size="sm" onClick={sync} disabled={syncing} className="mt-1">
-                {syncing ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Phone className="mr-1 h-4 w-4" />}
-                Run first sync
+                {syncing ? <Loader2 className="mr-1 h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Phone className="mr-1 h-4 w-4" aria-hidden />}
+                run first sync
               </Button>
             </div>
           )}
 
+          {!loading && loadError !== null && (
+            <p className="p-8 text-center text-xs text-muted-foreground">no ledger could be read.</p>
+          )}
+
           {!loading && threads.length > 0 && !filtered.length && (
-            <p className="p-8 text-center text-xs text-muted-foreground">No thread matches “{query}”.</p>
+            <p className="p-8 text-center text-xs text-muted-foreground">no thread matches “{query}”.</p>
           )}
 
           {filtered.map((t) => {
@@ -381,6 +396,7 @@ const PhoneMessages = () => {
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="truncate text-sm font-medium">{t.name || t.peer}</span>
                     {!t.name && <Badge variant="outline" className="text-[10px]">unknown number</Badge>}
+                    {/* name and number are read from the ledger as given */}
                     {t.channels.includes("device_sms") && <Smartphone className="h-3 w-3 text-muted-foreground" />}
                     {markerBadges(t).slice(0, 2).map((b) => (
                       <Badge key={b.label} variant={b.tone} className="text-[10px]">{b.label}</Badge>

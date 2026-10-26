@@ -146,7 +146,7 @@ describe("trajectory projection", () => {
     });
     const trajectories = buildTrajectories(record);
     expect(trajectories.length).toBe(1);
-    const [p3, p6, p12] = trajectories[0].points;
+    const [p3, _p6, p12] = trajectories[0].points;
     expect(p12.high - p12.low).toBeGreaterThanOrEqual(p3.high - p3.low);
     expect(trajectories[0].direction).toBe("falling");
   });

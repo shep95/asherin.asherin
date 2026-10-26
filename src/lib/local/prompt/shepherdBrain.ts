@@ -11,6 +11,7 @@
  * sees is the doctrine's own.
  */
 import doctrine from "./shepherd.txt?raw";
+import { datasetSections } from "./shepherdDatasets";
 
 export const SHEPHERD_DOCTRINE: string = doctrine.replace(/\r\n?/g, "\n");
 
@@ -143,13 +144,20 @@ interface Indexed extends DoctrineSection {
   bodyTerms: Set<string>;
 }
 let indexCache: Indexed[] | null = null;
+let datasetIndexCache: Indexed[] | null = null;
+const toIndexed = (s: DoctrineSection): Indexed => ({ ...s, titleTerms: new Set(terms(s.title)), bodyTerms: new Set(terms(s.body)) });
 function index(): Indexed[] {
   if (!indexCache) {
     indexCache = doctrineSections()
       .filter((s) => !CORE_TITLES.has(s.title) && s.body.length > 80)
-      .map((s) => ({ ...s, titleTerms: new Set(terms(s.title)), bodyTerms: new Set(terms(s.body)) }));
+      .map(toIndexed);
   }
   return indexCache;
+}
+/** the two reference datasets (aesthetic psychology, software architecture) ride a budget of their own, after the doctrine. */
+function datasetIndex(): Indexed[] {
+  if (!datasetIndexCache) datasetIndexCache = datasetSections().filter((s) => s.body.length > 80).map(toIndexed);
+  return datasetIndexCache;
 }
 
 /**
@@ -159,7 +167,12 @@ function index(): Indexed[] {
 export function retrieveDoctrine(query: string, budget = 14000): DoctrineSection[] {
   const q = terms(query);
   if (q.length === 0) return [];
-  const scored = index()
+  // the doctrine keeps its whole budget; the datasets add up to three sections within their own
+  return [...rank(index(), q, budget, 8), ...rank(datasetIndex(), q, Math.min(6000, budget), 3)];
+}
+
+function rank(pool: Indexed[], q: string[], budget: number, max: number): DoctrineSection[] {
+  const scored = pool
     .map((s) => {
       let score = 0;
       for (const t of q) {
@@ -177,7 +190,7 @@ export function retrieveDoctrine(query: string, budget = 14000): DoctrineSection
     if (used + s.body.length > budget) continue;
     out.push(s);
     used += s.body.length;
-    if (out.length >= 8) break;
+    if (out.length >= max) break;
   }
   return out;
 }

@@ -31,7 +31,7 @@ const Header = () => {
                   aria-hidden
                   className="h-1.5 w-1.5 rounded-full bg-foreground/80 shadow-[0_0_8px_rgba(255,255,255,0.8)] transition-transform group-hover/logo:scale-125"
                 />
-                <span className="text-sm font-extralight tracking-[0.32em] text-foreground/95">ASHERIN</span>
+                <span className="text-sm font-extralight tracking-[0.32em] text-foreground/95">asherin</span>
                 <span className="hidden md:inline text-[8px] font-mono tracking-[0.2em] text-foreground/40 translate-y-px">
                   ◊
                 </span>
@@ -44,7 +44,7 @@ const Header = () => {
 
               <Link
                 to="/software"
-                className="px-4 py-2.5 text-[11px] font-light tracking-[0.22em] uppercase text-muted-foreground transition-colors hover:text-foreground"
+                className="px-4 py-2.5 text-[11px] font-light tracking-[0.12em] lowercase text-muted-foreground transition-colors hover:text-foreground"
               >
                 Software
               </Link>
@@ -56,7 +56,7 @@ const Header = () => {
 
               <Link
                 to="/for"
-                className="px-4 py-2.5 text-[11px] font-light tracking-[0.22em] uppercase text-muted-foreground transition-colors hover:text-foreground"
+                className="px-4 py-2.5 text-[11px] font-light tracking-[0.12em] lowercase text-muted-foreground transition-colors hover:text-foreground"
               >
                 For
               </Link>
@@ -68,7 +68,7 @@ const Header = () => {
 
               <Link
                 to="/blog"
-                className="px-4 py-2.5 text-[11px] font-light tracking-[0.22em] uppercase text-muted-foreground transition-colors hover:text-foreground"
+                className="px-4 py-2.5 text-[11px] font-light tracking-[0.12em] lowercase text-muted-foreground transition-colors hover:text-foreground"
               >
                 Blog
               </Link>
@@ -95,7 +95,7 @@ const Header = () => {
             to="/"
             className="lg:hidden rounded-xl border border-border/30 bg-card/60 backdrop-blur-md px-4 py-2 flex items-center hover:bg-card/80 transition-colors"
           >
-            <span className="text-base font-extralight tracking-[0.25em] text-foreground">ASHERIN</span>
+            <span className="text-base font-extralight tracking-[0.25em] text-foreground">asherin</span>
           </Link>
 
           {/* Right: Auth buttons */}
@@ -112,7 +112,7 @@ const Header = () => {
               />
               <Link
                 to="/dashboard"
-                className="group relative flex items-center gap-2 px-5 py-2.5 text-[11px] font-light tracking-[0.22em] uppercase text-foreground transition-colors overflow-hidden"
+                className="group relative flex items-center gap-2 px-5 py-2.5 text-[11px] font-light tracking-[0.12em] lowercase text-foreground transition-colors overflow-hidden"
               >
                 <span className="font-mono text-[8px] tracking-[0.15em] text-foreground/40 relative z-10">02</span>
                 <span className="relative z-10">Dashboard</span>

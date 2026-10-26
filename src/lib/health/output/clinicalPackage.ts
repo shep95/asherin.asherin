@@ -3,7 +3,6 @@
 // inherited versus what is missing). both are markdown, both are honest about gaps.
 import type { HealthRecord } from "../store";
 import { labDef } from "../labs";
-import { findDrug } from "../medications";
 import { HERBS, safetyReview } from "../herbs";
 import { GENE_DEFS, findGene } from "../genetics";
 import { SYMPTOMS } from "../symptoms";

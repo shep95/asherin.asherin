@@ -31,7 +31,7 @@ export const ROUTE_SEO: Record<string, SeoEntry> = {
   "/": {
     title: "asherin, look a little closer.",
     description:
-      "asherin is a sourced research workspace: chat, asherin.cyber, asherin.defender, asherin.arvision and asherin.eye..",
+      "asherin is a sourced research workspace: chat, asherin.cyber, asherin.defender, asherin.arvision and asherin.adam..",
   },
 
   // --- Product / company ---
@@ -48,7 +48,7 @@ export const ROUTE_SEO: Record<string, SeoEntry> = {
   "/software": {
     title: "software | asherin",
     description:
-      "the rooms on a seat: chat, asherin.cyber, asherin.defender, asherin.arvision, asherin.eye, library, projects, memory, vault, whiteboard, connect, team..",
+      "the rooms on a seat: chat, asherin.cyber, asherin.defender, asherin.arvision, asherin.adam, library, projects, memory, vault, whiteboard, connect, team..",
   },
   "/for": {
     title: "who asherin is for",
@@ -106,31 +106,31 @@ export const ROUTE_SEO: Record<string, SeoEntry> = {
 
   // --- Blog index ---
   "/blog": {
-    title: "Blog | asherin",
-    description: "long-form write-ups on how the parts of asherin work, and what they cannot do yet.",
+    title: "blog | asherin",
+    description: "public notes with boundaries: current rooms, archived designs, method notes, and the limits that keep each claim honest.",
   },
 
   // --- Blog posts ---
   "/blog/what-is-ai-osint": {
-    title: "What is AI OSINT?",
+    title: "what is AI OSINT?",
     description: "the four stages of an osint pipeline, and how to tell one apart from a search wrapper.",
     ogType: "article",
     datePublished: "2026-06-19",
   },
   "/blog/sovereign-ai-platforms": {
-    title: "The 2026 sovereign AI landscape",
+    title: "the 2026 sovereign AI landscape",
     description: "four architecture patterns, and the four-layer test for whether a sovereignty claim holds.",
     ogType: "article",
     datePublished: "2026-06-19",
   },
   "/blog/ai-without-restrictions": {
-    title: "Working without vendor refusal defaults",
-    description: "model choice, prompt discipline, and refusal detection over long sessions.",
+    title: "AI with operator choice, the practical workflow",
+    description: "model choice, prompt discipline and provider boundaries over long sessions, on the key you bring.",
     ogType: "article",
     datePublished: "2026-06-19",
   },
   "/blog/elite-corporations-algorithms-vs-axrlen": {
-    title: "Forecasting, symbolism, and probability",
+    title: "archived forecasting method, symbolism and probability",
     description: "an archived method note on probability, windows, symbolic candidate generation, and honest verification.",
     ogType: "article",
     datePublished: "2026-06-24",
@@ -142,79 +142,79 @@ export const ROUTE_SEO: Record<string, SeoEntry> = {
     datePublished: "2026-06-19",
   },
   "/blog/vulnerability-chaining-explained": {
-    title: "Vulnerability chaining, explained",
+    title: "vulnerability chaining, explained",
     description: "how low-severity findings combine into one compromise path, with worked examples.",
     ogType: "article",
     datePublished: "2026-06-19",
   },
   "/blog/how-ai-predictive-forecasting-works": {
-    title: "How AI forecasting actually works",
+    title: "how AI predictive forecasting actually works",
     description: "signal fusion, scenario branching, probability weighting, and why calibration beats confidence.",
     ogType: "article",
     datePublished: "2026-06-19",
   },
   "/blog/how-aureon-uses-c-seo-research": {
-    title: "How asherin uses conversational SEO research",
-    description: "entity clustering, answer-shaped pages, and measuring citations inside AI answers.",
+    title: "how asherin used C-SEO research, archived",
+    description: "an archived publishing note: llms.txt and structured markup after the C-SEO Bench paper, and the crawler policy that has since reversed.",
     ogType: "article",
     datePublished: "2026-06-19",
   },
   "/blog/how-we-make-aureon-sound-human": {
-    title: "How we make asherin sound human",
-    description: "cadence, specificity, refusal of filler, and the review passes every page survives.",
+    title: "how we make shepherd sound human",
+    description: "the layered voice stack: appraisal, restraint, timing, leakage. written before personas became thinking patterns.",
     ogType: "article",
     datePublished: "2026-07-01",
   },
   "/blog/ai-stack-for-indian-startups": {
-    title: "An AI stack for early-stage Indian startups",
+    title: "the AI stack for Indian startups that can't afford to fail",
     description: "the bottleneck is workflow logic, not compute or budget.",
     ogType: "article",
     datePublished: "2026-08-10",
   },
   "/blog/code-narrative-quantum-collapse": {
-    title: "Code-to-narrative and candidate collapse",
+    title: "code as narrative and candidate collapse",
     description: "turn a prompt into a narrative, hunt the flaws, then collapse the candidates into one answer.",
     ogType: "article",
     datePublished: "2026-07-01",
   },
   "/blog/the-truth-and-reality-of-wars": {
-    title: "The truth and reality of wars",
+    title: "the truth and reality of wars, an essay",
     description: "incentive maps, resource clocks, and the exhaustion cycles that decide conflicts.",
     ogType: "article",
     datePublished: "2026-06-24",
   },
   "/blog/zaxin-tactical-ble-intelligence": {
-    title: "Archived bluetooth signal research",
+    title: "archived bluetooth signal research",
     description: "a retired concept and the limits of what browser bluetooth signals can show.",
     ogType: "article",
     datePublished: "2026-06-26",
   },
   "/blog/asherin-engine-deep-time": {
-    title: "The asherin engine and deep time",
-    description: "reading long cycles instead of headlines, and where that reading breaks.",
+    title: "asherin engine, an archived design for metadata-first search",
+    description: "an archived design note: retrieval legs across time, host lifespan, pdf metadata and exposure maps. the room that shipped is asherin.search.",
     ogType: "article",
     datePublished: "2026-08-02",
   },
   "/blog/cloud-intelligence-suite": {
-    title: "Cloud intelligence in asherin",
-    description: "what asherin can read from a google account you authorize, with permission and coverage limits.",
+    title: "cloud intelligence, an archived design for your own google account",
+    description: "an archived design note on mail-header, calendar and contact analysis. on this device asherin.google reads nothing until a browser-only authorization path is wired.",
     ogType: "article",
     datePublished: "2026-08-03",
   },
   "/blog/asherin-maps-find-my": {
-    title: "asherin maps and finding your own devices",
-    description: "how the map layer handles your locations, and who can see them.",
+    title: "asherin maps, an archived design for a satellite-first map",
+    description: "an archived design note: only the routing shipped, inside asherin.search. nothing here locates a phone.",
     ogType: "article",
     datePublished: "2026-08-04",
   },
   "/blog/transit-guardian": {
-    title: "Archived trip-safety research",
+    title: "archived trip-safety research",
     description: "what phone telemetry and public records can show about a trip, without claiming identity or safety certainty.",
     ogType: "article",
     datePublished: "2026-08-05",
   },
   "/blog/bulwark-counter-surveillance": {
-    title: "Counter-surveillance notes",
+    title: "archived counter-surveillance research",
     description: "what a browser can legitimately observe about the devices and trackers around it.",
     ogType: "article",
     datePublished: "2026-08-06",
@@ -222,19 +222,19 @@ export const ROUTE_SEO: Record<string, SeoEntry> = {
     excludeFromSitemap: true,
   },
   "/blog/autonomous-intelligence-loop": {
-    title: "The supervised intelligence loop",
-    description: "how an active request is routed through collection, verification, memory, and visible degraded states.",
+    title: "the supervised research loop",
+    description: "how a research-shaped request is routed through recall, collection, verification and a visible chain, on this device.",
     ogType: "article",
     datePublished: "2026-08-07",
   },
   "/blog/aureon-legal-advisor-multi-jurisdictional": {
-    title: "Multi-jurisdictional legal research in asherin",
-    description: "jurisdiction-specific research with source verification and uncertainty; not legal advice.",
+    title: "law mode, an archived composer toggle",
+    description: "an archived note on the retired law mode: jurisdiction-specific research with source verification and uncertainty; not legal advice.",
     ogType: "article",
     datePublished: "2026-07-08",
   },
   "/blog/personalities-are-not-thinking-patterns": {
-    title: "Personalities are not thinking patterns",
+    title: "personalities are not thinking patterns",
     description: "why a persona is not a reasoning procedure, and what we replaced ours with.",
     ogType: "article",
     datePublished: "2026-08-12",
@@ -243,7 +243,7 @@ export const ROUTE_SEO: Record<string, SeoEntry> = {
   "/blog/asher-fold-memory": {
     title: "asher.fold-memory, leftover memory, stored once",
     description:
-      "identical copies stored once. unique files stay their size. unfold returns the exact bits or refuses. $99 one-time pack, no account.",
+      "identical copies stored once. unique files stay their size. unfold returns the exact bits or refuses. described here, not sold.",
     ogType: "article",
     datePublished: "2026-08-16",
   },

@@ -92,13 +92,11 @@ const LinkPreviewCard = ({ url }: LinkPreviewProps) => {
       title: domain,
       description: url,
       domain,
-      favicon: `https://www.google.com/s2/favicons?domain=${domain}&sz=32`,
     };
 
     const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (ytMatch) {
       data.title = "YouTube Video";
-      data.image = `https://img.youtube.com/vi/${ytMatch[1]}/mqdefault.jpg`;
       data.description = "Watch on YouTube";
     }
 

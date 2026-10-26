@@ -1,7 +1,7 @@
 // asherin — sentinel -> shared fabric.
 //
 // Sentinel keeps everything it already had: its channels, its capture engines,
-// its account timeline, its gap semantics, its alerts, its companion. This
+// its timeline on this device, its gap semantics, its alerts. This
 // bridge is read-only with respect to all of it. It subscribes where sentinel
 // already broadcasts, normalizes what arrives, and publishes it into the fabric
 // so ArVision and Eagle Eye can see the same events on the same clock.
@@ -45,11 +45,11 @@ function syncChannels() {
       capabilities: [
         "voice activity detection and speech capture",
         "acoustic transient classification (door, glass-shaped impact, movement, vehicle)",
-        c.config.translateTo ? `translation into ${c.config.translateTo}` : "no translation configured",
+        "no translation — turns are kept in the language spoken",
       ],
       limitations: [
         "audio only — a microphone cannot say who made a sound or where in a room it happened",
-        "a browser tab cannot hold this input open once the tab is closed; the desktop companion owns that",
+        "a browser tab cannot hold this input open once the tab is closed; the gap is written when the tab returns",
         c.inputPresent ? "bound input is present on this machine" : "the bound input is not currently enumerable on this machine",
       ],
       authorization: "operator_device",
@@ -276,7 +276,7 @@ function publishDaemonState(state: SentinelState) {
     modality: "service",
     subsystem: "sentinel",
     capabilities: ["background bluetooth leg", "area risk leg", "watchdog re-arm"],
-    limitations: ["a browser tab cannot guarantee background execution; the desktop companion owns that"],
+    limitations: ["a browser tab cannot guarantee background execution; there is no background runtime in the local edition"],
     authorization: "operator_device",
     health: state.armed ? (state.scanning || state.positioned ? "live" : "stale") : "unavailable",
     healthDetail: state.armed

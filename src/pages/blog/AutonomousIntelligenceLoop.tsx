@@ -1,25 +1,24 @@
-import { useEffect } from "react";
 import ArticleShell from "@/components/seo/ArticleShell";
 import {
   ArticleJsonLd,
   BreadcrumbJsonLd,
   FaqJsonLd,
 } from "@/components/seo/SeoJsonLd";
-import { applySeoHead } from "@/lib/seoHead";
 
 /**
  * /blog/autonomous-intelligence-loop
  *
- * Product briefing for the Autonomous Intelligence Loop — the five-stage
- * pipeline (recall, fan-out, verify, persist, record) plus Ghost Chain
- * reasoning and the adaptive operator router.
+ * the supervised research loop — the five-stage shape (recall, fan-out,
+ * verify, persist, record) a research-shaped request takes in chat, plus
+ * the ghost chain thinking phase (src/lib/aureonThinking.ts) and intent
+ * routing (src/lib/adaptiveIntent.ts). runs on this device, on request.
  */
 
 const URL = "https://asherin.com/blog/autonomous-intelligence-loop";
 const TITLE =
-  "The supervised intelligence loop, how Asherin routes research requests";
+  "the supervised research loop, how shepherd routes research requests";
 const DEK =
-  "During an active request, Asherin can detect research intent, recall owner-scoped context, query available sources, preserve citations, and show degraded states. It does not run as an unsupervised background agent.";
+  "during an active request, shepherd can detect research intent, recall context held on this device, query available sources, preserve citations, and show degraded states. it does not run as an unsupervised background agent.";
 const PUBLISHED = "2026-08-07T00:00:00.000Z";
 
 const Box = ({ children }: { children: React.ReactNode }) => (
@@ -29,15 +28,6 @@ const Box = ({ children }: { children: React.ReactNode }) => (
 );
 
 const AutonomousIntelligenceLoop = () => {
-  useEffect(() => {
-    applySeoHead({
-      title: TITLE,
-      description:
-        "Briefing on the Autonomous Intelligence Loop in Asherin: research-intent detection, memory-graph recall, multi-surface fan-out, cross-verification, persistence, and Ghost Chain visible reasoning.",
-      path: "/blog/autonomous-intelligence-loop",
-    });
-  }, []);
-
   return (
     <>
       <ArticleJsonLd
@@ -46,7 +36,6 @@ const AutonomousIntelligenceLoop = () => {
         headline={TITLE}
         description={DEK}
         datePublished={PUBLISHED}
-        author="Asherin R&D"
         keywords={[
           "autonomous AI research agent",
           "AI intelligence loop",
@@ -61,9 +50,9 @@ const AutonomousIntelligenceLoop = () => {
         id="autonomous-intelligence-loop-crumbs"
         items={[
           { name: "Asherin", url: "/" },
-          { name: "Journal", url: "/blog" },
+          { name: "blog", url: "/blog" },
           {
-            name: "Autonomous Intelligence Loop",
+            name: "the supervised research loop",
             url: "/blog/autonomous-intelligence-loop",
           },
         ]}
@@ -77,7 +66,7 @@ const AutonomousIntelligenceLoop = () => {
           },
           {
             q: "What is the memory graph?",
-            a: "A persistent, per-operator store of entities, identifiers, relationships, and the sources that established them. Later sessions recall it, so a second question about the same subject starts from what was already verified rather than from zero.",
+            a: "a store on this device of entities, identifiers, relationships and the sources that established them, kept in asherin.vault. later sessions recall it, so a second question about the same subject starts from what was already verified rather than from zero.",
           },
           {
             q: "Why is the reasoning shown?",
@@ -91,8 +80,8 @@ const AutonomousIntelligenceLoop = () => {
       />
 
       <ArticleShell
-         eyebrow="Product Briefing · Supervised Research"
-         title="The supervised intelligence loop"
+        eyebrow="current · chat"
+        title="the supervised research loop"
         dek={DEK}
         publishedLabel="Aug 7 2026"
         readTime="12 min"
@@ -221,9 +210,9 @@ const AutonomousIntelligenceLoop = () => {
           quick factual check, deep investigation, legal research, code
           work, map task, and shapes the response accordingly:
           terse and direct where speed is the point, structured and cited
-          where rigour is the point, and jurisdiction-strict when legal
-          mode is engaged. The router also decides how much of the loop to
-          run; a quick check does not deserve a twelve-leg fan-out.
+          where rigour is the point. the router also decides how much of
+          the loop to run; a quick check does not deserve a twelve-leg
+          fan-out.
         </p>
 
         <h2>10. Speed</h2>
@@ -240,10 +229,11 @@ const AutonomousIntelligenceLoop = () => {
         <h2>11. FAQ</h2>
         <h3>Does the memory graph leak between conversations?</h3>
         <p>
-          The graph is per-operator and deliberately walled from
+          the graph lives in this browser and is deliberately walled from
           conversational carry-over: a fresh chat starts with no prior
           assumptions about the subject and must recall explicitly from the
-          graph, with the recall shown in the chain.
+          graph, with the recall shown in the chain. nothing in it leaves
+          the device unless you send it to the model you connected.
         </p>
         <h3>Can I still call a tool directly?</h3>
         <p>

@@ -1,26 +1,24 @@
-import { useEffect } from "react";
 import ArticleShell from "@/components/seo/ArticleShell";
 import {
   ArticleJsonLd,
   BreadcrumbJsonLd,
   FaqJsonLd,
 } from "@/components/seo/SeoJsonLd";
-import { applySeoHead } from "@/lib/seoHead";
 
 /**
  * /blog/cloud-intelligence-suite
  *
- * Product briefing for Cloud Intelligence — the Google-account substrate
- * that turns mail, messages, calendar, and contacts into ICD-203-graded
- * intelligence products. Covers POSTMARK, VOICEPRINT, SIGNAL, Meet Vault,
- * and the contact dossier pipeline.
+ * archived design note for "Cloud Intelligence" — the google-account
+ * analysis design (POSTMARK, VOICEPRINT, SIGNAL, Meet Vault, contact
+ * dossiers). the room is asherin.google; on this device it reads nothing
+ * until a browser-only authorization path is wired.
  */
 
 const URL = "https://asherin.com/blog/cloud-intelligence-suite";
 const TITLE =
-  "Cloud Intelligence, turning your inbox, messages and calls into graded intelligence";
+  "cloud intelligence, an archived design for reading your own google account";
 const DEK =
-  "Cloud Intelligence works with Google data you explicitly authorize, including supported mail, calendar, contact, and file records. Coverage depends on the permissions and records the connected account exposes.";
+  "an archived design note on mail-header, calendar and contact analysis over google data you explicitly authorize. the room is asherin.google; on this device it reads nothing until a browser-only authorization path is wired.";
 const PUBLISHED = "2026-08-03T00:00:00.000Z";
 
 const Box = ({ children }: { children: React.ReactNode }) => (
@@ -30,15 +28,6 @@ const Box = ({ children }: { children: React.ReactNode }) => (
 );
 
 const CloudIntelligenceSuite = () => {
-  useEffect(() => {
-    applySeoHead({
-      title: TITLE,
-      description:
-        "Cloud Intelligence briefing: POSTMARK email header forensics, VOICEPRINT call metadata, SIGNAL message comprehension, Meet Vault recordings, and contact dossiers built to ICD 203/206 analytic standards.",
-      path: "/blog/cloud-intelligence-suite",
-    });
-  }, []);
-
   return (
     <>
       <ArticleJsonLd
@@ -47,7 +36,6 @@ const CloudIntelligenceSuite = () => {
         headline={TITLE}
         description={DEK}
         datePublished={PUBLISHED}
-        author="Asherin R&D"
         keywords={[
           "cloud intelligence",
           "email header forensics",
@@ -63,7 +51,7 @@ const CloudIntelligenceSuite = () => {
         id="cloud-intelligence-suite-crumbs"
         items={[
           { name: "Asherin", url: "/" },
-          { name: "Journal", url: "/blog" },
+          { name: "blog", url: "/blog" },
           { name: "Cloud Intelligence", url: "/blog/cloud-intelligence-suite" },
         ]}
       />
@@ -72,7 +60,7 @@ const CloudIntelligenceSuite = () => {
         items={[
           {
             q: "What does Cloud Intelligence connect to?",
-            a: "Your own Google accounts, multiple at once. Mail, Contacts, Calendar, Voice, and Drive-linked Meet recordings. Each account is authorised separately by you and can be revoked independently.",
+            a: "as designed: your own Google accounts, mail, contacts, calendar, voice and drive-linked meet recordings, each authorised separately and revocable. as shipped: asherin.google exists, but on this device no account connects yet, because the authorization exchange ran on a server asherin no longer has.",
           },
           {
             q: "What is POSTMARK?",
@@ -80,7 +68,7 @@ const CloudIntelligenceSuite = () => {
           },
           {
             q: "Does it read the content of my messages?",
-            a: "Comprehension works only on records exposed by an account you authorize. Your connected-account results are isolated to your signed-in account, and access can be revoked.",
+            a: "only what an account you authorize exposes, and today nothing, because no account connects on this device. when a browser-only path is wired the read stays in this browser and access can be revoked.",
           },
           {
             q: "What analytic standards does the report follow?",
@@ -90,12 +78,24 @@ const CloudIntelligenceSuite = () => {
       />
 
       <ArticleShell
-        eyebrow="Product Briefing · Cloud Intelligence"
-        title="Cloud Intelligence, your own accounts, read like an analyst reads them"
+        eyebrow="archived · design note"
+        title="cloud intelligence, an archived design for reading your own google account"
         dek={DEK}
         publishedLabel="Aug 3 2026"
         readTime="13 min"
       >
+        <p>
+          <strong>status.</strong> archived design note. the room this
+          describes is <a href="/dashboard/google">asherin.google</a>. in the
+          local edition the google authorization exchange ran on a server
+          asherin no longer has, and no browser-only path is wired yet, so
+          the room reads nothing and says so in place. the voice and sms
+          desks below also assumed a companion app that does not exist.
+          the design is kept for the analytic discipline: headers over
+          bodies, confidence computed from the record set, competing
+          hypotheses written out.
+        </p>
+
         <h2>1. The premise</h2>
         <p>
           Every mailbox is already an intelligence archive. It records who
@@ -212,19 +212,20 @@ const CloudIntelligenceSuite = () => {
 
         <h2>7. Automation posture</h2>
         <p>
-          Analysis runs when you request it from an authorized connection.
-          The interface reports unavailable permissions, empty sources, and
-          provider failures instead of implying that collection continued
-          while the application was closed.
+          Analysis would run only when you request it from an authorized
+          connection. the interface reports unavailable permissions, empty
+          sources and provider failures instead of implying that collection
+          continued while the tab was closed; today it reports that no
+          account is connected.
         </p>
 
         <h2>8. Consent, scope, and revocation</h2>
         <p>
-          Every account is authorised by you and can be disconnected on its
-          own without disturbing the others. Derived records remain isolated
-          to your signed-in account. Metadata modules are deliberately envelope-only
-, they do not need bodies to do their work, so they do not take
-          them.
+          Every account would be authorised by you and disconnectable on its
+          own. derived records stay in this browser; there is no account on
+          asherin's side to hold them. metadata modules are deliberately
+          envelope-only, they do not need bodies to do their work, so they
+          do not take them.
         </p>
 
         <h2>9. FAQ</h2>
@@ -242,9 +243,11 @@ const CloudIntelligenceSuite = () => {
         </p>
         <h3>Is Cloud Intelligence included?</h3>
         <p>
-          Yes. Cloud Intelligence and Asherin Maps ship with the app. Model
-          reasoning inside the dossier runs on the key you connect on your
-          own device.
+          the room is. the reading is not, yet: asherin.google ships with the
+          app, but on this device no google account connects until a
+          browser-only authorization path exists. when it does, shepherd's
+          reasoning over the records runs on the key you connect, on your own
+          device.
         </p>
       </ArticleShell>
     </>

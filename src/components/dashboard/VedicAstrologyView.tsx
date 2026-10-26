@@ -7,18 +7,20 @@ import {
   rashis,
 } from "@/data/nakshatraData";
 import { supabase } from "@/integrations/supabase/client";
-import { computeMahadasha, ensureChildren, findCurrentDasha, DASHA_LEVEL_LABEL, type DashaPeriod } from "@/lib/vedic/dasha";
+import { useAuth } from "@/contexts/AuthContext";
+import { computeMahadasha, ensureChildren, findCurrentDasha, DASHA_LEVEL_LABEL } from "@/lib/vedic/dasha";
 import { buildDashaInsight } from "@/lib/vedic/dashaReading";
 import { houseFromAsc } from "@/lib/vedic/dignities";
 import { generateReading, type PlacementInput } from "@/lib/vedic/readingEngine";
 import { calculateSweVedicChart, type SweVedicChart, type SweVedicPlanet } from "@/lib/vedic/sweChart";
-import { resolveBirthTimezone } from "@/lib/vedic/timezoneLookup";
+import { resolveBirthTimezone, type ResolvedTz } from "@/lib/vedic/timezoneLookup";
+import { ChartInputError, describeChartFailure, validateChartInput } from "@/lib/vedic/chartInput";
 import { COUNTRY_CHARTS, type CountryFoundation } from "@/data/vedic/countryCharts";
 import { COUNTRY_LEADERS, getLeaderForCountry, type LeaderRecord } from "@/data/vedic/countryLeaders";
 import { COMPANY_CHARTS, COMPANY_FOUNDERS, getFounderForCompany, type CompanyFoundation, type FounderRecord } from "@/data/vedic/companyCharts";
 import { toast } from "sonner";
 import WealthHousesPanel from "./vedic/WealthHousesPanel";
-import AsherChatPanel from "./vedic/AsherChatPanel";
+import ShepherdChatPanel from "./vedic/ShepherdChatPanel";
 import GlobalPredictionsTab from "./vedic/GlobalPredictionsTab";
 import GlobalChartTab from "./vedic/GlobalChartTab";
 import CompatibilityPanel from "./vedic/CompatibilityPanel";
@@ -42,6 +44,8 @@ interface SavedChart {
   city_label: string | null;
   created_at: string;
 }
+
+const CITY_LOOKUP_MS = 8000;
 
 function fmtDeg(deg: number): string {
   const d = Math.floor(deg);
@@ -129,7 +133,7 @@ function VedicWheel({
         );
       })}
       <text x={c} y={size - 6} textAnchor="middle" fontSize={9} fill="hsl(var(--muted-foreground) / 0.5)" letterSpacing="0.15em">
-        ASC {fmtDeg(ascendant % 30)} {rashis[Math.floor(ascendant / 30)].name.toUpperCase()}
+        asc {fmtDeg(ascendant % 30)} {rashis[Math.floor(ascendant / 30)].name}
       </text>
     </svg>
   );
@@ -143,7 +147,7 @@ function PlacementsStrip({ items }: { items: { name: string; symbol: string; sig
   return (
     <div className="mt-1.5 pt-1.5 border-t border-border/15 grid grid-cols-3 gap-x-1.5 gap-y-0.5 text-[9px] font-light text-muted-foreground/80 leading-tight">
       {items.map((p) => (
-        <div key={p.name} className="flex items-baseline gap-1 truncate" title={`${p.name} in ${p.sign} · House ${p.house}${p.retro ? " (R)" : ""}`}>
+        <div key={p.name} className="flex items-baseline gap-1 truncate" title={`${p.name} in ${p.sign} · house ${p.house}${p.retro ? " (retrograde)" : ""}`}>
           <span className="text-foreground/70 w-3">{p.symbol}</span>
           <span className="truncate">{p.sign.slice(0, 3)} <span className="text-muted-foreground/50">H{p.house}</span>{p.retro && <span className="text-muted-foreground/60">ʀ</span>}</span>
         </div>
@@ -153,12 +157,14 @@ function PlacementsStrip({ items }: { items: { name: string; symbol: string; sig
 }
 
 const VedicAstrologyView = () => {
+  const { user } = useAuth();
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("12:00");
   const [tzOffset, setTzOffset] = useState("0");
   const [tzZoneName, setTzZoneName] = useState<string | null>(null);
   const [tzAuto, setTzAuto] = useState(true);
   const [tzResolving, setTzResolving] = useState(false);
+  const [tzSource, setTzSource] = useState<ResolvedTz["source"] | null>(null);
   const [lat, setLat] = useState("");
   const [lon, setLon] = useState("");
   const [cityQuery, setCityQuery] = useState("");
@@ -172,6 +178,7 @@ const VedicAstrologyView = () => {
   const [chartName, setChartName] = useState("");
   const [showSaved, setShowSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [tab, setTab] = useState<"mine" | "country" | "companies" | "predictions" | "global" | "custom" | "mythology">("mine");
   const [showCompat, setShowCompat] = useState(false);
   const [activeCountry, setActiveCountry] = useState<CountryFoundation | null>(null);
@@ -197,19 +204,18 @@ const VedicAstrologyView = () => {
   const debounceRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const tzDebounceRef = useRef<number | null>(null);
+  const tzRequestRef = useRef(0);
 
+  // rows are scoped to this device's identity, which is always present
   const loadSavedCharts = async () => {
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) {
-      setSavedCharts([]);
-      return;
-    }
     const { data, error: loadError } = await supabase
       .from("vedic_charts")
       .select("id,name,birth_date,birth_time,tz_offset,latitude,longitude,city_label,created_at")
-      .eq("user_id", auth.user.id)
       .order("created_at", { ascending: false });
-    if (loadError) return;
+    if (loadError) {
+      toast.error("saved charts could not be read from this device");
+      return;
+    }
     setSavedCharts((data ?? []) as SavedChart[]);
   };
 
@@ -256,6 +262,8 @@ const VedicAstrologyView = () => {
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
+    let timedOut = false;
+    const timer = window.setTimeout(() => { timedOut = true; ctrl.abort(); }, CITY_LOOKUP_MS);
     setSearching(true);
     setError(null);
     try {
@@ -263,19 +271,20 @@ const VedicAstrologyView = () => {
         `https://nominatim.openstreetmap.org/search?format=json&limit=6&addressdetails=0&q=${encodeURIComponent(query)}`,
         { headers: { "Accept-Language": "en" }, signal: ctrl.signal },
       );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setCityResults(
-        (data as { display_name: string; lat: string; lon: string }[]).map((d) => ({
-          label: d.display_name,
-          lat: parseFloat(d.lat),
-          lon: parseFloat(d.lon),
-        })),
-      );
+      if (!res.ok) throw new Error(`http ${res.status}`);
+      const data = (await res.json()) as unknown;
+      const rows = Array.isArray(data) ? (data as { display_name?: unknown; lat?: unknown; lon?: unknown }[]) : [];
+      const results = rows
+        .map((d) => ({ label: String(d.display_name ?? "").slice(0, 160), lat: parseFloat(String(d.lat)), lon: parseFloat(String(d.lon)) }))
+        .filter((d) => d.label && Number.isFinite(d.lat) && Number.isFinite(d.lon));
+      setCityResults(results);
+      if (results.length === 0) setError("no place matched — type latitude and longitude by hand");
     } catch (e) {
-      if ((e as Error).name !== "AbortError") setError("City lookup failed");
+      if (timedOut) setError("city lookup timed out — type latitude and longitude by hand");
+      else if ((e as Error).name !== "AbortError") setError("city lookup is unreachable — type latitude and longitude by hand");
     } finally {
-      setSearching(false);
+      window.clearTimeout(timer);
+      if (abortRef.current === ctrl) setSearching(false);
     }
   };
 
@@ -302,13 +311,16 @@ const VedicAstrologyView = () => {
     if (!birthDate || Number.isNaN(latNum) || Number.isNaN(lonNum)) return;
     if (tzDebounceRef.current) window.clearTimeout(tzDebounceRef.current);
     tzDebounceRef.current = window.setTimeout(async () => {
+      const seq = ++tzRequestRef.current;
       setTzResolving(true);
       try {
         const r = await resolveBirthTimezone(latNum, lonNum, birthDate, birthTime || "12:00");
+        if (seq !== tzRequestRef.current) return; // a newer lookup owns the field now
         setTzOffset(String(r.offsetHours));
         setTzZoneName(r.ianaName);
+        setTzSource(r.source);
       } finally {
-        setTzResolving(false);
+        if (seq === tzRequestRef.current) setTzResolving(false);
       }
     }, 300);
     return () => {
@@ -322,12 +334,7 @@ const VedicAstrologyView = () => {
     const tzText = input?.tzOffset ?? tzOffset;
     const latText = input?.lat ?? lat;
     const lonText = input?.lon ?? lon;
-    if (!bd) throw new Error("Birth date required");
-    const latNum = parseFloat(latText);
-    const lonNum = parseFloat(lonText);
-    const tz = parseFloat(tzText);
-    if (Number.isNaN(latNum) || Number.isNaN(lonNum)) throw new Error("Latitude / longitude required");
-    if (Number.isNaN(tz)) throw new Error("UTC offset required");
+    const { latNum, lonNum, tz } = validateChartInput({ birthDate: bd, birthTime: bt, tzOffset: tzText, lat: latText, lon: lonText });
     const result = await calculateSweVedicChart({ birthDate: bd, birthTime: bt, tzOffset: tz, lat: latNum, lon: lonNum });
     setChart(result);
     return result;
@@ -336,10 +343,13 @@ const VedicAstrologyView = () => {
   const generateChart = async () => {
     setError(null);
     setLoadingChart(true);
+    setActiveCountry(null);
+    setActiveSavedId(null);
+    setActiveName("");
     try {
       await computeAndSetChart();
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeChartFailure(e));
       setChart(null);
     } finally {
       setLoadingChart(false);
@@ -350,31 +360,36 @@ const VedicAstrologyView = () => {
     setError(null);
     setSaving(true);
     try {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) throw new Error("Sign in to save named charts");
-      if (!chartName.trim()) throw new Error("Chart name required");
-      if (!birthDate) throw new Error("Generate a chart first");
-      const latNum = parseFloat(lat);
-      const lonNum = parseFloat(lon);
-      const tz = parseFloat(tzOffset);
-      if (Number.isNaN(latNum) || Number.isNaN(lonNum) || Number.isNaN(tz)) throw new Error("Birth location required");
-      const { error: insertError } = await supabase.from("vedic_charts").insert({
-        user_id: auth.user.id,
-        name: chartName.trim(),
-        birth_date: birthDate,
-        birth_time: birthTime,
-        tz_offset: tz,
-        latitude: latNum,
-        longitude: lonNum,
-        city_label: cityQuery.trim() || null,
-      });
-      if (insertError) throw insertError;
-      toast.success(`Saved ${chartName.trim()}`);
+      const name = chartName.trim();
+      if (!name) throw new ChartInputError("name the chart first");
+      if (!chart) throw new ChartInputError("generate the chart first, then save it");
+      const { latNum, lonNum, tz } = validateChartInput({ birthDate, birthTime, tzOffset, lat, lon });
+      const { data: inserted, error: insertError } = await supabase
+        .from("vedic_charts")
+        .insert({
+          user_id: user?.id,
+          name,
+          birth_date: birthDate,
+          birth_time: birthTime,
+          tz_offset: tz,
+          latitude: latNum,
+          longitude: lonNum,
+          city_label: cityQuery.trim() || null,
+        })
+        .select("id")
+        .single();
+      if (insertError) throw new ChartInputError("the chart could not be written to this device's store");
+      const newId = (inserted as { id?: string } | null)?.id ?? null;
+      setActiveCountry(null);
+      setActiveSavedId(newId);
+      setActiveName(name);
+      toast.success(`saved ${name}`);
       setChartName("");
       await loadSavedCharts();
     } catch (e) {
-      setError((e as Error).message);
-      toast.error((e as Error).message);
+      const msg = describeChartFailure(e);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -403,9 +418,9 @@ const VedicAstrologyView = () => {
         lat: String(saved.latitude),
         lon: String(saved.longitude),
       });
-      toast.success(`Loaded ${saved.name}`);
+      toast.success(`loaded ${saved.name}`);
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeChartFailure(e));
     } finally {
       setLoadingChart(false);
     }
@@ -425,27 +440,34 @@ const VedicAstrologyView = () => {
     setActiveCountry(c);
     setActiveSavedId(null);
     setActiveName(`${c.flag} ${c.name}`);
+    setTab("mine");
     try {
       await computeAndSetChart({
         birthDate: c.birthDate, birthTime: c.birthTime,
         tzOffset: String(c.tzOffset), lat: String(c.lat), lon: String(c.lon),
       });
-      toast.success(`Loaded ${c.name} foundation chart`);
+      toast.success(`loaded the ${c.name} foundation chart`);
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeChartFailure(e));
     } finally {
       setLoadingChart(false);
     }
   };
 
   const deleteChart = async (id: string) => {
-    const { error: deleteError } = await supabase.from("vedic_charts").delete().eq("id", id);
-    if (deleteError) {
-      toast.error("Delete failed");
+    if (pendingDeleteId !== id) {
+      setPendingDeleteId(id);
       return;
     }
+    setPendingDeleteId(null);
+    const { error: deleteError } = await supabase.from("vedic_charts").delete().eq("id", id);
+    if (deleteError) {
+      toast.error("the chart could not be removed from this device");
+      return;
+    }
+    if (activeSavedId === id) { setActiveSavedId(null); setActiveName(""); }
     await loadSavedCharts();
-    toast.success("Chart deleted");
+    toast.success("chart removed");
   };
 
   const ascRashi = chart ? rashis[Math.floor(chart.ascendant / 30)] : null;
@@ -471,7 +493,7 @@ const VedicAstrologyView = () => {
     return generateReading(placements);
   }, [chart]);
 
-  // ── Stable chart key + grounded context for ASHER AI side-chat ───────────
+  // ── stable chart key + grounded context for the shepherd side panel ──────
   const chartKey = useMemo(() => {
     if (activeCountry) return `country:${activeCountry.code}`;
     if (activeSavedId) return `user:${activeSavedId}`;
@@ -481,19 +503,19 @@ const VedicAstrologyView = () => {
 
   const chartLabel = useMemo(() => {
     if (activeName) return activeName;
-    if (chart) return `Unsaved · ${birthDate} ${birthTime}`;
+    if (chart) return `unsaved · ${birthDate} ${birthTime}`;
     return "";
   }, [activeName, chart, birthDate, birthTime]);
 
   const chartContext = useMemo(() => {
     if (!chart || !ascRashi) return "";
     const lines: string[] = [];
-    lines.push(`Birth: ${birthDate} ${birthTime} (UTC${parseFloat(tzOffset) >= 0 ? "+" : ""}${tzOffset}) at ${cityQuery || `${lat}, ${lon}`}`);
-    lines.push(`Ascendant: ${ascRashi.name} ${fmtDeg(chart.ascendant % 30)} (ruler ${ascRashi.ruler})`);
+    lines.push(`birth: ${birthDate} ${birthTime} (UTC${parseFloat(tzOffset) >= 0 ? "+" : ""}${tzOffset}) at ${cityQuery || `${lat}, ${lon}`}`);
+    lines.push(`ascendant: ${ascRashi.name} ${fmtDeg(chart.ascendant % 30)} (ruler ${ascRashi.ruler})`);
     if (moonPlanet && moonNak) {
-      lines.push(`Moon Nakshatra: ${moonNak.nakshatra.name} pada ${moonNak.pada} (lord ${moonNak.nakshatra.ruler})`);
+      lines.push(`Moon nakshatra: ${moonNak.nakshatra.name} pada ${moonNak.pada} (lord ${moonNak.nakshatra.ruler})`);
     }
-    lines.push("Planetary placements (whole-sign houses from Lagna):");
+    lines.push("placements (whole-sign houses from the lagna):");
     for (const p of chart.planets) {
       const r = getRashiFromDeg(p.sid);
       const n = getNakshatraFromDeg(p.sid);
@@ -504,10 +526,10 @@ const VedicAstrologyView = () => {
         .filter(Boolean)
         .map((p) => `${p!.lord} (${DASHA_LEVEL_LABEL[p!.level]} ends ${fmtDate(p!.end)})`)
         .join(" / ");
-      lines.push(`Active Vimshottari path: ${cd}`);
+      lines.push(`active Vimshottari path: ${cd}`);
     }
     if (dashaTimeline.length > 0) {
-      lines.push("Upcoming Mahadashas:");
+      lines.push("mahadashas from birth:");
       for (const m of dashaTimeline.slice(0, 6)) {
         lines.push(`  ${m.lord}: ${fmtDate(m.start)} → ${fmtDate(m.end)}`);
       }
@@ -515,7 +537,7 @@ const VedicAstrologyView = () => {
     return lines.join("\n");
   }, [chart, ascRashi, moonPlanet, moonNak, currentDasha, dashaTimeline, birthDate, birthTime, tzOffset, cityQuery, lat, lon]);
 
-  // Reset Asher-extracted timeline markers when active chart changes
+  // dates shepherd named belong to one chart; a new chart clears them
   useEffect(() => { setAsherDates([]); }, [chartKey]);
 
   // Compute marker positions across the full Vimshottari span (for the timeline strip)
@@ -538,8 +560,6 @@ const VedicAstrologyView = () => {
       .filter((m): m is { date: string; pct: number; inRange: boolean } => m !== null);
   }, [asherDates, timelineSpan]);
 
-  const asherDateSet = useMemo(() => new Set(asherDates), [asherDates]);
-
   // ── Viral-influence markers across the entire Vimshottari span ──────────
   // Computes influence-flagged windows at maha AND antardasha resolution so
   // sudden viral/public-attention spikes (Rahu / Moon+fame-lord activations)
@@ -553,7 +573,7 @@ const VedicAstrologyView = () => {
         const mid = (maha.start.getTime() + maha.end.getTime()) / 2;
         out.push({
           pct: ((mid - timelineSpan.start) / timelineSpan.span) * 100,
-          label: `${maha.lord} Mahadasha · viral influence`,
+          label: `${maha.lord} mahadasha · viral influence`,
           start: maha.start, end: maha.end, level: "maha",
         });
       }
@@ -671,9 +691,9 @@ const VedicAstrologyView = () => {
         tzOffset: String(l.tzOffset), lat: String(l.lat), lon: String(l.lon),
       });
       setTab("mine");
-      toast.success(`Loaded ${l.name}'s chart${l.timeKnown ? "" : " (noon-chart)"}`);
+      toast.success(`loaded ${l.name}'s chart${l.timeKnown ? "" : " (noon chart)"}`);
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeChartFailure(e));
     } finally {
       setLoadingChart(false);
     }
@@ -772,9 +792,9 @@ const VedicAstrologyView = () => {
         tzOffset: String(c.tzOffset), lat: String(c.lat), lon: String(c.lon),
       });
       setTab("mine");
-      toast.success(`Loaded ${c.name} ${c.event.toLowerCase()} chart${c.timeKnown ? "" : " (noon-chart)"}`);
+      toast.success(`loaded the ${c.name} ${c.event.toLowerCase()} chart${c.timeKnown ? "" : " (noon chart)"}`);
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeChartFailure(e));
     } finally {
       setLoadingChart(false);
     }
@@ -800,55 +820,62 @@ const VedicAstrologyView = () => {
         tzOffset: String(f.tzOffset), lat: String(f.lat), lon: String(f.lon),
       });
       setTab("mine");
-      toast.success(`Loaded ${f.name}'s chart${f.timeKnown ? "" : " (noon-chart)"}`);
+      toast.success(`loaded ${f.name}'s chart${f.timeKnown ? "" : " (noon chart)"}`);
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeChartFailure(e));
     } finally {
       setLoadingChart(false);
     }
   };
 
   return (
-    <div
-      className="h-full overflow-y-auto relative"
-      style={{
-        backgroundImage: `linear-gradient(rgba(0,0,0,0.72), rgba(0,0,0,0.78)), url(${wallpaperAureon})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundAttachment: "fixed",
-        backgroundRepeat: "no-repeat",
-      }}
-    >
-      <div className="max-w-6xl mx-auto p-6 space-y-6 relative z-10">
+    <div className="h-full relative">
+      {/* the wallpaper sits in its own layer so the scroll container never needs
+          background-attachment: fixed, which mobile safari ignores and desktop
+          browsers repaint on every scroll */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0"
+        style={{
+          backgroundImage: `linear-gradient(rgba(0,0,0,0.72), rgba(0,0,0,0.78)), url(${wallpaperAureon})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      />
+      <div className="absolute inset-0 overflow-y-auto">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 pb-24 space-y-6 relative z-10">
         <div className="flex items-center gap-3 border-b border-border/15 pb-4">
           <div className="h-10 w-10 rounded-full border border-border/30 bg-background/40 backdrop-blur-md flex items-center justify-center">
             <Moon className="h-4 w-4 text-foreground/70" />
           </div>
           <div>
-            <h2 className="text-xl font-extralight tracking-[0.15em] text-foreground uppercase">Vedic Strategy</h2>
-            <p className="text-[11px] font-light tracking-[0.2em] text-muted-foreground/70 mt-1 uppercase">
-              Swiss Ephemeris · Sidereal Lahiri · Custom Chart Engine
+            <h2 className="text-xl font-extralight tracking-[0.15em] text-foreground">vedic</h2>
+            <p className="text-[11px] font-light tracking-[0.2em] text-muted-foreground/70 mt-1">
+              Swiss Ephemeris · sidereal Lahiri · computed on this device
             </p>
           </div>
         </div>
 
-        {/* TAB STRIP */}
-        <div className="grid grid-cols-2 md:grid-cols-7 rounded-xl border border-border/30 bg-background/40 backdrop-blur-xl overflow-hidden">
+        {/* tab strip */}
+        <div role="tablist" aria-label="vedic sections" className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 rounded-xl border border-border/30 bg-background/40 backdrop-blur-xl overflow-hidden">
           {([
-            { key: "mine" as const, icon: User2, label: "My Charts" },
-            { key: "country" as const, icon: Globe2, label: "Country Charts" },
-            { key: "companies" as const, icon: Building2, label: "Company Charts" },
-            { key: "predictions" as const, icon: TrendingUp, label: "Global Predictions" },
-            { key: "global" as const, icon: Globe2, label: "Global Chart" },
-            { key: "custom" as const, icon: Sparkles, label: "Custom Chart" },
-            { key: "mythology" as const, icon: Crown, label: "Mythology Match" },
+            { key: "mine" as const, icon: User2, label: "my charts" },
+            { key: "country" as const, icon: Globe2, label: "country charts" },
+            { key: "companies" as const, icon: Building2, label: "company charts" },
+            { key: "predictions" as const, icon: TrendingUp, label: "global predictions" },
+            { key: "global" as const, icon: Globe2, label: "global chart" },
+            { key: "custom" as const, icon: Sparkles, label: "custom chart" },
+            { key: "mythology" as const, icon: Crown, label: "mythology match" },
           ]).map(({ key, icon: Icon, label }) => (
             <button
               key={key}
+              role="tab"
+              aria-selected={tab === key}
               onClick={() => setTab(key)}
-              className={`px-4 py-3 flex items-center justify-center gap-2 text-xs uppercase tracking-[0.18em] transition border-r border-border/20 last:border-r-0 ${tab === key ? "text-foreground bg-foreground/[0.06]" : "text-muted-foreground hover:text-foreground"}`}
+              className={`px-3 py-2.5 sm:py-3 flex items-center justify-center gap-2 text-xs tracking-[0.12em] transition border-r border-b sm:border-b-0 border-border/20 last:border-r-0 ${tab === key ? "text-foreground bg-foreground/[0.06]" : "text-muted-foreground hover:text-foreground"}`}
             >
-              <Icon className="h-3.5 w-3.5" /> {label}
+              <Icon className="h-3.5 w-3.5 shrink-0" /> {label}
             </button>
           ))}
         </div>
@@ -866,16 +893,16 @@ const VedicAstrologyView = () => {
           <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-5 space-y-3">
             <div className="flex items-center gap-2 border-b border-border/15 pb-3">
               <Building2 className="h-4 w-4 text-foreground/70" />
-              <h3 className="text-sm font-light tracking-[0.15em] text-foreground uppercase">Company Foundation Charts</h3>
-              <span className="text-[10px] font-light text-muted-foreground/70 italic ml-auto">Incorporation moments + founder natal · sidereal Lahiri</span>
+              <h3 className="text-sm font-light tracking-[0.15em] text-foreground">company foundation charts</h3>
+              <span className="text-[10px] font-light text-muted-foreground/70 italic ml-auto hidden sm:inline">incorporation moments + founder natal · sidereal Lahiri</span>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-[10px] font-light text-muted-foreground/70 -mt-1">
-              <span className="uppercase tracking-[0.15em] text-muted-foreground/50">Founder Lagna vs you:</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#ff4fd8] shadow-[0_0_6px_rgba(255,79,216,0.7)]" /> Soulmate</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Friend</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" /> Enemy</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-foreground/80" /> Neutral</span>
-              {!chart && <span className="italic text-muted-foreground/50">· generate your chart to activate</span>}
+              <span className="tracking-[0.15em] text-muted-foreground/50">founder lagna vs yours:</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#ff4fd8] shadow-[0_0_6px_rgba(255,79,216,0.7)]" /> soulmate</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400" /> friend</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" /> enemy</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-foreground/80" /> neutral</span>
+              {!chart && <span className="italic text-muted-foreground/50">· generate your chart to light these up</span>}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
               {COMPANY_CHARTS.map((c) => {
@@ -895,12 +922,12 @@ const VedicAstrologyView = () => {
                       <div className="text-sm font-light text-foreground/90 flex items-center gap-1.5">
                         <span className="text-foreground/70 leading-none w-4 text-center">{c.glyph}</span>
                         <span className="truncate">{c.name}</span>
-                        <span className="ml-auto text-[9px] tracking-[0.2em] text-muted-foreground/60 uppercase">{c.symbol}</span>
+                        <span className="ml-auto text-[9px] tracking-[0.2em] text-muted-foreground/60">{c.symbol}</span>
                       </div>
-                      <div className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground/70 mt-0.5">{c.event}</div>
+                      <div className="text-[9px] tracking-[0.15em] text-muted-foreground/70 mt-0.5">{c.event.toLowerCase()}</div>
                       <div className="text-[10px] text-muted-foreground/70 mt-0.5 tabular-nums">{c.birthDate} · {c.city}</div>
                       <div className="mt-1.5 pt-1.5 border-t border-border/20 text-[10px] flex items-center justify-between">
-                        <span className="text-muted-foreground/60 uppercase tracking-wider text-[9px]">Lagna</span>
+                        <span className="text-muted-foreground/60 tracking-wider text-[9px]">lagna</span>
                         {lagna === undefined ? (
                           <span className="text-muted-foreground/40 italic">…</span>
                         ) : lagna === null ? (
@@ -925,17 +952,17 @@ const VedicAstrologyView = () => {
                           onClick={(e) => { e.stopPropagation(); void loadFounderChart(founder); }}
                           className="w-full text-left px-3 pt-2 pb-2.5 border-t border-border/20 hover:bg-foreground/[0.04] transition"
                           title={chart
-                            ? `${relationLabel(rel)} — relative to your active chart's Lagna`
-                            : (founder.timeKnown ? "Open founder's chart" : "Open noon-chart approximation")}
+                            ? `${relationLabel(rel).toLowerCase()} — relative to your active chart's lagna`
+                            : (founder.timeKnown ? "open the founder's chart" : "open a noon-chart approximation")}
                         >
-                          <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.18em] text-muted-foreground/60">
+                          <div className="flex items-center gap-1.5 text-[9px] tracking-[0.18em] text-muted-foreground/60">
                             <User2 className="h-2.5 w-2.5" /> {founder.role}
                           </div>
                           <div className={`text-[12px] font-light mt-0.5 truncate underline-offset-2 hover:underline ${nameColor}`}>
                             {founder.name}
                           </div>
                           <div className="mt-1 text-[10px] flex items-center justify-between">
-                            <span className="text-muted-foreground/60 uppercase tracking-wider text-[9px]">Rising</span>
+                            <span className="text-muted-foreground/60 tracking-wider text-[9px]">rising</span>
                             {founderLagna === undefined ? (
                               <span className="text-muted-foreground/40 italic">…</span>
                             ) : founderLagna === null ? (
@@ -962,18 +989,18 @@ const VedicAstrologyView = () => {
           <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-5 space-y-3">
             <div className="flex items-center gap-2 border-b border-border/15 pb-3">
               <Globe2 className="h-4 w-4 text-foreground/70" />
-              <h3 className="text-sm font-light tracking-[0.15em] text-foreground uppercase">Global Foundation Charts</h3>
-              <span className="text-[10px] font-light text-muted-foreground/70 italic ml-auto">Independence / Constitution moments · sidereal Lahiri</span>
+              <h3 className="text-sm font-light tracking-[0.15em] text-foreground">country foundation charts</h3>
+              <span className="text-[10px] font-light text-muted-foreground/70 italic ml-auto hidden sm:inline">independence and constitution moments · sidereal Lahiri</span>
             </div>
             <div className="rounded-md border border-amber-500/20 bg-amber-500/[0.04] px-3 py-2 text-[10px] font-light text-amber-200/80 leading-relaxed">
-              <span className="uppercase tracking-[0.15em] text-amber-300/90 font-normal">Data Reliability</span> — Foundation charts use the official independence/constitution moment at the capital. Where the exact birth time of a leader is not on public record, we display a <em className="not-italic text-foreground/80">noon-chart approximation</em> (marked <span className="text-muted-foreground/70">· noon</span>): Sun &amp; Moon signs are reliable, but Lagna (Ascendant) and house cusps are best-estimate placeholders, not predictive.</div>
+              <span className="tracking-[0.15em] text-amber-300/90 font-normal">data reliability</span> — foundation charts use the official independence or constitution moment at the capital. where a leader's exact birth time is not on public record the card shows a <em className="not-italic text-foreground/80">noon-chart approximation</em> (marked <span className="text-muted-foreground/70">· noon</span>): the Sun and Moon signs hold, but the lagna and house cusps are placeholders, not a reading.</div>
             <div className="flex flex-wrap items-center gap-3 text-[10px] font-light text-muted-foreground/70 -mt-1">
-              <span className="uppercase tracking-[0.15em] text-muted-foreground/50">Leader Lagna vs you:</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#ff4fd8] shadow-[0_0_6px_rgba(255,79,216,0.7)]" /> Soulmate</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Friend</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" /> Enemy</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-foreground/80" /> Neutral</span>
-              {!chart && <span className="italic text-muted-foreground/50">· generate your chart to activate</span>}
+              <span className="tracking-[0.15em] text-muted-foreground/50">leader lagna vs yours:</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#ff4fd8] shadow-[0_0_6px_rgba(255,79,216,0.7)]" /> soulmate</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400" /> friend</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" /> enemy</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-foreground/80" /> neutral</span>
+              {!chart && <span className="italic text-muted-foreground/50">· generate your chart to light these up</span>}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
               {COUNTRY_CHARTS.map((c) => {
@@ -993,10 +1020,10 @@ const VedicAstrologyView = () => {
                       <div className="text-sm font-light text-foreground/90 flex items-center gap-1.5">
                         <span className="text-base leading-none">{c.flag}</span> {c.name}
                       </div>
-                      <div className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground/70 mt-0.5">{c.event}</div>
+                      <div className="text-[9px] tracking-[0.15em] text-muted-foreground/70 mt-0.5">{c.event.toLowerCase()}</div>
                       <div className="text-[10px] text-muted-foreground/70 mt-0.5 tabular-nums">{c.birthDate} · {c.birthTime} · {c.city}</div>
                       <div className="mt-1.5 pt-1.5 border-t border-border/20 text-[10px] flex items-center justify-between">
-                        <span className="text-muted-foreground/60 uppercase tracking-wider text-[9px]">Lagna</span>
+                        <span className="text-muted-foreground/60 tracking-wider text-[9px]">lagna</span>
                         {lagna === undefined ? (
                           <span className="text-muted-foreground/40 italic">…</span>
                         ) : lagna === null ? (
@@ -1021,17 +1048,17 @@ const VedicAstrologyView = () => {
                           onClick={(e) => { e.stopPropagation(); void loadLeaderChart(leader); }}
                           className="w-full text-left px-3 pt-2 pb-2.5 border-t border-border/20 hover:bg-foreground/[0.04] transition"
                           title={chart
-                            ? `${relationLabel(rel)} — relative to your active chart's Lagna`
-                            : (leader.timeKnown ? "Open leader's chart" : "Open noon-chart approximation")}
+                            ? `${relationLabel(rel).toLowerCase()} — relative to your active chart's lagna`
+                            : (leader.timeKnown ? "open the leader's chart" : "open a noon-chart approximation")}
                         >
-                          <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.18em] text-muted-foreground/60">
+                          <div className="flex items-center gap-1.5 text-[9px] tracking-[0.18em] text-muted-foreground/60">
                             <User2 className="h-2.5 w-2.5" /> {leader.role}
                           </div>
                           <div className={`text-[12px] font-light mt-0.5 truncate underline-offset-2 hover:underline ${nameColor}`}>
                             {leader.name}
                           </div>
                           <div className="mt-1 text-[10px] flex items-center justify-between">
-                            <span className="text-muted-foreground/60 uppercase tracking-wider text-[9px]">Rising</span>
+                            <span className="text-muted-foreground/60 tracking-wider text-[9px]">rising</span>
                             {leaderLagna === undefined ? (
                               <span className="text-muted-foreground/40 italic">…</span>
                             ) : leaderLagna === null ? (
@@ -1059,17 +1086,17 @@ const VedicAstrologyView = () => {
         <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <label className="space-y-1">
-              <span className="text-[10px] font-light text-muted-foreground uppercase tracking-wider">Birth date</span>
+              <span className="text-[10px] font-light text-muted-foreground tracking-wider">birth date</span>
               <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="w-full rounded-md border border-border/30 bg-background/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-foreground/40" />
             </label>
             <label className="space-y-1">
-              <span className="text-[10px] font-light text-muted-foreground uppercase tracking-wider">Birth time (local)</span>
+              <span className="text-[10px] font-light text-muted-foreground tracking-wider">birth time (local)</span>
               <input type="time" value={birthTime} onChange={(e) => setBirthTime(e.target.value)} className="w-full rounded-md border border-border/30 bg-background/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-foreground/40" />
             </label>
             <label className="space-y-1">
-              <span className="text-[10px] font-light text-muted-foreground uppercase tracking-wider flex items-center justify-between gap-2">
+              <span className="text-[10px] font-light text-muted-foreground tracking-wider flex items-center justify-between gap-2">
                 <span>
-                  UTC offset {tzAuto ? "(auto)" : "(manual)"}
+                  utc offset {tzAuto ? "(auto)" : "(manual)"}
                   {tzResolving && <Loader2 className="inline h-2.5 w-2.5 ml-1 animate-spin" />}
                 </span>
                 <button
@@ -1083,27 +1110,33 @@ const VedicAstrologyView = () => {
               <input
                 type="number"
                 step="0.25"
+                min={-14}
+                max={14}
                 value={tzOffset}
                 onChange={(e) => { setTzAuto(false); setTzOffset(e.target.value); }}
-                placeholder="auto from city"
+                placeholder="auto from the birth place"
+                aria-label="utc offset in hours"
                 className="w-full rounded-md border border-border/30 bg-background/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-foreground/40"
               />
-              {tzZoneName && tzAuto && (
+              {tzAuto && tzZoneName && (
                 <span className="block text-[9px] text-muted-foreground/60 tracking-wider truncate">{tzZoneName}</span>
+              )}
+              {tzAuto && !tzResolving && tzSource === "longitude-fallback" && (
+                <span className="block text-[9px] text-amber-300/80 tracking-wider">estimated from longitude — the zone service was unreachable, check this value</span>
               )}
             </label>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
             <div className="flex gap-2">
-              <input value={cityQuery} onChange={(e) => setCityQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void searchCity()} placeholder="Search birth city…" className="flex-1 rounded-md border border-border/30 bg-background/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-foreground/40" />
-              <button onClick={() => void searchCity()} disabled={searching} className="rounded-md border border-border/30 bg-background/40 px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/40 transition disabled:opacity-50">
+              <input value={cityQuery} onChange={(e) => setCityQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void searchCity()} placeholder="search the birth city…" aria-label="birth city" className="flex-1 min-w-0 rounded-md border border-border/30 bg-background/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-foreground/40" />
+              <button onClick={() => void searchCity()} disabled={searching} aria-label="look the city up" className="rounded-md border border-border/30 bg-background/40 px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/40 transition disabled:opacity-50">
                 {searching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
               </button>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <input value={lat} onChange={(e) => setLat(e.target.value)} placeholder="Lat" className="rounded-md border border-border/30 bg-background/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-foreground/40" />
-              <input value={lon} onChange={(e) => setLon(e.target.value)} placeholder="Lon" className="rounded-md border border-border/30 bg-background/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-foreground/40" />
+              <input value={lat} onChange={(e) => setLat(e.target.value)} inputMode="decimal" placeholder="latitude" aria-label="latitude" className="min-w-0 rounded-md border border-border/30 bg-background/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-foreground/40" />
+              <input value={lon} onChange={(e) => setLon(e.target.value)} inputMode="decimal" placeholder="longitude" aria-label="longitude" className="min-w-0 rounded-md border border-border/30 bg-background/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-foreground/40" />
             </div>
           </div>
 
@@ -1118,32 +1151,39 @@ const VedicAstrologyView = () => {
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_auto_auto] gap-2 items-center">
-            <input value={chartName} onChange={(e) => setChartName(e.target.value)} placeholder="Name this chart…" className="rounded-md border border-border/30 bg-background/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-foreground/40" />
-            <button onClick={() => void saveChart()} disabled={saving} className="inline-flex items-center justify-center gap-2 rounded-md border border-border/30 bg-background/40 px-4 py-2 text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-foreground/40 transition disabled:opacity-50">
-              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save Named Chart
+            <input value={chartName} onChange={(e) => setChartName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void saveChart()} placeholder="name this chart…" aria-label="chart name" className="min-w-0 rounded-md border border-border/30 bg-background/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-foreground/40" />
+            <button onClick={() => void saveChart()} disabled={saving || !chart} title={chart ? undefined : "generate the chart first"} className="inline-flex items-center justify-center gap-2 rounded-md border border-border/30 bg-background/40 px-4 py-2 text-xs tracking-wider text-muted-foreground hover:text-foreground hover:border-foreground/40 transition disabled:opacity-50">
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} save named chart
             </button>
-            <button onClick={() => setShowSaved((v) => !v)} className="inline-flex items-center justify-center gap-2 rounded-md border border-border/30 bg-background/40 px-4 py-2 text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-foreground/40 transition">
-              <FolderOpen className="h-3.5 w-3.5" /> Saved ({savedCharts.length})
+            <button onClick={() => setShowSaved((v) => !v)} aria-expanded={showSaved} className="inline-flex items-center justify-center gap-2 rounded-md border border-border/30 bg-background/40 px-4 py-2 text-xs tracking-wider text-muted-foreground hover:text-foreground hover:border-foreground/40 transition">
+              <FolderOpen className="h-3.5 w-3.5" /> saved ({savedCharts.length})
             </button>
-            <button onClick={() => setShowCompat((v) => !v)} disabled={!chart} className="inline-flex items-center justify-center gap-2 rounded-md border border-border/30 bg-background/40 px-4 py-2 text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-foreground/40 transition disabled:opacity-40">
-              <Heart className="h-3.5 w-3.5" /> Compatibility
+            <button onClick={() => setShowCompat((v) => !v)} disabled={!chart} title={chart ? undefined : "generate the chart first"} className="inline-flex items-center justify-center gap-2 rounded-md border border-border/30 bg-background/40 px-4 py-2 text-xs tracking-wider text-muted-foreground hover:text-foreground hover:border-foreground/40 transition disabled:opacity-40">
+              <Heart className="h-3.5 w-3.5" /> compatibility
             </button>
           </div>
 
           {showSaved && (
             <div className="rounded-lg border border-border/25 bg-background/30 divide-y divide-border/15">
               {savedCharts.length === 0 ? (
-                <div className="px-3 py-3 text-xs text-muted-foreground">No saved charts yet.</div>
+                <div className="px-3 py-3 text-xs text-muted-foreground">no saved charts yet. generate one, name it, and save it — it stays on this device.</div>
               ) : savedCharts.map((saved) => (
                 <div key={saved.id} className="px-3 py-2">
                   <div className="flex items-center gap-3">
                     <button onClick={() => void loadChart(saved)} className="flex-1 text-left min-w-0">
                       <span className="block truncate text-sm text-foreground/85 font-light">{saved.name}</span>
-                      <span className="block truncate text-[10px] uppercase tracking-wider text-muted-foreground/70">{saved.birth_date} · {saved.birth_time} · {saved.city_label || `${saved.latitude}, ${saved.longitude}`}</span>
+                      <span className="block truncate text-[10px] tracking-wider text-muted-foreground/70">{saved.birth_date} · {saved.birth_time} · {saved.city_label || `${saved.latitude}, ${saved.longitude}`}</span>
                     </button>
-                    <button onClick={() => void deleteChart(saved.id)} className="p-1 text-muted-foreground hover:text-destructive transition" aria-label="Delete saved Vedic chart">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    {pendingDeleteId === saved.id ? (
+                      <span className="flex items-center gap-1 text-[10px]">
+                        <button onClick={() => void deleteChart(saved.id)} className="rounded border border-destructive/40 px-2 py-0.5 text-destructive hover:bg-destructive/10 transition">remove</button>
+                        <button onClick={() => setPendingDeleteId(null)} className="px-1.5 py-0.5 text-muted-foreground hover:text-foreground transition">keep</button>
+                      </span>
+                    ) : (
+                      <button onClick={() => void deleteChart(saved.id)} className="p-1 text-muted-foreground hover:text-destructive transition" aria-label={`remove ${saved.name}`}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                   <PlacementsStrip items={savedPlacements[saved.id]} />
                 </div>
@@ -1151,10 +1191,10 @@ const VedicAstrologyView = () => {
             </div>
           )}
 
-          <div className="flex items-center justify-between">
-            {error && <span className="text-xs text-destructive font-light">{error}</span>}
-            <button onClick={() => void generateChart()} disabled={loadingChart} className="ml-auto inline-flex items-center gap-2 rounded-md border border-foreground/20 bg-foreground/5 px-4 py-2 text-xs uppercase tracking-wider text-foreground hover:bg-foreground/10 transition disabled:opacity-50">
-              {loadingChart ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} Generate Chart
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            {error && <span role="alert" className="text-xs text-destructive font-light">{error}</span>}
+            <button onClick={() => void generateChart()} disabled={loadingChart} className="ml-auto inline-flex items-center gap-2 rounded-md border border-foreground/20 bg-foreground/5 px-4 py-2 text-xs tracking-wider text-foreground hover:bg-foreground/10 transition disabled:opacity-50">
+              {loadingChart ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} {loadingChart ? "computing…" : "generate chart"}
             </button>
           </div>
         </div>
@@ -1163,7 +1203,7 @@ const VedicAstrologyView = () => {
         {tab === "mine" && showCompat && chart && (
           <CompatibilityPanel
             baseChart={chart}
-            baseLabel={activeName || `Chart · ${birthDate} ${birthTime}`}
+            baseLabel={activeName || `chart · ${birthDate} ${birthTime}`}
             savedCharts={savedCharts}
             onClose={() => setShowCompat(false)}
           />
@@ -1171,14 +1211,14 @@ const VedicAstrologyView = () => {
 
         {chart && (
           <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-6">
-            <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-4 flex justify-center">
+            <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-2 sm:p-4 flex justify-center">
               <VedicWheel ascendant={chart.ascendant} planets={chart.planets} />
             </div>
 
             <div className="space-y-4">
               {ascRashi && (
                 <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-4">
-                  <div className="text-[10px] font-light text-muted-foreground uppercase tracking-wider mb-2">Ascendant (Lagna)</div>
+                  <div className="text-[10px] font-light text-muted-foreground tracking-wider mb-2">ascendant (lagna)</div>
                   <div className="text-lg font-extralight text-foreground">{ascRashi.name} <span className="text-muted-foreground">· {ascRashi.sanskrit}</span></div>
                   <div className="text-xs text-muted-foreground mt-1">{fmtDeg(chart.ascendant % 30)} · ruled by {ascRashi.ruler}</div>
                 </div>
@@ -1186,30 +1226,30 @@ const VedicAstrologyView = () => {
 
               {moonPlanet && moonNak && (
                 <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-4">
-                  <div className="text-[10px] font-light text-muted-foreground uppercase tracking-wider mb-2">Moon Nakshatra</div>
-                  <div className="text-lg font-extralight text-foreground">{moonNak.nakshatra.name} <span className="text-muted-foreground">· Pada {moonNak.pada}</span></div>
-                  <div className="text-xs text-muted-foreground mt-1">Ruled by {moonNak.nakshatra.ruler} · Deity {moonNak.nakshatra.deity}</div>
+                  <div className="text-[10px] font-light text-muted-foreground tracking-wider mb-2">Moon nakshatra</div>
+                  <div className="text-lg font-extralight text-foreground">{moonNak.nakshatra.name} <span className="text-muted-foreground">· pada {moonNak.pada}</span></div>
+                  <div className="text-xs text-muted-foreground mt-1">ruled by {moonNak.nakshatra.ruler} · deity {moonNak.nakshatra.deity}</div>
                   <div className="text-xs text-muted-foreground/80 mt-2 leading-relaxed font-light">{moonNak.nakshatra.description}</div>
                 </div>
               )}
 
               <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-4">
-                <div className="text-[10px] font-light text-muted-foreground uppercase tracking-wider mb-3">Planetary Positions (Swiss Ephemeris · Sidereal Lahiri)</div>
+                <div className="text-[10px] font-light text-muted-foreground tracking-wider mb-3">planetary positions (Swiss Ephemeris · sidereal Lahiri)</div>
                 <div className="space-y-1.5">
                   {chart.planets.map((p) => {
                     const r = getRashiFromDeg(p.sid);
                     const n = getNakshatraFromDeg(p.sid);
                     return (
-                      <div key={p.name} className="grid grid-cols-[20px_70px_1fr_auto] items-center gap-3 text-xs font-light">
+                      <div key={p.name} className="grid grid-cols-[20px_64px_1fr_auto] items-center gap-2 sm:gap-3 text-xs font-light">
                         <span className="text-foreground/70">{p.symbol}</span>
-                        <span className="text-foreground">{p.name}{p.retrograde && <span className="text-muted-foreground"> ʀ</span>}</span>
-                        <span className="text-muted-foreground">House {houseFromAsc(p.sid, chart.ascendant)} · {r.name} · {n.nakshatra.name} (Pada {n.pada})</span>
+                        <span className="text-foreground">{p.name}{p.retrograde && <span className="text-muted-foreground" title="retrograde"> ʀ</span>}</span>
+                        <span className="text-muted-foreground">house {houseFromAsc(p.sid, chart.ascendant)} · {r.name} · {n.nakshatra.name} (pada {n.pada})</span>
                         <span className="text-muted-foreground/70 tabular-nums">{fmtDeg(p.sid % 30)}</span>
                       </div>
                     );
                   })}
                 </div>
-                <div className="mt-3 pt-3 border-t border-border/20 text-[10px] text-muted-foreground/60">Ayanamsa: {chart.ayanamsa.toFixed(6)}° · JD {chart.jd.toFixed(5)}</div>
+                <div className="mt-3 pt-3 border-t border-border/20 text-[10px] text-muted-foreground/60">ayanamsa {chart.ayanamsa.toFixed(6)}° · julian day {chart.jd.toFixed(5)}</div>
               </div>
             </div>
           </div>
@@ -1219,8 +1259,8 @@ const VedicAstrologyView = () => {
           <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-2 sm:p-4">
             <div className="flex items-center gap-2 border-b border-border/15 pb-3 px-3 pt-2">
               <Crown className="h-4 w-4 text-foreground/70" />
-              <h3 className="text-sm font-light tracking-[0.15em] text-foreground uppercase">Mythological Archetype — Greek &amp; Roman Gods / Monsters</h3>
-              <span className="text-[10px] font-light text-muted-foreground/70 italic ml-auto">Deterministic · derived from house, sign &amp; planet placements</span>
+              <h3 className="text-sm font-light tracking-[0.15em] text-foreground">mythological archetype — Greek and Roman gods and monsters</h3>
+              <span className="text-[10px] font-light text-muted-foreground/70 italic ml-auto hidden sm:inline">deterministic · derived from house, sign and planet placements</span>
             </div>
             <VedicGodsCompat
               defaultDate={birthDate}
@@ -1243,7 +1283,7 @@ const VedicAstrologyView = () => {
             lat={parseFloat(lat) || 0}
             lon={parseFloat(lon) || 0}
             chartKey={chartKey}
-            userChartName={activeName || "Your Chart"}
+            userChartName={activeName || "your chart"}
             companyCharts={COMPANY_CHARTS}
             currentDasha={currentDasha}
             dashaTimeline={dashaTimeline}
@@ -1260,7 +1300,8 @@ const VedicAstrologyView = () => {
           <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-5 space-y-4">
             <div className="flex items-center gap-2 border-b border-border/15 pb-3">
               <BookOpen className="h-4 w-4 text-foreground/70" />
-              <h3 className="text-sm font-light tracking-[0.15em] text-foreground uppercase">Deterministic Personalized Reading</h3>
+              <h3 className="text-sm font-light tracking-[0.15em] text-foreground">deterministic reading</h3>
+              <span className="text-[10px] font-light text-muted-foreground/70 italic ml-auto hidden sm:inline">rule-based, from placements · not the model</span>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {reading.sections.map((section, index) => (
@@ -1288,20 +1329,20 @@ const VedicAstrologyView = () => {
             <div className="flex items-center justify-between gap-3 border-b border-border/15 pb-3 flex-wrap">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-foreground/70" />
-                <h3 className="text-sm font-light tracking-[0.15em] text-foreground uppercase">Vimshottari Timeline</h3>
+                <h3 className="text-sm font-light tracking-[0.15em] text-foreground">Vimshottari timeline</h3>
               </div>
               {currentDasha.maha && (
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                <span className="text-[10px] tracking-wider text-muted-foreground">
                   {[currentDasha.maha?.lord, currentDasha.antar?.lord, currentDasha.pratyantar?.lord, currentDasha.sookshma?.lord, currentDasha.prana?.lord].filter(Boolean).join(" / ")}
                 </span>
               )}
             </div>
 
-            {/* ASHER-extracted date markers across the entire Vimshottari span */}
+            {/* dates shepherd named, across the whole Vimshottari span */}
             {asherMarkers.length > 0 && timelineSpan && (
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.2em] text-muted-foreground/70">
-                  <span>Asher Markers · {asherMarkers.length} date{asherMarkers.length > 1 ? "s" : ""}</span>
+                <div className="flex items-center justify-between text-[9px] tracking-[0.2em] text-muted-foreground/70">
+                  <span>shepherd markers · {asherMarkers.length} date{asherMarkers.length > 1 ? "s" : ""}</span>
                   <button
                     onClick={() => setAsherDates([])}
                     className="normal-case tracking-normal text-[10px] text-muted-foreground/60 hover:text-foreground transition"
@@ -1318,7 +1359,7 @@ const VedicAstrologyView = () => {
                     if (now < timelineSpan.start || now > timelineSpan.start + timelineSpan.span) return null;
                     const pct = ((now - timelineSpan.start) / timelineSpan.span) * 100;
                     return (
-                      <div className="absolute top-0 bottom-0 w-px bg-foreground/40" style={{ left: `${pct}%` }} title="Now" />
+                      <div className="absolute top-0 bottom-0 w-px bg-foreground/40" style={{ left: `${pct}%` }} title="now" />
                     );
                   })()}
                   {asherMarkers.map((m) => (
@@ -1346,10 +1387,10 @@ const VedicAstrologyView = () => {
                 indicates mass-public attention / going viral. */}
             {influenceMarkers.length > 0 && timelineSpan && (
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.2em] text-muted-foreground/70">
+                <div className="flex items-center justify-between text-[9px] tracking-[0.2em] text-muted-foreground/70">
                   <span className="inline-flex items-center gap-1.5">
                     <Megaphone className="h-3 w-3 text-foreground/80" />
-                    Influence Windows · {influenceMarkers.length} pulse{influenceMarkers.length > 1 ? "s" : ""}
+                    influence windows · {influenceMarkers.length} pulse{influenceMarkers.length > 1 ? "s" : ""}
                   </span>
                   <span className="normal-case tracking-normal text-[10px] text-muted-foreground/50">
                     viral / public reach
@@ -1361,7 +1402,7 @@ const VedicAstrologyView = () => {
                     const now = Date.now();
                     if (now < timelineSpan.start || now > timelineSpan.start + timelineSpan.span) return null;
                     const pct = ((now - timelineSpan.start) / timelineSpan.span) * 100;
-                    return <div className="absolute top-0 bottom-0 w-px bg-foreground/40" style={{ left: `${pct}%` }} title="Now" />;
+                    return <div className="absolute top-0 bottom-0 w-px bg-foreground/40" style={{ left: `${pct}%` }} title="now" />;
                   })()}
                   {/* Influence-window bands */}
                   {influenceMarkers.map((m, i) => {
@@ -1406,7 +1447,7 @@ const VedicAstrologyView = () => {
 
             {currentDasha.maha && (
               <div className="rounded-lg border border-foreground/25 bg-foreground/[0.035] p-3 space-y-2">
-                <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">Active Period</div>
+                <div className="text-[10px] tracking-[0.2em] text-muted-foreground/80">active period</div>
                 {([
                   ["maha", currentDasha.maha],
                   ["antar", currentDasha.antar],
@@ -1417,7 +1458,7 @@ const VedicAstrologyView = () => {
                   p ? (
                     <div key={lvl} className="flex items-center justify-between gap-3 flex-wrap text-[11px]">
                       <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground/70 w-32 inline-block tracking-wider uppercase text-[9px]">{DASHA_LEVEL_LABEL[lvl]}</span>
+                        <span className="text-muted-foreground/70 w-32 inline-block tracking-wider text-[9px]">{DASHA_LEVEL_LABEL[lvl]}</span>
                         <span className="text-foreground/90 font-light">{p.lord}</span>
                       </div>
                       <div className="text-muted-foreground tabular-nums">
@@ -1453,22 +1494,25 @@ const VedicAstrologyView = () => {
         {!chart && (
           <div className="rounded-xl border border-dashed border-border/30 bg-background/40 backdrop-blur-xl p-10 text-center">
             <Moon className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground font-light">Enter birth details and generate your sidereal Vedic chart.</p>
+            <p className="text-sm text-muted-foreground font-light">enter birth details and generate your sidereal chart. nothing leaves this device until you ask shepherd.</p>
           </div>
         )}
       </div>
 
-      {/* Floating ASHER chat trigger */}
+      </div>
+
+      {/* shepherd, beside the chart */}
       <button
         onClick={() => setChatOpen(true)}
         disabled={!chartKey}
-        className="fixed bottom-6 right-6 z-30 inline-flex items-center gap-2 rounded-full border border-foreground/25 bg-background/80 backdrop-blur-md px-4 py-2.5 text-xs uppercase tracking-[0.18em] text-foreground hover:bg-foreground/10 shadow-[0_8px_28px_rgba(0,0,0,0.5)] disabled:opacity-40 transition"
-        aria-label="Open ASHER AI chat"
+        title={chartKey ? "ask shepherd about this chart" : "generate or load a chart first"}
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-30 inline-flex items-center gap-2 rounded-full border border-foreground/25 bg-background/80 backdrop-blur-md px-4 py-2.5 text-xs tracking-[0.18em] text-foreground hover:bg-foreground/10 shadow-[0_8px_28px_rgba(0,0,0,0.5)] disabled:opacity-40 transition"
+        aria-label="ask shepherd about this chart"
       >
-        <MessageSquare className="h-3.5 w-3.5" /> Ask Asher
+        <MessageSquare className="h-3.5 w-3.5" /> ask shepherd
       </button>
 
-      <AsherChatPanel
+      <ShepherdChatPanel
         open={chatOpen}
         onClose={() => setChatOpen(false)}
         chartKey={chartKey}

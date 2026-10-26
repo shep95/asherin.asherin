@@ -38,7 +38,7 @@ const AiStackForIndianStartups = () => (
       id="ai-stack-for-indian-startups"
       items={[
         { name: "Asherin", url: "/" },
-        { name: "Blog", url: "/blog" },
+        { name: "blog", url: "/blog" },
         { name: TITLE, url: URL },
       ]}
     />
@@ -104,7 +104,7 @@ const AiStackForIndianStartups = () => (
 
     <h2>What we built at Asherin</h2>
     <p>
-      We built Asherin this way. Asherin is the AI app you're reading this on. It's an American AI software created by an Indian founder who loves AI, intelligence gathering, and surveillance, but built for the consumer and not for corporations or governments. The information advantage has always belonged to the people with the most money. I'm trying to change that.
+      We built Asherin this way. Asherin is the app you're reading this on, and shepherd is the model inside it: thinking patterns loaded onto whichever provider key you bring, running in your own browser with no account and no server. It's an American AI software created by an Indian founder who loves AI, intelligence gathering, and surveillance, but built for the consumer and not for corporations or governments. The information advantage has always belonged to the people with the most money. I'm trying to change that.
     </p>
     <p>
       You can read more on the <a href="/founder">founders page</a>. And a little about me personally is that I'm trying to make my way back home.
@@ -115,14 +115,13 @@ const AiStackForIndianStartups = () => (
       What this means for you as a founder is simple. You do not need a Series A to build a serious AI product. You need to understand how American AI companies architect their systems and then build leaner, smarter, and faster than they can. The workflow is the moat. Not the model. And the workflow is something you can start building today with tools that cost you nothing but time and understanding.
     </p>
     <p>
-      That is what this newsletter breaks down every week. One layer at a time.
-    </p>
-    <p>
-      Subscribe below. It's free to start.
+      the rest of these notes take that apart one layer at a time. there is no
+      newsletter and nothing to subscribe to: the writing lands on this blog,
+      and the software it describes runs on your own device.
     </p>
 
     <RelatedLinks
-      heading="Continue the chain"
+      heading="read next"
       links={[
         {
           to: "/founder",
@@ -135,14 +134,14 @@ const AiStackForIndianStartups = () => (
           description: "The full consumer AI stack, with detailed capability breakdowns.",
         },
         {
-          to: "/blog/asherin-engine-deep-time",
-          label: "Asherin Engine deep time",
-          description: "How the Asherin search engine turns one identifier into a full exposure map across sixteen retrieval legs.",
+          to: "/blog/personalities-are-not-thinking-patterns",
+          label: "personalities are not thinking patterns",
+          description: "the conversion this note is about, piece by piece.",
         },
         {
           to: "/blog/code-narrative-quantum-collapse",
-          label: "Code as narrative",
-          description: "How Asherin patches workflow and logic bugs in under a minute using narrative-first reasoning.",
+          label: "code as narrative",
+          description: "how workflow and logic bugs get patched with narrative-first reasoning.",
         },
       ]}
     />

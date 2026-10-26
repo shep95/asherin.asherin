@@ -1100,9 +1100,10 @@ html[data-scrolling] .zophiel-aurora-pulse {
 }
 
 /* Eight software rooms, one architectural language. The frame is deliberately
-   quiet: layered absence, infrastructure lines and one trustworthy signal. */
+   quiet: layered absence, infrastructure lines and one trustworthy signal.
+   --accent stays tonal here as everywhere: a primary button is not a trust
+   signal, so it must not borrow --signal-live's colour. */
 [data-asherin-room] {
-  --accent: var(--signal-live);
   --ring: var(--signal-live-dim);
   position: relative;
   isolation: isolate;

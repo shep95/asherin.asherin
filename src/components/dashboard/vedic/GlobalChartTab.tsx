@@ -119,8 +119,9 @@ export default function GlobalChartTab() {
         const tc = await computeTransitChart(new Date(), chart.ascendant, ref.lat, ref.lon);
         if (cancelled) return;
         setTransits(tc);
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? "Failed to compute world chart");
+      } catch (e) {
+        console.warn("[vedic] world chart failed", e);
+        if (!cancelled) setError("the ephemeris could not cast the world chart on this device — reload once and try again");
       }
     })();
     return () => { cancelled = true; };
@@ -232,8 +233,8 @@ export default function GlobalChartTab() {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-red-500/30 bg-red-500/[0.04] p-5 text-sm text-red-300">
-        <div className="font-light">World chart failed: {error}</div>
+      <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/[0.04] p-5 text-sm text-red-300">
+        <div className="font-light">{error}</div>
       </div>
     );
   }
@@ -241,8 +242,8 @@ export default function GlobalChartTab() {
   if (!worldChart || !transits) {
     return (
       <div className="rounded-xl border border-border/30 bg-background/40 backdrop-blur-xl p-8 text-center">
-        <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground animate-pulse">
-          Casting world mundane chart · sidereal Lahiri ephemeris…
+        <div className="text-xs tracking-[0.2em] text-muted-foreground animate-pulse motion-reduce:animate-none">
+          casting the world chart · sidereal Lahiri…
         </div>
       </div>
     );
@@ -264,24 +265,24 @@ export default function GlobalChartTab() {
         <div className="flex items-start gap-4">
           <Globe2 className="h-8 w-8 text-amber-500/80 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] uppercase tracking-[0.2em] text-amber-500/70 mb-1">World Mundane Chart · Medini Jyotisha</div>
+            <div className="text-[10px] tracking-[0.2em] text-amber-500/70 mb-1">world mundane chart · medini jyotisha</div>
             <div className="text-lg font-light text-foreground">{ref.label}</div>
             <div className="text-[11px] text-muted-foreground/85 font-light mt-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
-                <div className="uppercase tracking-wider text-muted-foreground/60 text-[9px]">Ascendant</div>
+                <div className="tracking-wider text-muted-foreground/60 text-[9px]">ascendant</div>
                 <div className="text-foreground/95 mt-0.5">{rashis[ascSign].name} <span className="text-muted-foreground/70">{fmtDeg(worldChart.ascendant % 30)}</span></div>
               </div>
               <div>
-                <div className="uppercase tracking-wider text-muted-foreground/60 text-[9px]">Moon (Rashi)</div>
+                <div className="tracking-wider text-muted-foreground/60 text-[9px]">Moon (rashi)</div>
                 <div className="text-foreground/95 mt-0.5">{rashis[moonSign].name} <span className="text-muted-foreground/70">{fmtDeg(worldChart.dashaMoonSid % 30)}</span></div>
               </div>
               <div>
-                <div className="uppercase tracking-wider text-muted-foreground/60 text-[9px]">Ayanamsa</div>
+                <div className="tracking-wider text-muted-foreground/60 text-[9px]">ayanamsa</div>
                 <div className="text-foreground/95 mt-0.5 tabular-nums">{worldChart.ayanamsa.toFixed(4)}°</div>
               </div>
               <div>
-                <div className="uppercase tracking-wider text-muted-foreground/60 text-[9px]">Frame</div>
-                <div className="text-foreground/95 mt-0.5">Sidereal Lahiri</div>
+                <div className="tracking-wider text-muted-foreground/60 text-[9px]">frame</div>
+                <div className="text-foreground/95 mt-0.5">sidereal Lahiri</div>
               </div>
             </div>
           </div>
@@ -292,21 +293,21 @@ export default function GlobalChartTab() {
       <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-5 space-y-3">
         <div className="flex items-center gap-2 border-b border-border/15 pb-3">
           <Sparkles className="h-4 w-4 text-foreground/70" />
-          <h3 className="text-sm font-light tracking-[0.15em] text-foreground uppercase">Global Vimshottari · Active Lords</h3>
-          <span className="ml-auto text-[10px] font-light text-muted-foreground/70 italic">Measured from world natal Moon</span>
+          <h3 className="text-sm font-light tracking-[0.15em] text-foreground">global Vimshottari · active lords</h3>
+          <span className="ml-auto text-[10px] font-light text-muted-foreground/70 italic">measured from the world chart's Moon</span>
         </div>
         {dashaPath && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {(["maha", "antar", "pratyantar"] as const).map((lvl) => {
               const period = dashaPath[lvl];
               if (!period) return null;
-              const label = lvl === "maha" ? "Mahadasha" : lvl === "antar" ? "Antardasha" : "Pratyantardasha";
+              const label = lvl === "maha" ? "mahadasha" : lvl === "antar" ? "antardasha" : "pratyantardasha";
               const totalMs = period.end.getTime() - period.start.getTime();
               const elapsed = Date.now() - period.start.getTime();
               const pct = Math.max(0, Math.min(100, (elapsed / totalMs) * 100));
               return (
                 <div key={lvl} className="rounded-lg border border-border/25 bg-background/30 p-3">
-                  <div className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/70">{label}</div>
+                  <div className="text-[9px] tracking-[0.2em] text-muted-foreground/70">{label}</div>
                   <div className="text-2xl font-extralight text-foreground mt-1">{period.lord}</div>
                   <div className="text-[10px] text-muted-foreground/80 tabular-nums mt-1">
                     {fmtDate(period.start)} → {fmtDate(period.end)}
@@ -328,7 +329,7 @@ export default function GlobalChartTab() {
       <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-5 space-y-3">
         <div className="flex items-center gap-2 border-b border-border/15 pb-3">
           <Activity className="h-4 w-4 text-foreground/70" />
-          <h3 className="text-sm font-light tracking-[0.15em] text-foreground uppercase">Live Global Transits</h3>
+          <h3 className="text-sm font-light tracking-[0.15em] text-foreground">global transits now</h3>
           <span className="ml-auto text-[10px] font-light text-muted-foreground/70 tabular-nums">
             <Clock className="inline h-3 w-3 mr-1" />{transits.at.toUTCString().replace("GMT", "UTC")}
           </span>
@@ -340,7 +341,7 @@ export default function GlobalChartTab() {
               <div className="min-w-0">
                 <div className="text-sm font-light text-foreground/95 flex items-center gap-2">
                   {p.name}
-                  {p.retrograde && <span className="text-[9px] uppercase tracking-wider text-amber-500/80">Retrograde</span>}
+                  {p.retrograde && <span className="text-[9px] tracking-wider text-amber-500/80">retrograde</span>}
                 </div>
                 <div className="text-[10px] text-muted-foreground/70 italic">{MUNDANE_MEANING[p.name]}</div>
               </div>
@@ -349,7 +350,7 @@ export default function GlobalChartTab() {
                 <div className="text-[10px] text-muted-foreground/70 tabular-nums">{fmtDeg(p.degInSign)}</div>
               </div>
               <div className="text-right w-16">
-                <div className="text-[9px] uppercase tracking-wider text-muted-foreground/60">World H</div>
+                <div className="text-[9px] tracking-wider text-muted-foreground/60">world house</div>
                 <div className="text-sm font-light text-foreground tabular-nums">{p.natalHouse}</div>
               </div>
             </div>
@@ -361,8 +362,8 @@ export default function GlobalChartTab() {
       <div className="rounded-xl border border-border/30 bg-background/50 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-5 space-y-3">
         <div className="flex items-center gap-2 border-b border-border/15 pb-3">
           <Flag className="h-4 w-4 text-foreground/70" />
-          <h3 className="text-sm font-light tracking-[0.15em] text-foreground uppercase">Top 10 Affected Nations · Now</h3>
-          <span className="ml-auto text-[10px] font-light text-muted-foreground/70 italic">Slow-planet weighted · angles + dusthanas</span>
+          <h3 className="text-sm font-light tracking-[0.15em] text-foreground">ten most affected nations · now</h3>
+          <span className="ml-auto text-[10px] font-light text-muted-foreground/70 italic hidden sm:inline">slow-planet weighted · angles + dusthanas</span>
         </div>
         <div className="divide-y divide-border/10">
           {affected.map(({ c, kind, stresses, benefits, hits }) => (
@@ -373,7 +374,7 @@ export default function GlobalChartTab() {
                 <div className="text-[10px] text-muted-foreground/70">{hits.join(" · ")}</div>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                <span className={`text-[9px] tracking-wider px-1.5 py-0.5 rounded ${
                   kind === "malefic" ? "bg-red-500/15 text-red-300" :
                   kind === "benefic" ? "bg-emerald-500/15 text-emerald-300" :
                   "bg-amber-500/15 text-amber-300"
@@ -387,7 +388,7 @@ export default function GlobalChartTab() {
           ))}
         </div>
         <div className="text-[10px] text-muted-foreground/60 italic pt-2 border-t border-border/10">
-          Impact = transiting planet's house against a country-localized reference of the world ascendant. Angles (1/4/7/10) and dusthanas (6/8/12) weighted highest; slow planets (Saturn, Jupiter, Rahu, Ketu) 2× multiplier.
+          impact = the transiting planet's house against a country-localised reference of the world ascendant (the world lagna rotated by the country's utc offset — a proxy, not each nation's own foundation lagna). angles (1/4/7/10) and dusthanas (6/8/12) weigh most; slow planets (Saturn, Jupiter, Rahu, Ketu) count double.
         </div>
       </div>
 
@@ -395,8 +396,8 @@ export default function GlobalChartTab() {
       <div className="rounded-xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/[0.05] via-background/60 to-background/40 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-5 space-y-3">
         <div className="flex items-center gap-2 border-b border-border/15 pb-3">
           <Sparkles className="h-4 w-4 text-indigo-400/80" />
-          <h3 className="text-sm font-light tracking-[0.15em] text-foreground uppercase">Western Tropical Transits</h3>
-          <span className="ml-auto text-[10px] font-light text-muted-foreground/70 italic">Seasonal zodiac · same planets, tropical signs</span>
+          <h3 className="text-sm font-light tracking-[0.15em] text-foreground">western tropical transits</h3>
+          <span className="ml-auto text-[10px] font-light text-muted-foreground/70 italic hidden sm:inline">seasonal zodiac · same planets, tropical signs</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
           {westernTransits.map((p) => (
@@ -405,9 +406,9 @@ export default function GlobalChartTab() {
               <div className="min-w-0">
                 <div className="text-[13px] font-light text-foreground/95 flex items-center gap-2">
                   {p.name}
-                  {p.retrograde && <span className="text-[9px] uppercase tracking-wider text-amber-500/80">℞</span>}
+                  {p.retrograde && <span className="text-[9px] tracking-wider text-amber-500/80" title="retrograde">℞</span>}
                 </div>
-                <div className="text-[10px] text-muted-foreground/70">{p.sign.element} · ruler {p.sign.ruler}</div>
+                <div className="text-[10px] text-muted-foreground/70">{p.sign.element.toLowerCase()} · ruler {p.sign.ruler}</div>
               </div>
               <div className="text-right">
                 <div className="text-[12px] text-foreground/90">{p.sign.symbol} {p.sign.name}</div>
@@ -420,16 +421,16 @@ export default function GlobalChartTab() {
         {/* Major aspects */}
         {majorAspects.length > 0 && (
           <div className="pt-3 border-t border-border/15">
-            <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/70 mb-2">Active Ptolemaic Aspects (tightest 12)</div>
+            <div className="text-[10px] tracking-[0.2em] text-muted-foreground/70 mb-2">active ptolemaic aspects (tightest 12)</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
               {majorAspects.map((a, i) => (
                 <div key={i} className="flex items-center gap-2 text-[11px] py-1 px-2 rounded bg-background/40 border border-border/10">
                   <span className="text-base">{a.aSym}</span>
-                  <span className={`text-[10px] uppercase tracking-wider font-light px-1.5 py-0.5 rounded ${
+                  <span className={`text-[10px] tracking-wider font-light px-1.5 py-0.5 rounded ${
                     a.nature === "tense" ? "bg-red-500/15 text-red-300" :
                     a.nature === "harmonious" ? "bg-emerald-500/15 text-emerald-300" :
                     "bg-amber-500/15 text-amber-300"
-                  }`}>{a.kind}</span>
+                  }`}>{a.kind.toLowerCase()}</span>
                   <span className="text-base">{a.bSym}</span>
                   <span className="ml-auto text-[10px] text-muted-foreground/70 tabular-nums">orb {a.orb.toFixed(2)}°</span>
                 </div>
@@ -443,8 +444,8 @@ export default function GlobalChartTab() {
       <div className="rounded-xl border border-orange-500/30 bg-gradient-to-br from-orange-500/[0.05] via-background/60 to-background/40 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-5 space-y-3">
         <div className="flex items-center gap-2 border-b border-border/15 pb-3">
           <Sun className="h-4 w-4 text-orange-400/85" />
-          <h3 className="text-sm font-light tracking-[0.15em] text-foreground uppercase">Solar Eclipses Over Capitals · 2026 → 2034</h3>
-          <span className="ml-auto text-[10px] font-light text-muted-foreground/70 italic">NASA Espenak canon</span>
+          <h3 className="text-sm font-light tracking-[0.15em] text-foreground">solar eclipses over capitals · 2026 → 2034</h3>
+          <span className="ml-auto text-[10px] font-light text-muted-foreground/70 italic hidden sm:inline">~ NASA / Espenak eclipse canon</span>
         </div>
         <div className="space-y-3">
           {upcomingEclipses.map((e: SolarEclipse) => {
@@ -465,16 +466,16 @@ export default function GlobalChartTab() {
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <div className="text-base font-light text-foreground tabular-nums">{e.date}</div>
                   <div className="text-[10px] text-muted-foreground/70 tabular-nums">{e.timeUt} UT</div>
-                  <div className={`text-[10px] uppercase tracking-[0.2em] font-light ${typeColor}`}>{e.type}</div>
+                  <div className={`text-[10px] tracking-[0.2em] font-light ${typeColor}`}>{e.type}</div>
                   <div className="text-[10px] text-muted-foreground/70 tabular-nums">mag {e.magnitude.toFixed(3)} · max {Math.floor(e.maxDurationSec / 60)}m{String(e.maxDurationSec % 60).padStart(2, "0")}s</div>
-                  <span className={`ml-auto text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${weightColor}`}>{weightLabel} omen</span>
+                  <span className={`ml-auto text-[9px] tracking-wider px-1.5 py-0.5 rounded border ${weightColor}`}>{weightLabel} omen</span>
                 </div>
                 <div className="text-[11px] text-muted-foreground/85 font-light leading-relaxed">{e.pathSummary}</div>
 
                 {inCount > 0 && (
                   <div>
-                    <div className="text-[9px] uppercase tracking-[0.2em] text-red-300/80 mb-1 flex items-center gap-1.5">
-                      <Eye className="h-3 w-3" /> Capitals under central path
+                    <div className="text-[9px] tracking-[0.2em] text-red-300/80 mb-1 flex items-center gap-1.5">
+                      <Eye className="h-3 w-3" /> capitals under the central path
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {e.capitalsInPath.map((c) => (
@@ -488,7 +489,7 @@ export default function GlobalChartTab() {
 
                 {nearCount > 0 && (
                   <div>
-                    <div className="text-[9px] uppercase tracking-[0.2em] text-amber-300/80 mb-1">Deep partial (≥80%)</div>
+                    <div className="text-[9px] tracking-[0.2em] text-amber-300/80 mb-1">deep partial (≥80%)</div>
                     <div className="flex flex-wrap gap-1.5">
                       {e.capitalsNearPath.map((c) => (
                         <span key={c.capital} className="text-[10px] px-2 py-1 rounded border border-amber-500/25 bg-amber-500/[0.05] text-foreground/85">
@@ -507,7 +508,7 @@ export default function GlobalChartTab() {
           })}
         </div>
         <div className="text-[10px] text-muted-foreground/60 italic pt-2 border-t border-border/10">
-          Classical mundane rule: a solar eclipse whose central path crosses a national capital signals leadership disruption or major policy inflection within ~6 months on either side. "In path" = umbral/antumbral; "near path" = ≥80% obscuration.
+          classical mundane rule: a solar eclipse whose central path crosses a national capital signals leadership disruption or a policy inflection within ~6 months either side. "in path" = umbral/antumbral; "near path" = ≥80% obscuration. a tradition's rule, not a measurement.
         </div>
       </div>
     </div>

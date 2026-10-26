@@ -163,14 +163,14 @@ export default function FunctionalPanel({ record, onHighlights, onSelectTerritor
             </div>
           )}
 
-          {activeFindings.length === 0 && <p className="text-[10px] font-light text-foreground/35">not enough in your record yet to paint this overlay on the body.</p>}
+          {activeFindings.length === 0 && <p className="text-[10px] font-light text-foreground/35">not enough in your record yet to build this overlay.</p>}
         </div>
       )}
 
       {sub === "network" && (
         <div className="space-y-2">
           <p className="text-[10px] font-light leading-relaxed text-foreground/40">
-            a qualitative map of organ/system interdependency. select a node to see what feeds into it and to look at it on the body.
+            a qualitative map of organ/system interdependency. select a node to name its territories in the room and ask shepherd about it.
           </p>
           <div className="flex flex-wrap gap-1.5">
             {NODES.map((n) => (

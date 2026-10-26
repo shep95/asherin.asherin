@@ -61,7 +61,8 @@ const p = (
 ): Protection => ({ id, cat, title, why, src, sev });
 
 /**
- * The register. 140 named protections across 18 categories.
+ * The register. 186 named protections across 18 categories (PROTECTION_COUNT is the
+ * number the room shows; this comment is not).
  * Order inside a category is roughly worst-first.
  */
 export const PROTECTIONS: Protection[] = [
@@ -75,7 +76,7 @@ export const PROTECTIONS: Protection[] = [
   p("dev.dev-mode", "device", "developer mode off", "developer mode and usb debugging are a full-device backdoor when left on.", "agent", "high"),
   p("dev.virtualisation", "device", "no unexpected hypervisor", "an unexpected hypervisor layer can observe everything above it.", "agent", "medium"),
   p("dev.clock-skew", "device", "system clock accurate", "a wrong clock silently breaks certificate validation.", "both", "medium"),
-  p("dev.locale-leak", "device", "locale and timezone consistent", "a mismatch between reported timezone and ip is a fingerprint and a proxy tell.", "browser", "low"),
+  p("dev.locale-leak", "device", "locale and timezone recorded", "a recorded timezone and locale are what make a later mismatch against your network a visible proxy tell; the tab cannot see the ip side.", "browser", "low"),
   p("dev.hardware-shape", "device", "hardware profile recorded", "a baseline is what makes a later change visible.", "both", "low"),
   p("dev.serial-drift", "device", "no unexplained hardware change", "a swapped disk or nic between reports deserves an explanation.", "agent", "medium"),
 
@@ -158,7 +159,7 @@ export const PROTECTIONS: Protection[] = [
   p("br.download-history", "browser", "recent downloads reviewed", "the download list is where the first stage always appears.", "agent", "high"),
   p("br.saved-passwords", "browser", "browser password store protected", "an unlocked browser store is every account at once.", "agent", "critical"),
   p("br.autofill-data", "browser", "autofill data reviewed", "autofill holds cards and addresses in cleartext-ish storage.", "agent", "medium"),
-  p("br.cookie-scope", "browser", "third-party cookies restricted", "third-party cookies are cross-site tracking by definition.", "browser", "medium"),
+  p("br.cookie-scope", "browser", "cookie state on this origin known", "whether this origin can set cookies is the one cookie fact a tab can read; third-party policy lives in the browser settings.", "browser", "low"),
   p("br.site-permissions", "browser", "site permission grants reviewed", "an old camera grant is a live camera grant.", "browser", "high"),
   p("br.service-workers", "browser", "service workers accounted for", "a service worker runs with no tab open.", "browser", "medium"),
   p("br.storage-footprint", "browser", "site storage footprint known", "large silent storage is a staging area.", "browser", "low"),
@@ -217,7 +218,7 @@ export const PROTECTIONS: Protection[] = [
   p("acct.autologin", "accounts", "automatic login off", "autologin turns theft of the device into theft of everything.", "agent", "high"),
   p("acct.screen-lock", "accounts", "screen lock enforced", "an unlocked idle screen is an open session.", "agent", "high"),
   p("acct.password-policy", "accounts", "login credential strength sane", "a four digit pin protects nothing meaningful.", "agent", "medium"),
-  p("acct.mfa", "accounts", "second factor on this account", "a password alone is one phishing email from gone.", "both", "critical"),
+  p("acct.mfa", "accounts", "second factor on your accounts", "a password alone is one phishing email from gone.", "agent", "critical"),
   p("acct.ssh-authorized-keys", "accounts", "authorized_keys reviewed", "one extra public key is permanent remote access.", "agent", "critical"),
   p("acct.sudoers", "accounts", "sudoers rules reviewed", "a nopasswd rule quietly removes the last prompt.", "agent", "critical"),
   p("acct.session-count", "accounts", "no unexpected logged-in session", "a second live session is someone else using your device.", "agent", "critical"),

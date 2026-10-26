@@ -18,6 +18,9 @@ const ALLOWED_EXTENSIONS: Record<string, string[]> = {
   // Documents
   ".pdf": ["application/pdf"],
   ".txt": ["text/plain"],
+  ".md": ["text/markdown", "text/plain"],
+  ".markdown": ["text/markdown", "text/plain"],
+  ".tsv": ["text/tab-separated-values", "text/plain"],
   ".log": ["text/plain", "application/octet-stream"],
   ".sql": ["application/sql", "text/plain", "application/x-sql"],
   // Archives

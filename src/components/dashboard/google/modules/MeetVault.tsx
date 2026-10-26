@@ -16,6 +16,8 @@ import {
   Video, FileText, Download, RefreshCw, Search, AlertTriangle,
   Play, Users, Clock, ExternalLink,
 } from "lucide-react";
+import OrganOffline from "../OrganOffline";
+import { describeFailure, isLocalOnlyError } from "../offline";
 
 interface Artifact {
   id: string;
@@ -75,7 +77,10 @@ function when(iso: string | null): string {
 export default function MeetVault() {
   const [loading, setLoading] = useState(true);
   const [sweeping, setSweeping] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  // the organ answered "no device handler": every button that would call it
+  // again is disabled rather than left to fail on click.
+  const [offline, setOffline] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [unmatched, setUnmatched] = useState<Artifact[]>([]);
   const [needsGrant, setNeedsGrant] = useState<string[]>([]);
@@ -101,8 +106,12 @@ export default function MeetVault() {
       setSessions(data.sessions ?? []);
       setUnmatched(data.unmatched ?? []);
       setNeedsGrant(data.needsGrant ?? []);
+      setOffline(false);
     } catch (e) {
-      if (alive.current) setError(e instanceof Error ? e.message : "Vault unavailable");
+      if (alive.current) {
+        setError(e);
+        setOffline(isLocalOnlyError(e));
+      }
     } finally {
       if (alive.current) setLoading(false);
     }
@@ -124,7 +133,7 @@ export default function MeetVault() {
       }
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Sweep failed");
+      toast.error(describeFailure(e, "meet organ"));
     } finally {
       if (alive.current) setSweeping(false);
     }
@@ -152,29 +161,29 @@ export default function MeetVault() {
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/25 pb-3">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-sm font-light uppercase tracking-[0.18em] text-foreground">
+          <h2 className="flex items-center gap-2 text-sm font-light tracking-[0.18em] text-foreground">
             <Video className="h-4 w-4 text-muted-foreground" aria-hidden />
-            Meet Vault
+            meet records
           </h2>
           <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-muted-foreground">
-            Meeting history reconstructed from calendar records, conference records and the Drive
-            recordings folder. {sessions.length} meetings · {totalRecordings} recordings held.
+            meeting history reconstructed from calendar records, conference records and the drive
+            recordings folder. {sessions.length} meetings · {totalRecordings} recordings listed.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
             <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Title, person, file"
-              aria-label="Search meetings"
+              placeholder="title, person, file"
+              aria-label="search meetings"
               className="h-8 w-48 pl-7 text-xs"
             />
           </div>
-          <Button size="sm" variant="outline" className="h-8 text-[11px]" onClick={() => void sweep()} disabled={sweeping}>
-            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${sweeping ? "animate-spin" : ""}`} aria-hidden />
-            {sweeping ? "Sweeping" : "Sweep Google"}
+          <Button size="sm" variant="outline" className="h-8 text-[11px]" onClick={() => void sweep()} disabled={sweeping || offline}>
+            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${sweeping ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden />
+            {sweeping ? "sweeping" : "sweep google"}
           </Button>
         </div>
       </div>
@@ -185,8 +194,7 @@ export default function MeetVault() {
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
           <p className="text-[11px] leading-relaxed text-muted-foreground">
             {needsGrant.join(", ")} {needsGrant.length > 1 ? "were" : "was"} connected before file
-            access was requested. Reconnect the account from Account Mesh to enable in-app playback
-            and downloads — until then recordings are listed but must be opened in Drive.
+            access was requested, so recordings are listed but must be opened in drive.
           </p>
         </div>
       )}
@@ -198,22 +206,17 @@ export default function MeetVault() {
         </div>
       )}
 
-      {!loading && error && (
-        <div className="rounded border border-border/30 px-3 py-4 text-center">
-          <p className="text-xs text-muted-foreground">{error}</p>
-          <Button size="sm" variant="outline" className="mt-2 h-7 text-[11px]" onClick={() => void load()}>
-            Retry
-          </Button>
-        </div>
+      {!loading && error !== null && (
+        <OrganOffline error={error} organ="meet organ" onRetry={() => void load()} />
       )}
 
-      {!loading && !error && filtered.length === 0 && unmatched.length === 0 && (
+      {!loading && error === null && filtered.length === 0 && unmatched.length === 0 && (
         <div className="rounded border border-dashed border-border/30 px-3 py-8 text-center">
           <p className="text-xs text-muted-foreground">
-            Nothing indexed yet. Run a sweep to pull two years of meetings and recordings.
+            nothing indexed yet. a sweep would pull two years of meetings and recordings.
           </p>
-          <Button size="sm" variant="outline" className="mt-3 h-7 text-[11px]" onClick={() => void sweep()} disabled={sweeping}>
-            Sweep Google
+          <Button size="sm" variant="outline" className="mt-3 h-7 text-[11px]" onClick={() => void sweep()} disabled={sweeping || offline}>
+            sweep google
           </Button>
         </div>
       )}
@@ -222,11 +225,11 @@ export default function MeetVault() {
       {playing && (
         <div className="rounded border border-border/30 bg-muted/5 p-3">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="truncate text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-              {playing.name ?? "Recording"}
+            <span className="truncate text-[11px] tracking-[0.14em] text-muted-foreground">
+              {playing.name ?? "recording"}
             </span>
             <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => setPlaying(null)}>
-              Close
+              close
             </Button>
           </div>
           {playing.kind === "recording" ? (
@@ -292,7 +295,7 @@ export default function MeetVault() {
               </ul>
             ) : (
               <p className="mt-2 border-t border-border/20 pt-2 text-[11px] text-muted-foreground">
-                No recording was stored for this meeting.
+                no recording was stored for this meeting.
               </p>
             )}
           </article>
@@ -302,8 +305,8 @@ export default function MeetVault() {
       {/* ── ORPHANS ────────────────────────────────────────────────────── */}
       {unmatched.length > 0 && (
         <section className="rounded border border-border/25 px-3 py-3">
-          <h3 className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-            Recordings with no matching calendar entry
+          <h3 className="text-[11px] tracking-[0.16em] text-muted-foreground">
+            recordings with no matching calendar entry
           </h3>
           <ul className="mt-2 space-y-1.5">
             {unmatched.map((a) => (
@@ -326,23 +329,39 @@ function ArtifactRow({
       <div className="flex min-w-0 items-center gap-2">
         <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
         <span className="truncate text-[11px] text-foreground">
-          {a.name ?? (a.kind === "recording" ? "Recording" : "Transcript")}
+          {a.name ?? (a.kind === "recording" ? "recording" : "transcript")}
         </span>
         <span className="shrink-0 text-[10px] text-muted-foreground">
           {duration(a.duration_ms)} · {bytes(a.size_bytes)}
         </span>
       </div>
-      <div className="flex shrink-0 items-center gap-1">
-        <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => onPlay(a)}>
-          <Play className="mr-1 h-3 w-3" aria-hidden />
-          {a.kind === "recording" ? "Play" : "Read"}
-        </Button>
-        <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" asChild>
-          <a href={streamUrl(a.playback, "download")} download>
-            <Download className="mr-1 h-3 w-3" aria-hidden />Save
-          </a>
-        </Button>
-      </div>
+      {/* playback and download streamed through the kernel; with no kernel the
+          stream url is empty, so neither control is offered — the drive link
+          on the meeting row is the way to the file. */}
+      {streamUrl(a.playback, "stream") ? (
+        <div className="flex shrink-0 items-center gap-1">
+          <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => onPlay(a)}>
+            <Play className="mr-1 h-3 w-3" aria-hidden />
+            {a.kind === "recording" ? "play" : "read"}
+          </Button>
+          <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" asChild>
+            <a href={streamUrl(a.playback, "download")} download>
+              <Download className="mr-1 h-3 w-3" aria-hidden />save
+            </a>
+          </Button>
+        </div>
+      ) : a.web_view_link ? (
+        <a
+          href={a.web_view_link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+        >
+          <ExternalLink className="h-3 w-3" aria-hidden /> open in drive
+        </a>
+      ) : (
+        <span className="shrink-0 text-[10px] text-muted-foreground/60">no playback path on this device</span>
+      )}
     </li>
   );
 }

@@ -32,7 +32,7 @@ export interface Finding {
   nextStep: string;
   territoryKeys: string[];
   direction: Direction;
-  /** 0..1 confidence-weighted salience used for opacity on the atlas. */
+  /** 0..1 confidence-weighted salience; orders the read-out and sets how strongly a territory is named. */
   weight: number;
   source: string;
   /** true when the pattern warrants prompt clinical evaluation. */
@@ -51,7 +51,7 @@ export const DIRECTION_COLOR: Record<Direction, string> = {
 export const PAIN_SEVERE = "#e0402a";
 export const PAIN_MILD = "#e78a2e";
 
-/** every finding as a region the room can point at, coloured by direction; pain reads in red and orange only. */
+/** every finding as a territory the room can name in its "looking at" panel, coloured by direction; pain reads in red and orange only. */
 export function findingHighlights(findings: Finding[]): TerritoryHighlight[] {
   return findings
     .filter((f) => f.territoryKeys.length > 0)

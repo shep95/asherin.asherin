@@ -18,7 +18,7 @@ const Box = ({ children }: { children: React.ReactNode }) => (
 
 const CodeNarrativeQuantumCollapse = () => (
   <ArticleShell
-    eyebrow="#HouseOfAsher · Engineering Method · Integrated into Asherin"
+    eyebrow="method · engineering"
     title="Code-as-Narrative × Quantum Candidate Collapse"
     dek="Two #HouseOfAsher methods turn source into a plain-language workflow, compare candidate repairs against that workflow, and verify the chosen change with observable tests. Timing and success still depend on the defect and evidence available."
     publishedLabel="Jul 01 2026"
@@ -47,7 +47,7 @@ const CodeNarrativeQuantumCollapse = () => (
       id="code-narrative-quantum-collapse"
       items={[
         { name: "Asherin", url: "/" },
-        { name: "Blog", url: "/blog" },
+        { name: "blog", url: "/blog" },
         {
           name: "Code-as-Narrative × Quantum Candidate Collapse",
           url: "/blog/code-narrative-quantum-collapse",
@@ -75,7 +75,7 @@ const CodeNarrativeQuantumCollapse = () => (
         },
         {
           q: "Is this integrated into Asherin?",
-          a: "Yes. Every Asherin software module and page is authored, audited, and patched through the Code → Narrative → Flaws → New Narrative → Code loop. It is the project's default engineering contract, not an optional workflow.",
+          a: "Yes. asherin's rooms are written and reviewed through the Code → Narrative → Flaws → New Narrative → Code loop, and shepherd is asked to narrate before it patches when you hand it code in chat. It is the project's default engineering contract, not an optional workflow.",
         },
       ]}
     />
@@ -111,8 +111,8 @@ const CodeNarrativeQuantumCollapse = () => (
 │  a story for plot holes.     │  guessing.                          │
 └──────────────────────────────┴─────────────────────────────────────┘`}</Box>
 
-    <h2>3. The full loop, how Asherin actually runs a fix</h2>
-    <Box>{`OPERATOR                 ASHERIN (Gemini-Lite)           CODEBASE
+    <h2>3. The full loop, how a fix actually runs</h2>
+    <Box>{`OPERATOR                 SHEPHERD (your model key)      CODEBASE
    │                          │                             │
    │  "the auth image loads    │                             │
    │   slow"  ───────────────▶ │                             │
@@ -152,7 +152,7 @@ const CodeNarrativeQuantumCollapse = () => (
    │  patch shipped ◀─────────│  elapsed: 47 seconds        │
    ▼                          ▼                             ▼`}</Box>
 
-    <h2>4. Why the cheapest Gemini tier is enough</h2>
+    <h2>4. Why a small model is enough</h2>
     <p>
       Mainstream copilots throw the largest available model at every bug
       because their loop is <em>retrieve → diff → hope</em>. The model is
@@ -164,11 +164,12 @@ const CodeNarrativeQuantumCollapse = () => (
       in plain language.
     </p>
     <p>
-      In production Asherin uses <code>gemini-2.5-flash-lite</code>-class
-      models for the loop. Median wall-clock time on the 20 most recent
-      logical/workflow bug fixes: <strong>47 seconds</strong>. Same 20 bugs,
-      same model, no method: median <strong>34 minutes</strong> with an
-      average of <strong>4.3 retries</strong> and one abandoned session.
+      the loop was developed on <code>gemini-2.5-flash-lite</code>-class
+      models and runs on whichever provider key you connect; it does not
+      need a frontier tier. there is no fixed completion time: a small,
+      well-described defect can close in one pass, an ambiguous one takes
+      more narration and more verification. the figure in the diagram above
+      is one recorded run, not a benchmark.
     </p>
 
     <h2>5. The measurement operator, what actually collapses the wave</h2>
@@ -232,13 +233,14 @@ const CodeNarrativeQuantumCollapse = () => (
         Narrative → Code loop where it helps make a change auditable.
       </li>
       <li>
-        Bug reports from users are run through the same loop before a patch
-        is written. No shortcut path exists.
+        entries from asherin.bugs that you export and hand over are run
+        through the same loop before a patch is written. No shortcut path
+        exists.
       </li>
       <li>
-        Asherin's chat agents (Asherin, Asher, Axrlen) inherit the discipline:
-        when a user asks them to fix or reason about code, they narrate
-        first, collapse second, emit code third.
+        shepherd inherits the discipline in chat: when you ask it to fix or
+        reason about code, it narrates first, collapses second, emits code
+        third.
       </li>
       <li>
         The candidate field is capped at a small N (typically 3-7) so the
@@ -276,12 +278,14 @@ const CodeNarrativeQuantumCollapse = () => (
     </p>
     <h3>Where can I read the raw #HouseOfAsher theories?</h3>
     <p>
-      They live under{" "}
-      <a href="/house-of-asher" className="underline">
-        House of Asher · Theories
+      the theory pages were taken down with the rest of the hosted-era
+      site; the method survives in the two notes you are reading and in{" "}
+      <a href="/blog/personalities-are-not-thinking-patterns">
+        personalities are not thinking patterns
       </a>
       . Code-as-Narrative and Quantum Candidate Collapse are the two most
-      operationally-loaded members of the set.
+      operationally-loaded members of the set, and the{" "}
+      <a href="/founder">founder page</a> names the book behind them.
     </p>
   </ArticleShell>
 );

@@ -13,20 +13,20 @@ import {
 
 interface Props {
   appearance: DashboardAppearance;
-  /** Applies immediately (local + broadcast) and persists for signed-in operators. */
+  /** Applies immediately (local + broadcast); the settings row is written after. */
   onChange: (patch: Partial<DashboardAppearance>) => void;
   /** Label of the photo the operator returns to when they leave colour mode. */
   wallpaperLabel: string;
   /** Chrome layout the operator is on. Default stays "current". */
   ui: DashboardUi;
-  /** Applies immediately (local + broadcast) and persists for signed-in operators. */
+  /** Applies immediately (local + broadcast); the settings row is written after. */
   onUiChange: (next: DashboardUi) => void;
 }
 
 /**
- * Appearance controls for the workspace surface: photograph or flat colour.
- * Everything here is free — only the photo upload add-on is paid, and that
- * lives in the wallpaper block below.
+ * Appearance controls for the workspace surface: chrome layout, then
+ * photograph or flat colour. Every control here is read by Dashboard.tsx
+ * (dashboardUi.ts, dashboardAppearance.ts) and repaints live.
  */
 const DashboardAppearanceControls = ({ appearance, onChange, wallpaperLabel, ui, onUiChange }: Props) => {
   const [hexDraft, setHexDraft] = useState(appearance.color);
@@ -65,15 +65,15 @@ const DashboardAppearanceControls = ({ appearance, onChange, wallpaperLabel, ui,
     <div className="space-y-6">
       {/* Chrome layout — opt-in, never forced. */}
       <div className="space-y-3">
-        <p className="text-[9px] text-muted-foreground/40 uppercase tracking-wider">Dashboard layout</p>
+        <p className="text-[10px] text-muted-foreground/50 tracking-wider">layout</p>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
           <div
             role="tablist"
-            aria-label="Dashboard layout"
+            aria-label="dashboard layout"
             className="inline-flex rounded-xl border border-border/20 bg-background/40 p-1 self-start"
           >
             {([
-              { key: "current" as const, label: "Current", Icon: PanelLeft },
+              { key: "current" as const, label: "current", Icon: PanelLeft },
               { key: "v2" as const, label: "v.2", Icon: MessageSquare },
             ]).map(({ key, label, Icon }) => {
               const active = ui === key;
@@ -102,7 +102,7 @@ const DashboardAppearanceControls = ({ appearance, onChange, wallpaperLabel, ui,
               {
                 key: "current" as const,
                 copy: "the dashboard you already know.",
-                rows: ["Search software…", "Past Convos", "Workspace", "Account"],
+                rows: ["search the rooms…", "past convos", "workspace", "account"],
               },
               {
                 key: "v2" as const,
@@ -127,7 +127,7 @@ const DashboardAppearanceControls = ({ appearance, onChange, wallpaperLabel, ui,
                       ))}
                     </div>
                     <div className="min-w-0 space-y-1">
-                      <p className="text-xs font-light text-foreground">{key === "current" ? "Current" : "v.2"}</p>
+                      <p className="text-xs font-light text-foreground">{key === "current" ? "current" : "v.2"}</p>
                       <p className="text-[10px] font-light leading-relaxed text-muted-foreground/70">{copy}</p>
                       <p className="text-[9px] font-mono leading-relaxed text-muted-foreground/45 truncate">
                         {rows.join(" · ")}
@@ -147,12 +147,12 @@ const DashboardAppearanceControls = ({ appearance, onChange, wallpaperLabel, ui,
       {/* Segmented control */}
       <div
         role="tablist"
-        aria-label="Dashboard background mode"
+        aria-label="background"
         className="inline-flex w-full sm:w-auto rounded-xl border border-border/20 bg-background/40 p-1"
       >
         {([
-          { mode: "wallpaper" as const, label: "Wallpaper", Icon: ImageIcon },
-          { mode: "color" as const, label: "Color", Icon: Paintbrush },
+          { mode: "wallpaper" as const, label: "wallpaper", Icon: ImageIcon },
+          { mode: "color" as const, label: "colour", Icon: Paintbrush },
         ]).map(({ mode, label, Icon }) => {
           const active = appearance.mode === mode;
           return (
@@ -179,7 +179,7 @@ const DashboardAppearanceControls = ({ appearance, onChange, wallpaperLabel, ui,
           {/* Swatches + hex */}
           <div className="space-y-4 order-2 lg:order-1">
             <div>
-              <p className="text-[9px] text-muted-foreground/40 uppercase tracking-wider mb-2">Cinematic</p>
+              <p className="text-[10px] text-muted-foreground/50 tracking-wider mb-2">cinematic</p>
               <div className="flex flex-wrap gap-2.5">
                 {CURATED_SWATCHES.map((sw) => {
                   const active = appearance.color === sw.hex.toUpperCase();
@@ -210,11 +210,11 @@ const DashboardAppearanceControls = ({ appearance, onChange, wallpaperLabel, ui,
             </div>
 
             <div className="space-y-2">
-              <p className="text-[9px] text-muted-foreground/40 uppercase tracking-wider">Custom</p>
+              <p className="text-[10px] text-muted-foreground/50 tracking-wider">custom</p>
               <div className="flex items-center gap-2 flex-wrap">
                 <input
                   type="color"
-                  aria-label="Pick a background color"
+                  aria-label="pick a background colour"
                   value={appearance.color}
                   onChange={(e) => onChange({ mode: "color", color: e.target.value })}
                   className="h-9 w-11 shrink-0 cursor-pointer rounded-lg border border-border/30 bg-transparent p-1"
@@ -224,7 +224,7 @@ const DashboardAppearanceControls = ({ appearance, onChange, wallpaperLabel, ui,
                   inputMode="text"
                   spellCheck={false}
                   maxLength={7}
-                  aria-label="Background hex"
+                  aria-label="background hex"
                   value={hexDraft}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -251,7 +251,7 @@ const DashboardAppearanceControls = ({ appearance, onChange, wallpaperLabel, ui,
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-[9px] text-muted-foreground/40 uppercase tracking-wider">Dim veil</p>
+                <p className="text-[10px] text-muted-foreground/50 tracking-wider">dim veil</p>
                 <span className="text-[10px] font-mono text-muted-foreground/60">{appearance.dim}%</span>
               </div>
               <input
@@ -259,7 +259,7 @@ const DashboardAppearanceControls = ({ appearance, onChange, wallpaperLabel, ui,
                 min={0}
                 max={MAX_DIM}
                 step={1}
-                aria-label="Dim veil"
+                aria-label="dim veil"
                 value={appearance.dim}
                 onChange={(e) => onChange({ dim: Number(e.target.value) })}
                 className="w-full accent-foreground/70"
@@ -275,13 +275,13 @@ const DashboardAppearanceControls = ({ appearance, onChange, wallpaperLabel, ui,
               onClick={() => onChange({ mode: "wallpaper" })}
               className="text-[11px] font-light text-muted-foreground/70 hover:text-foreground underline underline-offset-4 transition-colors"
             >
-              Use wallpaper again ({wallpaperLabel})
+              use the wallpaper again ({wallpaperLabel})
             </button>
           </div>
 
           {/* Live preview — the actual color, not a stock thumbnail */}
           <div className="order-1 lg:order-2">
-            <p className="text-[9px] text-muted-foreground/40 uppercase tracking-wider mb-2">Preview</p>
+            <p className="text-[10px] text-muted-foreground/50 tracking-wider mb-2">preview</p>
             <div
               data-appearance-preview
               className="relative rounded-xl border border-border/20 overflow-hidden aspect-[16/10]"
@@ -310,7 +310,7 @@ const DashboardAppearanceControls = ({ appearance, onChange, wallpaperLabel, ui,
         </div>
       ) : (
         <p className="text-[10px] text-muted-foreground/40 leading-relaxed">
-          the workspace sits on a photograph. pick one below, or switch to Color for a flat surface.
+          the workspace sits on a photograph. pick one below, or switch to colour for a flat surface.
         </p>
       )}
     </div>

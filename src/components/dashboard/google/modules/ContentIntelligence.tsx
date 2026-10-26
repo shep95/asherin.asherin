@@ -13,6 +13,7 @@ import {
 import FindingCard from "../intel/FindingCard";
 import { TrendStat } from "../intel/TrendStat";
 import Treemap from "../intel/Treemap";
+import { CONNECT_UNAVAILABLE, describeFailure } from "../offline";
 
 // ARCHIVE — document and media intelligence.
 // Not a file browser. The corpus is read for exposure, duplication, decay, and
@@ -36,9 +37,8 @@ const ContentIntelligence = () => {
       ]);
       setRaw(fileData.files || []);
       setStorage(aboutData);
-    } catch (err: any) {
-      console.error("[Archive] corpus sweep failed:", err);
-      setError(err?.message || "Corpus sweep failed.");
+    } catch (err: unknown) {
+      setError(describeFailure(err, "drive organ"));
     } finally {
       setLoading(false);
     }
@@ -56,10 +56,10 @@ const ContentIntelligence = () => {
   const findings = useMemo<Finding[]>(() => {
     if (!isConnected) {
       return [silenceFinding({
-        module: "Archive", id: "archive-unlinked", subject: "Drive corpus",
-        expected: "A linked account typically exposes 50–5,000 files",
-        cause: ["No account is linked, so no corpus exists to score."],
-        action: "Link an account under Account Mesh to begin corpus scoring.", connected: false,
+        module: "archive", id: "archive-unlinked", subject: "drive corpus",
+        expected: "a linked account typically exposes 50–5,000 files",
+        cause: ["no google account is connected, so no corpus exists to score."],
+        action: "no connect path exists on this device yet — see the station overview for what it would take.", connected: false,
       })];
     }
     if (!files.length) {
@@ -256,26 +256,27 @@ const ContentIntelligence = () => {
             <ArchiveIcon className="h-6 w-6 text-foreground/70" />
           </div>
           <div className="flex-1 space-y-2">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-extralight tracking-wide text-foreground">Archive</h2>
-                <p className="text-[9px] tracking-[0.22em] text-muted-foreground/40 font-light">DOCUMENT &amp; MEDIA INTELLIGENCE</p>
+                <h2 className="text-lg font-extralight tracking-wide text-foreground">document & media intel</h2>
+                <p className="text-[9px] tracking-[0.22em] text-muted-foreground/40 font-light">exposure, duplication, decay, subject matter</p>
               </div>
               {isConnected && (
                 <button
-                  onClick={loadData}
+                  type="button"
+                  onClick={() => void loadData()}
                   disabled={loading}
                   className="flex items-center gap-1 rounded-lg bg-foreground/10 px-3 py-1.5 text-[10px] font-light text-foreground hover:bg-foreground/20 transition-all disabled:opacity-50"
                 >
-                  <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-                  Sweep
+                  <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden />
+                  sweep
                 </button>
               )}
             </div>
             <p className="text-sm font-extralight leading-relaxed text-muted-foreground">
               {isConnected
-                ? `${files.length} files scored for exposure, duplication, decay and subject matter. Confidence ${stats.confidence}%.`
-                : "Link an account to score the document corpus for exposure, duplication and decay."}
+                ? `${files.length} files scored for exposure, duplication, decay and subject matter. confidence ${stats.confidence}%.`
+                : CONNECT_UNAVAILABLE}
             </p>
           </div>
         </div>
@@ -284,41 +285,41 @@ const ContentIntelligence = () => {
       {error && (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 flex items-start gap-2">
           <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />
-          <p className="text-[11px] font-extralight text-muted-foreground">{error} — showing the last successful sweep.</p>
+          <p className="text-[11px] font-extralight text-muted-foreground">{error} {files.length ? "— the last successful sweep is still shown." : ""}</p>
         </div>
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <TrendStat
-          label="Corpus"
+          label="corpus"
           value={files.length}
           series={stats.creationSeries}
           hint={`${fmtBytes(stats.totalBytes)} sampled · median file ${fmtBytes(stats.medianBytes)}`}
           loading={loading}
         />
         <TrendStat
-          label="Exposed"
+          label="exposed"
           value={stats.publicCount + stats.sharedCount}
           population={files.map((f) => f.risk)}
           hint={`${stats.publicCount} public link · ${stats.sharedCount} shared`}
           loading={loading}
         />
         <TrendStat
-          label="Redundant"
+          label="redundant"
           value={stats.duplicateCount}
           hint={`${fmtBytes(stats.duplicateBytes)} recoverable`}
           loading={loading}
         />
         <TrendStat
-          label="Quota"
+          label="quota"
           value={quotaLimit ? `${Math.round((quotaUsed / quotaLimit) * 100)}%` : fmtBytes(quotaUsed)}
-          hint={quotaLimit ? `${fmtBytes(quotaUsed)} of ${fmtBytes(quotaLimit)}` : "Quota not reported by the account"}
+          hint={quotaLimit ? `${fmtBytes(quotaUsed)} of ${fmtBytes(quotaLimit)}` : "quota not reported by the account"}
           loading={loading}
         />
       </div>
 
       <section className="space-y-2">
-        <h3 className="text-[9px] tracking-[0.22em] text-muted-foreground/40 font-light">SYNTHESIS</h3>
+        <h3 className="text-[9px] tracking-[0.22em] text-muted-foreground/40 font-light">synthesis</h3>
         {findings.map((f) => (
           <FindingCard key={f.id} finding={f} defaultOpen={f.severity === "critical" || f.severity === "elevated"} />
         ))}

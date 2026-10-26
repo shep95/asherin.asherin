@@ -9,6 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plane, Train, Ship, Bus, Car, Loader2, Trash2, RefreshCw, Mail, ShieldAlert } from "lucide-react";
+import OrganOffline from "../OrganOffline";
+import { describeFailure, isLocalOnlyError } from "../offline";
 
 /**
  * TRANSIT — every leg of a journey, not just the car.
@@ -161,7 +163,8 @@ const OPERATORS: Record<Mode, Array<{ id: string; label: string }>> = {
 const TransitTab = () => {
   const [legs, setLegs] = useState<Leg[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const offline = isLocalOnlyError(loadError);
   const [capturing, setCapturing] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [sweeping, setSweeping] = useState<string | null>(null);
@@ -195,7 +198,7 @@ const TransitTab = () => {
       const d = await call({ action: "leg.list" });
       setLegs((d.legs || []) as Leg[]);
     } catch (e) {
-      setLoadError((e as Error).message);
+      setLoadError(e ?? new Error("the transit organ did not answer"));
     } finally {
       setLoading(false);
     }
@@ -210,17 +213,17 @@ const TransitTab = () => {
 
   const capture = async () => {
     if (!form.vehicle_ident.trim() && !(form.origin_label.trim() && form.destination_label.trim())) {
-      toast.error("Give a service identifier, or both ends of the route.");
+      toast.error("give a service identifier, or both ends of the route.");
       return;
     }
     setCapturing(true);
     try {
       await call({ action: "leg.capture", ...form });
-      toast.success("Leg captured.");
+      toast.success("leg captured.");
       setForm((f) => ({ ...f, vehicle_ident: "", booking_ref: "", seat: "" }));
       await load();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(describeFailure(e, "transit organ"));
     } finally {
       setCapturing(false);
     }
@@ -233,11 +236,11 @@ const TransitTab = () => {
       toast.success(
         d.saved
           ? `${d.saved} leg${d.saved === 1 ? "" : "s"} read from ${d.scanned_accounts?.length ?? 0} mailbox(es).`
-          : "No travel itineraries found in the last 72 hours.",
+          : "no travel itineraries found in the last 72 hours.",
       );
       await load();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(describeFailure(e, "transit organ"));
     } finally {
       setScanning(false);
     }
@@ -247,10 +250,10 @@ const TransitTab = () => {
     setSweeping(id);
     try {
       const d = await call({ action: "leg.sweep", leg_id: id });
-      toast.success(`Sweep complete — ${d.deep?.verdict ?? "done"}.`);
+      toast.success(`sweep complete — ${d.deep?.verdict ?? "done"}.`);
       await load();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(describeFailure(e, "transit organ"));
     } finally {
       setSweeping(null);
     }
@@ -261,7 +264,7 @@ const TransitTab = () => {
       await call({ action: "leg.delete", leg_id: id });
       setLegs((l) => l.filter((x) => x.id !== id));
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(describeFailure(e, "transit organ"));
     }
   };
 
@@ -273,14 +276,21 @@ const TransitTab = () => {
         {/* ── capture ─────────────────────────────────────────────── */}
         <section className="rounded-sm border border-border/40 bg-muted/10 p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-              Capture a leg
+            <h3 className="font-mono text-[11px] tracking-[0.22em] text-muted-foreground">
+              capture a leg
             </h3>
-            <Button size="sm" variant="outline" onClick={scanMail} disabled={scanning}>
-              {scanning ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Mail className="mr-1.5 h-3.5 w-3.5" />}
-              Read itineraries from mail
+            <Button size="sm" variant="outline" onClick={scanMail} disabled={scanning || offline}>
+              {scanning ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden /> : <Mail className="mr-1.5 h-3.5 w-3.5" aria-hidden />}
+              read itineraries from mail
             </Button>
           </div>
+
+          {offline && (
+            <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground" role="status">
+              the capture, the mail scan and the sweep all ran on the transit organ. it has no device answer, so these
+              controls are held until one exists.
+            </p>
+          )}
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5">
@@ -367,13 +377,13 @@ const TransitTab = () => {
             </div>
           </div>
 
-          <Button className="mt-3" size="sm" onClick={capture} disabled={capturing}>
-            {capturing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <ShieldAlert className="mr-1.5 h-3.5 w-3.5" />}
-            Capture and fast-pass
+          <Button className="mt-3" size="sm" onClick={capture} disabled={capturing || offline}>
+            {capturing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden /> : <ShieldAlert className="mr-1.5 h-3.5 w-3.5" aria-hidden />}
+            capture and fast-pass
           </Button>
           <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-            A fast pass reads only what the booking says. The sweep is what queries the aircraft registry,
-            live ADS-B, the open transit graph and the ground risk where you arrive.
+            a fast pass reads only what the booking says. the sweep is what queries the aircraft registry,
+            live ads-b, the open transit graph and the ground risk where you arrive.
           </p>
         </section>
 
@@ -389,11 +399,11 @@ const TransitTab = () => {
                   : "border-border/40 text-muted-foreground hover:text-foreground"
               }`}
             >
-              {m === "all" ? "All" : MODE_LABEL[m]}
+              {m === "all" ? "all" : MODE_LABEL[m].toLowerCase()}
             </button>
           ))}
           <Button size="sm" variant="ghost" className="ml-auto" onClick={() => void load()}>
-            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />Refresh
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" aria-hidden />read again
           </Button>
         </div>
 
@@ -403,14 +413,11 @@ const TransitTab = () => {
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-20 w-full" />
           </div>
-        ) : loadError ? (
-          <div className="rounded-sm border border-border/40 p-4 text-sm text-muted-foreground">
-            {loadError}
-            <Button size="sm" variant="outline" className="ml-3" onClick={() => void load()}>Retry</Button>
-          </div>
+        ) : loadError !== null ? (
+          <OrganOffline error={loadError} organ="transit organ" onRetry={() => void load()} />
         ) : visible.length === 0 ? (
           <div className="rounded-sm border border-dashed border-border/40 p-6 text-center text-sm text-muted-foreground">
-            No legs recorded yet. Capture one above, or read your itineraries from connected mail.
+            no legs recorded yet. capture one above, or read your itineraries from connected mail.
           </div>
         ) : (
           <div className="space-y-2">

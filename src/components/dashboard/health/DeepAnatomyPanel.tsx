@@ -1,7 +1,7 @@
 // asherin.health — deep anatomy panel: browses the fine-grained structure catalogue
 // (deepAnatomy.ts), regional maps (maps.ts), development (embryology.ts), microbiome
-// (microbiome.ts) and life-phase change (aging.ts). every click into a structure asks the
-// body to look at it and writes a real question to the assistant — nothing here fabricates
+// (microbiome.ts) and life-phase change (aging.ts). every click into a structure names its
+// territories in the room and writes a real question to shepherd — nothing here fabricates
 // a personal reading.
 import { useMemo, useState } from "react";
 import { Search, Info } from "lucide-react";
@@ -162,7 +162,7 @@ export default function DeepAnatomyPanel({ record, persist, onEvent, onSelectTer
   return (
     <div className="space-y-4">
       <p className="text-[11px] font-light leading-relaxed text-foreground/50">
-        the fine-grained catalogue beneath the base body: sublayers, functional maps, development and the microbiome.
+        the fine-grained catalogue beneath the territory map: sublayers, functional maps, development and the microbiome.
         reference knowledge only — every reading elsewhere in this room stays separate from what is shown here.
       </p>
 
@@ -182,8 +182,8 @@ export default function DeepAnatomyPanel({ record, persist, onEvent, onSelectTer
       </div>
       {referenceSex === "female" && (
         <p className="text-[10px] font-light leading-relaxed text-amber-200/60">
-          the loaded reference geometry is an adult male body. female-specific structures below are described from
-          general anatomy but will show as not represented in the mesh until a female reference body is available.
+          the female reference lists female-specific structures and hides male-specific ones. there is no drawn body in
+          this edition; the switch changes which structures are listed and named, nothing else.
         </p>
       )}
 

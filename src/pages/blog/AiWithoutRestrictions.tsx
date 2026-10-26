@@ -35,7 +35,7 @@ const AiWithoutRestrictions = () => (
       id="ai-without-restrictions"
       items={[
         { name: "Asherin", url: "/" },
-        { name: "Blog", url: "/blog" },
+        { name: "blog", url: "/blog" },
         { name: "AI Without Restrictions", url: "/blog/ai-without-restrictions" },
       ]}
     />
@@ -76,9 +76,10 @@ const AiWithoutRestrictions = () => (
     <h3>3. Policy and capability checks</h3>
     <p>
       Confirm that the selected model supports the requested modality and
-      tools. Providers and Asherin can each apply safeguards, rate limits,
-      and service rules. A refusal or unavailable state should identify the
-      relevant boundary instead of encouraging attempts to bypass it.
+      tools. the provider applies its own safeguards, rate limits and terms;
+      asherin adds no server rules because it has no server. A refusal or
+      unavailable state should identify the relevant boundary instead of
+      encouraging attempts to bypass it.
     </p>
 
     <h2>Three workflow patterns that survive long sessions</h2>
@@ -101,16 +102,18 @@ const AiWithoutRestrictions = () => (
         platform routes a single query through multiple models in stages
         for example, public-source collection followed by analysis and a
         saved report. The operator interacts with the synthesis,
-        not the underlying models. This is what Asherin ships.
+        not the underlying models. this is the shape shepherd's chat takes
+        when a request needs sources.
       </li>
     </ol>
 
-    <h2>Asherin&apos;s default path</h2>
+    <h2>asherin&apos;s default path</h2>
     <p>
-      Asherin supports saved provider keys and managed model access. A saved
-      compatible key is preferred for the calls you choose to make, while
-      current provider and modality coverage appears in the live model
-      picker. Individual tools can be disabled and saved keys can be removed.
+      asherin runs on the provider key you save in guardian vault, called
+      from this browser for the calls you choose to make. there is no managed
+      access, no account and no tier; you pay the provider. current provider
+      and modality coverage appears in the model picker in connect. tools can
+      be disabled and keys removed at any time.
     </p>
 
     <FaqJsonLd
@@ -122,7 +125,7 @@ const AiWithoutRestrictions = () => (
         },
         {
           q: "Is there a free uncensored AI?",
-          a: "Asherin has no free trial. Current managed access, saved-key support, and model availability are shown in the live product and pricing pages.",
+          a: "asherin has no tiers, no trial and no account: it is a local app that runs on the provider key you bring, and the provider bills you for inference. model availability is whatever that provider offers.",
         },
         {
           q: "How do I prompt a model effectively?",
@@ -138,19 +141,19 @@ const AiWithoutRestrictions = () => (
     <RelatedLinks
       links={[
         {
-          to: "/glossary/uncensored-ai",
-          label: "Model policy and capability boundaries",
-          description: "A historical term explained with its current limitations.",
+          to: "/blog/sovereign-ai-platforms",
+          label: "the 2026 sovereign AI landscape",
+          description: "how key custody, portability and provider dependencies differ.",
         },
         {
-          to: "/glossary/sovereign-ai",
-          label: "Sovereign AI, definition",
-          description: "How key custody, portability, and provider dependencies differ.",
+          to: "/blog/personalities-are-not-thinking-patterns",
+          label: "personalities are not thinking patterns",
+          description: "why the prompt discipline above is loaded as procedure, not persona.",
         },
         {
-          to: "/glossary/digital-gnostic",
-          label: "Digital Gnostic, operator demographic",
-          description: "Who this workflow is actually for.",
+          to: "/dashboard/api-keys",
+          label: "connect",
+          description: "where the provider key lives on this device.",
         },
       ]}
     />

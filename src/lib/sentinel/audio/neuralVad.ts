@@ -5,13 +5,14 @@
 // The fast detector in vad.ts is an energy-and-spectrum judge. It is honest
 // about what it is: it opens on anything with speech-shaped energy, which means
 // a television, a fan cycling, a chair scrape with a formant-ish resonance can
-// all open a turn. Sending those to a transcriber produces the worst possible
-// output — a confident sentence invented out of noise — and that sentence then
-// enters the account timeline as if a person said it.
+// all open a turn. Storing those as speech fills the timeline with turns that
+// read as a person speaking when nobody was.
 //
-// So a second, model-based judgement sits between "a turn closed" and "send it
-// for transcription": silero, running locally in wasm, scoring 30 ms frames.
-// Nothing leaves the device to make this decision.
+// So a second, model-based judgement sits between "a turn closed" and "keep
+// it": silero, running locally in wasm, scoring 30 ms frames. Nothing leaves
+// the device to make this decision. The runtime's wasm binary is fetched once
+// from a cdn (ORT_WASM_BASE); that request carries nothing about the operator,
+// and offline the layer reports itself absent rather than failing the watch.
 //
 // Flaws designed around:
 //   • the model is 2.3 mb plus a wasm runtime. Loading it at boot would tax
@@ -24,8 +25,8 @@
 //     when the model finds no speech at all in it; anything partial is kept,
 //     because losing a real sentence is far worse than transcribing a fan.
 //   • silero expects 16 khz. The caller already resamples to 16 khz for the
-//     wav it uploads, so the same buffer is judged that gets transcribed —
-//     judging a different signal than the one sent would be theatre.
+//     wav it stores, so the same buffer is judged that gets kept — judging a
+//     different signal than the one stored would be theatre.
 
 const MODEL_URL = "/sentinel/silero_vad_legacy.onnx";
 
@@ -96,7 +97,7 @@ export function neuralVadReady(): boolean {
 
 /**
  * Judge a candidate turn. `pcm` must be mono 16 khz — the same buffer that will
- * be uploaded — so the verdict describes the audio the transcriber receives.
+ * be stored — so the verdict describes the audio the timeline keeps.
  */
 export async function confirmSpeech(pcm: Float32Array, sampleRate: number): Promise<SpeechVerdict> {
   // Under ~250 ms silero has too few frames to judge; the fast detector's

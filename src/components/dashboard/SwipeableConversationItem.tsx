@@ -147,7 +147,7 @@ const SwipeableConversationItem = ({
             <button
               onClick={(e) => { e.stopPropagation(); setActionsOpen((o) => !o); }}
               className="shrink-0 h-11 w-11 -my-2 -mr-2 flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground"
-              aria-label="Conversation actions"
+              aria-label="conversation actions"
               aria-expanded={actionsOpen}
             >
               <MoreHorizontal className="h-4 w-4" />
@@ -157,16 +157,16 @@ const SwipeableConversationItem = ({
             className={`flex gap-0.5 shrink-0 transition-opacity bg-inherit pl-1 ${
               touchDevice
                 ? actionsOpen ? "opacity-100" : "hidden"
-                : "opacity-0 group-hover:opacity-100"
+                : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
             }`}
           >
-            <button onClick={(e) => { e.stopPropagation(); setActionsOpen(false); onRename(); }} className="p-1 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors" title="Rename">
+            <button onClick={(e) => { e.stopPropagation(); setActionsOpen(false); onRename(); }} aria-label="rename conversation" title="rename" className="p-1 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors">
               <Pencil className="h-3 w-3" />
             </button>
-            <button onClick={(e) => { e.stopPropagation(); setActionsOpen(false); onTogglePin(); }} className={`p-1 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors ${conv.pinned ? "opacity-100 text-foreground" : ""}`} title="Pin">
+            <button onClick={(e) => { e.stopPropagation(); setActionsOpen(false); onTogglePin(); }} aria-label={conv.pinned ? "unpin conversation" : "pin conversation"} title={conv.pinned ? "unpin" : "pin"} className={`p-1 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors ${conv.pinned ? "opacity-100 text-foreground" : ""}`}>
               <Pin className="h-3 w-3" />
             </button>
-            <button onClick={(e) => { e.stopPropagation(); setActionsOpen(false); onDelete(); }} className="p-1 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded text-muted-foreground hover:text-destructive transition-colors" title="Delete permanently">
+            <button onClick={(e) => { e.stopPropagation(); setActionsOpen(false); onDelete(); }} aria-label="delete conversation" title="delete — undo for six seconds" className="p-1 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded text-muted-foreground hover:text-destructive transition-colors">
               <Trash2 className="h-3 w-3" />
             </button>
           </div>

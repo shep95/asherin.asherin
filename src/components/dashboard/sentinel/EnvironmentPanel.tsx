@@ -1,34 +1,36 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Bluetooth, Crosshair, Loader2, MapPin, Radio, ShieldAlert, Signal } from "lucide-react";
+import { AlertTriangle, Bluetooth, Crosshair, Globe, Loader2, MapPin, Navigation, Radio, ShieldAlert, Signal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { BluetoothEnvironment, label as radioLabel, type EnvironmentEvent, type RadioRecord } from "@/lib/sentinel/radio/environment";
-import { detectSupport, scanViaCompanion, scanViaNative, scanViaWeb, type ScanHandle, type ScanSupport } from "@/lib/sentinel/radio/scanSources";
+import { detectSupport, scanViaNative, scanViaWeb, type ScanHandle, type ScanSupport } from "@/lib/sentinel/radio/scanSources";
 import { accuracyBand, movementBetween, type LocationFix, type MovementState } from "@/lib/sentinel/location/geo";
-import { acquireFix, geoErrorText, ipFix, reverseGeocode, watchPosition } from "@/lib/sentinel/location/sources";
+import { acquireFix, ipFix, reverseGeocode, watchPosition } from "@/lib/sentinel/location/sources";
 import { attachFix, buildTrail, type RadioSighting } from "@/lib/sentinel/location/trackers";
 import { logLocation, logRadio, registerDevice } from "@/lib/sentinel/audio/sync";
 import { publishSentinelLocation, publishSentinelRadio } from "@/lib/fabric/bridges/sentinelFabric";
 
 /**
- * asherin.sentinel — the environment room.
+ * asherin.sentinel — the environment tab.
  *
  * Two records that only mean something together: what is broadcasting near you,
- * and where you were while it did. Both are written into the same account
- * timeline as speech, so an operator reads one history rather than three.
+ * and where you were while it did. Both are written into the same timeline on
+ * this device as speech, so an operator reads one history rather than three.
  *
- * The boundaries are stated on the face of the room, not in a footnote:
+ * The boundaries are stated on the face of the tab, not in a footnote:
  *  • every bluetooth field here came from a packet the device broadcast to the
  *    whole room. nothing pairs, connects, queries or handshakes.
  *  • a radio in range is a radio in range — never a person, never attribution.
  *  • distance from signal strength is a band, not a measurement.
- *  • ordinary gps is horizontal. it cannot state a floor, and this room will
+ *  • ordinary gps is horizontal. it cannot state a floor, and this tab will
  *    not pretend otherwise.
+ *  • nothing about where you are leaves this device unless you press the one
+ *    control that says where it goes: "name this place" asks openstreetmap,
+ *    "estimate from ip" asks ipapi.co. neither runs on its own.
  *  • when a receiver drops, the record shows a gap rather than implying quiet.
  */
 
 const ENV_DEVICE_KEY = "asherin-sentinel-environment";
-const SWEEP_MS = 5_000;
 const FLUSH_MS = 30_000;
 const MAX_TRAIL = 400;
 
@@ -36,7 +38,7 @@ type Pending = { atIso: string; summary: string; tag: string; risk: string; sour
 
 export default function EnvironmentPanel() {
   const { toast } = useToast();
-  const [support, setSupport] = useState<ScanSupport | null>(null);
+  const [support] = useState<ScanSupport>(() => detectSupport());
   const [scanning, setScanning] = useState(false);
   const [scanNote, setScanNote] = useState<string>("");
   const [records, setRecords] = useState<RadioRecord[]>([]);
@@ -48,11 +50,14 @@ export default function EnvironmentPanel() {
   const [movement, setMovement] = useState<MovementState>("unknown");
   const [locError, setLocError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
+  const [following, setFollowing] = useState(false);
+  const [naming, setNaming] = useState(false);
   const [trail, setTrail] = useState<LocationFix[]>([]);
   const [locationGaps, setLocationGaps] = useState<{ from: number; to: number | null; reason: string }[]>([]);
 
   const ledgerRef = useRef<BluetoothEnvironment | null>(null);
   const handleRef = useRef<ScanHandle | null>(null);
+  const stopWatchRef = useRef<(() => void) | null>(null);
   const fixRef = useRef<LocationFix | null>(null);
   const placeRef = useRef<string | null>(null);
   const sightingsRef = useRef<Map<string, RadioSighting[]>>(new Map());
@@ -60,7 +65,7 @@ export default function EnvironmentPanel() {
   const pendingFixRef = useRef<LocationFix[]>([]);
   const registeredRef = useRef(false);
 
-  // ── one ledger for the life of the room ────────────────────────────────────
+  // ── one ledger for the life of the tab ─────────────────────────────────────
   if (!ledgerRef.current) {
     ledgerRef.current = new BluetoothEnvironment({
       onEvent: (event) => {
@@ -96,10 +101,6 @@ export default function EnvironmentPanel() {
     });
   }
 
-  useEffect(() => {
-    void detectSupport().then(setSupport);
-  }, []);
-
   // ── the per-second record ──────────────────────────────────────────────────
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -129,7 +130,7 @@ export default function EnvironmentPanel() {
     return () => window.clearInterval(timer);
   }, []);
 
-  // ── batched writes to the account timeline ─────────────────────────────────
+  // ── batched writes to the timeline on this device ─────────────────────────
   const flush = useCallback(async () => {
     const radio = pendingRadioRef.current.splice(0, pendingRadioRef.current.length);
     const fixes = pendingFixRef.current.splice(0, pendingFixRef.current.length);
@@ -159,11 +160,11 @@ export default function EnvironmentPanel() {
         );
       }
     } catch (e) {
-      // Put the work back rather than losing it; a failed write is a network
+      // Put the work back rather than losing it; a failed write is a storage
       // problem, not evidence that nothing happened.
       pendingRadioRef.current.unshift(...radio);
       pendingFixRef.current.unshift(...fixes);
-      setScanNote(`timeline write failed: ${e instanceof Error ? e.message : "unknown error"} — retrying`);
+      setScanNote(`the timeline on this device could not be written: ${e instanceof Error ? e.message : "unknown error"} — retrying`);
     }
   }, [movement]);
 
@@ -175,31 +176,30 @@ export default function EnvironmentPanel() {
     };
   }, [flush]);
 
-  useEffect(() => () => handleRef.current?.stop(), []);
+  // Leaving the tab releases the radio and the location watch: both are
+  // explicit grants the operator made to this tab, not to the app.
+  useEffect(
+    () => () => {
+      handleRef.current?.stop();
+      stopWatchRef.current?.();
+    },
+    [],
+  );
 
   const startScan = useCallback(async () => {
     if (handleRef.current) return;
-    const s = support ?? (await detectSupport());
     try {
-      let handle: ScanHandle;
-      if (s.companion) {
-        handle = scanViaCompanion(
-          (packet) => ledgerRef.current?.observe(packet),
-          (status) => setScanNote(status),
-        );
-      } else if (s.native) {
-        handle = await scanViaNative((packet) => ledgerRef.current?.observe(packet));
-      } else {
-        handle = await scanViaWeb((packet) => ledgerRef.current?.observe(packet));
-      }
+      const handle = support.native
+        ? await scanViaNative((packet) => ledgerRef.current?.observe(packet))
+        : await scanViaWeb((packet) => ledgerRef.current?.observe(packet));
       handleRef.current = handle;
       setScanning(true);
-      setScanNote(`scanning via ${handle.source}`);
+      setScanNote(`scanning via ${handle.source === "native" ? "this device's radio" : "the browser's bluetooth scanner"}`);
     } catch (e) {
       setScanNote(e instanceof Error ? e.message : "the scan could not start");
       toast({ title: "no bluetooth receiver", description: e instanceof Error ? e.message : "scan unavailable" });
     }
-  }, [support, toast]);
+  }, [support.native, toast]);
 
   const stopScan = useCallback(() => {
     handleRef.current?.stop();
@@ -218,21 +218,15 @@ export default function EnvironmentPanel() {
     pendingFixRef.current.push(next);
     publishSentinelLocation(next, placeRef.current);
     setLocError(null);
-    setLocationGaps((gaps) =>
-      gaps.map((g) => (g.to === null ? { ...g, to: next.at } : g)),
-    );
-    void reverseGeocode(next.lat, next.lon).then((name) => {
-      if (!name) return;
-      placeRef.current = name;
-      setPlace(name);
-    });
+    setLocationGaps((gaps) => gaps.map((g) => (g.to === null ? { ...g, to: next.at } : g)));
   }, []);
 
   const openLocationGap = useCallback((reason: string) => {
     setLocationGaps((gaps) => (gaps.some((g) => g.to === null) ? gaps : [{ from: Date.now(), to: null, reason }, ...gaps].slice(0, 40)));
   }, []);
 
-  const startLocation = useCallback(async () => {
+  /** One satellite / network fix from the platform. No fallback runs on its own. */
+  const fixNow = useCallback(async () => {
     setLocating(true);
     const result = await acquireFix();
     if (result.fix) applyFix(result.fix);
@@ -244,52 +238,86 @@ export default function EnvironmentPanel() {
     setLocating(false);
   }, [applyFix, openLocationGap]);
 
-  useEffect(() => {
-    const stop = watchPosition(applyFix, (reason) => {
+  /** City-level estimate from ipapi.co. The request carries this device's ip and nothing else. */
+  const estimateFromIp = useCallback(async () => {
+    setLocating(true);
+    try {
+      applyFix(await ipFix());
+    } catch (e) {
+      setLocError(e instanceof Error ? e.message : "the ip estimate failed");
+    } finally {
+      setLocating(false);
+    }
+  }, [applyFix]);
+
+  const toggleFollow = useCallback(() => {
+    if (stopWatchRef.current) {
+      stopWatchRef.current();
+      stopWatchRef.current = null;
+      setFollowing(false);
+      openLocationGap("following stopped by you");
+      return;
+    }
+    stopWatchRef.current = watchPosition(applyFix, (reason) => {
       setLocError(reason);
       openLocationGap(reason);
-      // A denied or unavailable satellite fix is not the end of the record: an
-      // ip estimate is still true, it is simply true at city scale.
-      void ipFix()
-        .then(applyFix)
-        .catch(() => {});
     });
-    return stop;
+    setFollowing(true);
   }, [applyFix, openLocationGap]);
 
+  /** Sends the current coordinates to openstreetmap's nominatim, once, on request. */
+  const namePlace = useCallback(async () => {
+    const current = fixRef.current;
+    if (!current) return;
+    setNaming(true);
+    const name = await reverseGeocode(current.lat, current.lon);
+    setNaming(false);
+    if (!name) {
+      toast({ title: "no place name", description: "openstreetmap did not answer for this fix." });
+      return;
+    }
+    placeRef.current = name;
+    setPlace(name);
+  }, [toast]);
+
   const selectedRecord = useMemo(() => records.find((r) => r.key === selected) ?? null, [records, selected]);
-  const selectedTrail = useMemo(
-    () => (selectedRecord ? buildTrail(selectedRecord.key, radioLabel(selectedRecord), sightingsRef.current.get(selectedRecord.key) ?? []) : null),
-    [selectedRecord, records],
-  );
+  // Recomputed on every render on purpose: the sightings behind it grow on the
+  // one-second tick, and a memo keyed on the record would show a stale trail.
+  const selectedTrail = selectedRecord ? buildTrail(selectedRecord.key, radioLabel(selectedRecord), sightingsRef.current.get(selectedRecord.key) ?? []) : null;
 
   const present = records.filter((r) => r.presence !== "departed");
   const risky = records.filter((r) => r.leak.riskLevel === "high" || r.leak.riskLevel === "critical");
+  const canScan = support.native || support.web;
 
   return (
     <div className="space-y-4">
       {/* boundary statement */}
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-[11px] leading-relaxed text-white/55">
-        <span className="font-medium text-white/90">what this room reads:</span> every bluetooth field below arrived in a
+        <span className="font-medium text-white/90">what this tab reads:</span> every bluetooth field below arrived in a
         packet the device itself broadcast to the whole room. nothing here pairs, connects, queries or handshakes, and no
         radio is ever attributed to a person. distance is derived from signal strength, so it is a band and not a
         measurement. location carries its own source and accuracy on every entry — a satellite fix and a city-level ip
         estimate are different claims and are never drawn as the same pin. ordinary gps is horizontal: it cannot state a
-        floor. when a receiver drops, the record opens a visible gap instead of showing quiet.
+        floor. nothing about where you are leaves this device unless you press a control that says where it goes. when a
+        receiver drops, the record opens a visible gap instead of showing quiet.
       </div>
 
       {/* controls */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" variant={scanning ? "secondary" : "default"} onClick={() => (scanning ? stopScan() : void startScan())}>
+        <Button size="sm" variant={scanning ? "secondary" : "default"} disabled={!canScan && !scanning} onClick={() => (scanning ? stopScan() : void startScan())}>
           <Bluetooth className="mr-2 h-4 w-4" />
           {scanning ? "stop radio scan" : "scan the room"}
         </Button>
-        <Button size="sm" variant="secondary" onClick={() => void startLocation()} disabled={locating}>
+        <Button size="sm" variant="secondary" onClick={() => void fixNow()} disabled={locating}>
           {locating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Crosshair className="mr-2 h-4 w-4" />}
           fix location now
         </Button>
-        <span className="text-[11px] text-white/45">{scanNote || support?.note || "checking receivers…"}</span>
+        <Button size="sm" variant={following ? "secondary" : "ghost"} className="border border-white/10" onClick={toggleFollow}>
+          <Navigation className="mr-2 h-4 w-4" />
+          {following ? "stop following" : "follow location"}
+        </Button>
       </div>
+      <p className="text-[11px] text-white/45">{scanNote || support.note}</p>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* radios */}
@@ -305,7 +333,8 @@ export default function EnvironmentPanel() {
 
           {!records.length ? (
             <p className="text-[12px] text-white/45">
-              nothing observed yet. {scanning ? "the receiver is on and no device in range has advertised." : "start a scan to begin the record."}
+              nothing observed yet.{" "}
+              {scanning ? "the receiver is on and no device in range has advertised." : canScan ? "start a scan to begin the record." : "this browser has no receiver, so no record can begin here."}
             </p>
           ) : (
             <ul className="max-h-[26rem] space-y-2 overflow-y-auto pr-1">
@@ -356,7 +385,14 @@ export default function EnvironmentPanel() {
                 {fix.source} · ±{fix.accuracyM} m ({accuracyBand(fix.accuracyM)}) · {new Date(fix.at).toLocaleTimeString()}
               </div>
               <div className="text-[11px] text-white/45">{fix.note}</div>
-              {place && <div className="text-[12px] text-white/75">{place}</div>}
+              {place ? (
+                <div className="text-[12px] text-white/75">{place}</div>
+              ) : (
+                <Button size="sm" variant="ghost" className="h-8 border border-white/10 text-[11px]" disabled={naming} onClick={() => void namePlace()}>
+                  {naming ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Globe className="mr-2 h-3.5 w-3.5" />}
+                  name this place — sends these coordinates to openstreetmap
+                </Button>
+              )}
               {fix.altitudeM != null && (
                 <div className="text-[11px] text-white/45">
                   altitude {Math.round(fix.altitudeM)} m ±{fix.altitudeAccuracyM ? Math.round(fix.altitudeAccuracyM) : "?"} m — barometric
@@ -366,7 +402,15 @@ export default function EnvironmentPanel() {
               <TrailMap trail={trail} />
             </div>
           ) : (
-            <p className="text-[12px] text-white/45">no fix yet. {locError ?? "waiting for a location source."}</p>
+            <div className="space-y-2">
+              <p className="text-[12px] text-white/45">no fix yet. {locError ?? "press fix location now, or follow location for a continuing trail."}</p>
+              {locError && (
+                <Button size="sm" variant="ghost" className="h-8 border border-white/10 text-[11px]" disabled={locating} onClick={() => void estimateFromIp()}>
+                  <Globe className="mr-2 h-3.5 w-3.5" />
+                  estimate from ip — asks ipapi.co, city level at best
+                </Button>
+              )}
+            </div>
           )}
 
           {locError && fix && <p className="mt-2 text-[11px] text-amber-300/80">last error: {locError}</p>}
@@ -488,7 +532,7 @@ function TrailMap({ trail }: { trail: LocationFix[] }) {
   const y = (lat: number) => 128 - ((lat - minLat) / spanLat) * 112 - 8;
 
   return (
-    <svg viewBox="0 0 280 136" className="mt-2 h-32 w-full rounded-xl border border-white/10 bg-black/40">
+    <svg viewBox="0 0 280 136" className="mt-2 h-32 w-full rounded-xl border border-white/10 bg-black/40" role="img" aria-label={`${trail.length} location fixes`}>
       {trail.map((t, i) => (
         <circle
           key={`${t.at}-${i}`}

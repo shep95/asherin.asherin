@@ -138,7 +138,7 @@ export async function computeFutureIngresses(
       if (prevSign !== nextSign) {
         // Bisect to ~1 hour
         let loMs = prevDate.getTime();
-        let loSign = prevSign;
+        const loSign = prevSign;
         let hiMs = nextDate.getTime();
         for (let i = 0; i < 18; i++) {
           const midMs = (loMs + hiMs) / 2;

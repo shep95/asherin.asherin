@@ -19,8 +19,11 @@
 //     device row goes to `offline` instead of pretending to still listen.
 //
 // So the engine is built to be resumable and lossless rather than immortal:
-// every closed segment is encrypted to disk before any upload, uploads retry,
-// and the timeline is authoritative in the account, not in this tab.
+// every closed segment is encrypted to disk before it is written to the
+// timeline, that write retries, and the timeline lives in this device's own
+// store (sync.ts), not in this tab's memory. Nothing in this file opens a
+// socket; the one thing that may leave the device for words is the browser's
+// own speech recogniser, which transcripts.ts describes and the room prints.
 
 import { FRAME, frameFeatures, type FrameFeatures } from "./dsp";
 import { Vad, VAD_DEFAULTS, VAD_SENSITIVITY, type VadSegment, type VadSensitivity } from "./vad";
@@ -49,6 +52,7 @@ export interface EngineStatus {
   noiseFloor: number;
   speaking: boolean;
   segmentsCaptured: number;
+  /** buffered turns not yet written into the timeline on this device */
   pendingUploads: number;
   lastSyncAt: number | null;
   deviceKey: string;
@@ -74,8 +78,9 @@ export interface EngineEvents {
   onDrop?: (reason: string) => void;
 }
 
-/** A channel binds this engine to one physical input and one account device
- *  row. Absent, the engine behaves exactly as the single built-in watch did. */
+/** A channel binds this engine to one physical input and one lane row in this
+ *  device's timeline. Absent, the engine behaves exactly as the single built-in
+ *  watch did. */
 export interface EngineOptions {
   deviceKey?: string;
   label?: string;
@@ -231,9 +236,9 @@ export class SentinelEngine {
       await registerDevice(this.status.deviceKey, this.label, devicePlatform());
       this.registered = true;
     } catch (e) {
-      // A registration failure must not silently downgrade to a local-only
-      // watch that the operator believes is syncing.
-      this.emit({ state: "error", message: e instanceof Error ? e.message : "could not register this device" });
+      // The lane row could not be written, which means the timeline itself
+      // cannot be written. Say so instead of capturing into nowhere.
+      this.emit({ state: "error", message: e instanceof Error ? e.message : "the timeline on this device could not be opened." });
       return false;
     }
 
@@ -296,7 +301,7 @@ export class SentinelEngine {
     this.source = this.ctx.createMediaStreamSource(this.stream);
 
     // Layers 2, 3 and 4 — the ear model. Everything downstream, the meters and
-    // the uploaded wav included, reads the shaped signal, so what the operator
+    // the stored wav included, reads the shaped signal, so what the operator
     // watches is what the transcriber is given.
     this.chain = await buildEarChain(this.ctx, this.source, EAR_TUNING);
     this.chain.setGateThresholdDb(GATE_BY_PICKUP[this.sensitivity]);
@@ -501,10 +506,10 @@ export class SentinelEngine {
     // LAYER 5 — the intelligence gate. The energy detector opened this turn;
     // the on-device model now decides whether a person was actually speaking.
     // A television, a fan spinning up, a chair scrape can all pass the energy
-    // test, and a transcriber handed one of those invents a confident sentence
-    // that then enters the timeline as something a person said. The model
-    // judges the exact 16 khz buffer that would be uploaded — not a different
-    // signal — and nothing leaves the device to make the call.
+    // test, and a turn like that would enter the timeline as a speech turn
+    // with no words behind it. The model judges the exact 16 khz buffer that
+    // is kept — not a different signal — and nothing leaves the device to make
+    // the call.
     const verdict = await confirmSpeech(pcm, TARGET_RATE);
     if (verdict.note) this.note(verdict.note);
     if (verdict.modelRan && !this.status.modelJudging) this.emit({ modelJudging: true });
@@ -536,7 +541,8 @@ export class SentinelEngine {
     }
   }
 
-  /** Ship buffered rows. Serialised: one flight at a time, retried on failure. */
+  /** Write buffered rows into the timeline. Serialised: one batch at a time,
+   *  retried on failure, and a row is only cleared once the write returned. */
   async drain(): Promise<void> {
     if (this.syncing) return;
     this.syncing = true;
@@ -564,7 +570,7 @@ export class SentinelEngine {
         for (const n of result.notes ?? []) this.note(n);
       } catch (e) {
         for (const id of ids) await markAttempt(id);
-        this.note(e instanceof Error ? e.message : "sync failed; the segments are still on this device.");
+        this.note(e instanceof Error ? e.message : "the timeline could not be written; the turns are still in this device's buffer.");
       }
       await purge();
     } finally {

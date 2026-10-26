@@ -47,17 +47,50 @@ const categoryNav: { id: ZerlalScreen; label: string; icon: React.ElementType }[
   { id: "workforce", label: "Workforce", icon: GraduationCap },
 ];
 
+const footNav: { id: ZerlalScreen; label: string; icon: React.ElementType }[] = [
+  { id: "settings", label: "Settings", icon: Settings },
+  { id: "team", label: "Team", icon: Users },
+];
+
 const ZerlalNav = ({ activeScreen, onNavigate, criticalCount }: ZerlalNavProps) => {
   return (
-    <div className="w-52 shrink-0 border-r border-border/[0.06] bg-background/60 backdrop-blur-md flex flex-col overflow-y-auto">
+    <>
+    {/* phone: one compact picker above the screen, so the screen keeps the width */}
+    <div className="md:hidden shrink-0 border-b border-border/[0.06] px-3 py-2">
+      <label className="flex items-center gap-2">
+        <Shield className="h-3.5 w-3.5 shrink-0 text-foreground/60" aria-hidden />
+        <span className="shrink-0 text-[11px] font-light tracking-[0.12em] text-foreground/85 lowercase">asherin.cyber</span>
+        <select
+          aria-label="asherin.cyber section"
+          value={activeScreen}
+          onChange={(e) => onNavigate(e.target.value as ZerlalScreen)}
+          className="min-w-0 flex-1 rounded-lg border border-border/20 bg-background/80 px-2.5 py-2 text-xs font-light lowercase text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <optgroup label="asherin.cyber">
+            {mainNav.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.label.toLowerCase()}{i.id === "finding" && criticalCount > 0 ? ` · ${criticalCount} critical` : ""}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="intelligence modules">
+            {categoryNav.map((i) => <option key={i.id} value={i.id}>{i.label.toLowerCase()}</option>)}
+          </optgroup>
+          <optgroup label="room">
+            {footNav.map((i) => <option key={i.id} value={i.id}>{i.label.toLowerCase()}</option>)}
+          </optgroup>
+        </select>
+      </label>
+    </div>
+    <nav aria-label="asherin.cyber sections" className="hidden md:flex w-52 shrink-0 border-r border-border/[0.06] bg-background/60 backdrop-blur-md flex-col overflow-y-auto">
       <div className="px-4 py-4 border-b border-border/[0.06]">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-foreground/[0.04] border border-border/[0.08] flex items-center justify-center">
             <Shield className="h-3.5 w-3.5 text-foreground/60" />
           </div>
           <div>
-            <span className="text-[11px] font-light tracking-[0.15em] text-foreground/90 uppercase">Zerlal</span>
-            <p className="text-[7px] text-muted-foreground/30 tracking-[0.2em] uppercase">Cyber Intelligence Engine</p>
+            <span className="text-[11px] font-light tracking-[0.15em] text-foreground/90 lowercase">asherin.cyber</span>
+            <p className="text-[9px] text-muted-foreground/55 tracking-[0.12em] lowercase">domain + infrastructure context</p>
           </div>
         </div>
       </div>
@@ -67,14 +100,15 @@ const ZerlalNav = ({ activeScreen, onNavigate, criticalCount }: ZerlalNavProps) 
           <button
             key={item.id}
             onClick={() => onNavigate(item.id)}
+            aria-current={activeScreen === item.id ? "page" : undefined}
             className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] tracking-wide transition-all ${
               activeScreen === item.id
                 ? "bg-foreground/[0.06] text-foreground/90"
-                : "text-muted-foreground/50 hover:text-foreground/70 hover:bg-foreground/[0.02]"
+                : "text-muted-foreground/65 hover:text-foreground/85 hover:bg-foreground/[0.02]"
             }`}
           >
             <item.icon className="h-3 w-3" />
-            <span>{item.label}</span>
+            <span className="lowercase">{item.label}</span>
             {item.id === "finding" && criticalCount > 0 && (
               <span className="ml-auto text-[8px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full font-medium">
                 {criticalCount}
@@ -84,51 +118,48 @@ const ZerlalNav = ({ activeScreen, onNavigate, criticalCount }: ZerlalNavProps) 
         ))}
 
         <div className="pt-2 pb-1 px-2.5">
-          <span className="text-[8px] text-muted-foreground/25 uppercase tracking-[0.2em]">Intelligence Modules</span>
+          <span className="text-[9px] text-muted-foreground/45 lowercase tracking-[0.2em]">intelligence modules</span>
         </div>
 
         {categoryNav.map((item) => (
           <button
             key={item.id}
             onClick={() => onNavigate(item.id)}
+            aria-current={activeScreen === item.id ? "page" : undefined}
             className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] tracking-wide transition-all ${
               activeScreen === item.id
                 ? "bg-foreground/[0.06] text-foreground/90"
-                : "text-muted-foreground/40 hover:text-foreground/60 hover:bg-foreground/[0.02]"
+                : "text-muted-foreground/60 hover:text-foreground/80 hover:bg-foreground/[0.02]"
             }`}
           >
             <item.icon className="h-3 w-3" />
-            <span>{item.label}</span>
+            <span className="lowercase">{item.label}</span>
           </button>
         ))}
 
         <div className="pt-2">
-          {[
-            { id: "settings" as ZerlalScreen, label: "Settings", icon: Settings },
-            { id: "team" as ZerlalScreen, label: "Team", icon: Users },
-          ].map((item) => (
+          {footNav.map((item) => (
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
               className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] tracking-wide transition-all ${
                 activeScreen === item.id
                   ? "bg-foreground/[0.06] text-foreground/90"
-                  : "text-muted-foreground/40 hover:text-foreground/60 hover:bg-foreground/[0.02]"
+                  : "text-muted-foreground/60 hover:text-foreground/80 hover:bg-foreground/[0.02]"
               }`}
             >
               <item.icon className="h-3 w-3" />
-              <span>{item.label}</span>
+              <span className="lowercase">{item.label}</span>
             </button>
           ))}
         </div>
       </div>
 
       <div className="px-3 py-2 border-t border-border/[0.06]">
-        <div className="text-[8px] text-muted-foreground/20 tracking-wider uppercase text-center">
-          Powered by AUREON
-        </div>
+        <div className="text-[9px] text-muted-foreground/45 tracking-wider lowercase text-center">local edition · on this device</div>
       </div>
-    </div>
+    </nav>
+    </>
   );
 };
 

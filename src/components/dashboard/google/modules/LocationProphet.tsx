@@ -15,6 +15,7 @@ import { setPendingVenues } from "@/lib/cloudIntel/mapBridge";
 import FindingCard from "../intel/FindingCard";
 import { TrendStat, BaselineBar } from "../intel/TrendStat";
 import Heatmap, { type HeatCell } from "../intel/Heatmap";
+import { CONNECT_UNAVAILABLE, describeFailure } from "../offline";
 
 // PROPHET — presence and movement inference.
 // A list of addresses is not a prophecy. This module normalises venues, measures
@@ -42,9 +43,8 @@ const LocationProphet = () => {
         maxResults: 500,
       });
       setEvents(data.events || []);
-    } catch (err: any) {
-      console.error("[Prophet] presence sweep failed:", err);
-      setError(err?.message || "Presence sweep failed.");
+    } catch (err: unknown) {
+      setError(describeFailure(err, "calendar organ"));
     } finally {
       setLoading(false);
     }
@@ -70,10 +70,10 @@ const LocationProphet = () => {
   const findings = useMemo<Finding[]>(() => {
     if (!isConnected) {
       return [silenceFinding({
-        module: "Prophet", id: "prophet-unlinked", subject: "Calendar presence",
-        expected: "A linked calendar typically yields 20–300 located events across 150 days",
-        cause: ["No account is linked, so no calendar geometry exists to model."],
-        action: "Link an account under Account Mesh to begin presence modelling.", connected: false,
+        module: "waypoint", id: "prophet-unlinked", subject: "calendar presence",
+        expected: "a linked calendar typically yields 20–300 located events across 150 days",
+        cause: ["no google account is connected, so no calendar geometry exists to model."],
+        action: "no connect path exists on this device yet — see the station overview for what it would take.", connected: false,
       })];
     }
     if (!venues.length) {
@@ -236,37 +236,39 @@ const LocationProphet = () => {
             <Compass className="h-6 w-6 text-foreground/70" />
           </div>
           <div className="flex-1 space-y-2">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-extralight tracking-wide text-foreground">Prophet</h2>
-                <p className="text-[9px] tracking-[0.22em] text-muted-foreground/40 font-light">PRESENCE &amp; MOVEMENT INFERENCE</p>
+                <h2 className="text-lg font-extralight tracking-wide text-foreground">movement forecast</h2>
+                <p className="text-[9px] tracking-[0.22em] text-muted-foreground/40 font-light">presence &amp; movement from calendar locations</p>
               </div>
               {isConnected && (
                 <button
-                  onClick={loadData}
+                  type="button"
+                  onClick={() => void loadData()}
                   disabled={loading}
                   className="flex items-center gap-1 rounded-lg bg-foreground/10 px-3 py-1.5 text-[10px] font-light text-foreground hover:bg-foreground/20 transition-all disabled:opacity-50"
                 >
-                  <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-                  Sweep
+                  <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden />
+                  sweep
                 </button>
               )}
               {isConnected && venues.length > 0 && (
                 <button
+                  type="button"
                   onClick={() => {
                     setPendingVenues(venues);
-                    navigate("/dashboard/asherin-eye");
+                    navigate("/dashboard/asherin-adam");
                   }}
                   className="flex items-center gap-1 rounded-lg bg-foreground/10 px-3 py-1.5 text-[10px] font-light text-foreground hover:bg-foreground/20 transition-all"
                 >
-                  <MapPin className="h-3 w-3" /> Plot on map
+                  <MapPin className="h-3 w-3" aria-hidden /> plot on map
                 </button>
               )}
             </div>
             <p className="text-sm font-extralight leading-relaxed text-muted-foreground">
               {isConnected
-                ? `${venues.length} venues resolved from ${events.length} events across ${WINDOW_BACK_DAYS} days back and ${WINDOW_FORWARD_DAYS} forward. Model confidence ${profile.confidence}%.`
-                : "Link an account to model dwell time, revisit cadence, and forward presence."}
+                ? `${venues.length} venues resolved from ${events.length} events across ${WINDOW_BACK_DAYS} days back and ${WINDOW_FORWARD_DAYS} forward. model confidence ${profile.confidence}%.`
+                : CONNECT_UNAVAILABLE}
             </p>
           </div>
         </div>
@@ -275,32 +277,32 @@ const LocationProphet = () => {
       {error && (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 flex items-start gap-2">
           <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />
-          <p className="text-[11px] font-extralight text-muted-foreground">{error} — showing the last successful sweep.</p>
+          <p className="text-[11px] font-extralight text-muted-foreground">{error} {venues.length ? "— the last successful sweep is still shown." : ""}</p>
         </div>
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <TrendStat
-          label="Physical venues"
+          label="physical venues"
           value={profile.physicalVenues.length}
           population={venues.map((v) => v.visits.length)}
           hint={`${profile.mobilityIndex} distinct venues per week`}
           loading={loading}
         />
         <TrendStat
-          label="Anchor share"
+          label="anchor share"
           value={`${Math.round(profile.concentration * 100)}%`}
           hint={venues[0] ? `${venues[0].label.slice(0, 28)}` : "no anchor established"}
           loading={loading}
         />
         <TrendStat
-          label="Proven patterns"
+          label="proven patterns"
           value={venues.filter((v) => v.patternConfidence >= 50).length}
-          hint="Venues that beat the coincidence test"
+          hint="venues that beat the coincidence test"
           loading={loading}
         />
         <TrendStat
-          label="Transition slack"
+          label="transition slack"
           value={profile.medianTransitionHours != null ? `${Math.round(profile.medianTransitionHours * 60)}m` : "—"}
           hint={`${profile.tightTransitions.length} collisions under 30 min`}
           loading={loading}
@@ -308,7 +310,7 @@ const LocationProphet = () => {
       </div>
 
       <section className="space-y-2">
-        <h3 className="text-[9px] tracking-[0.22em] text-muted-foreground/40 font-light">SYNTHESIS</h3>
+        <h3 className="text-[9px] tracking-[0.22em] text-muted-foreground/40 font-light">synthesis</h3>
         {findings.map((f) => (
           <FindingCard key={f.id} finding={f} defaultOpen={f.severity === "critical" || f.severity === "elevated"} />
         ))}
@@ -339,8 +341,10 @@ const LocationProphet = () => {
 
       <Heatmap
         cells={heatCells}
-        title="Presence Rhythm — when you are scheduled to be somewhere"
-        emptyNote="No located event carries a usable timestamp, so no weekly rhythm can be drawn. Add times and addresses to recurring commitments to populate this grid."
+        title="presence rhythm — when you are scheduled to be somewhere"
+        emptyNote={isConnected
+          ? "no located event carries a usable timestamp, so no weekly rhythm can be drawn. add times and addresses to recurring commitments to populate this grid."
+          : "no calendar is readable on this device, so no weekly rhythm can be drawn."}
       />
 
       {venues.length > 0 && (

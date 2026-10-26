@@ -1,58 +1,74 @@
-import { useState, useRef, useCallback } from "react";
+// asherin.pages — deck kind.
+//
+// raw notes in, a 16:9 deck out. shepherd proposes the slide split; the
+// operator edits every slide by hand; the pdf is a screenshot of each slide at
+// 1920×1080, made on this device with html2canvas + jspdf. nothing is uploaded.
+
+import { useState, useRef, useCallback, useEffect } from "react";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { Presentation, Upload, Download, Sparkles, Image, Loader2, Trash2, Plus, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
 import { streamChat } from "@/lib/ai";
 import { ALL_WALLPAPERS, getWallpaperSrc } from "@/lib/wallpapers";
+import { useIsV2 } from "@/lib/dashboardUiContext";
+import { DECK_LIMITS, LAYOUTS, parseSlides, type Slide } from "@/lib/pages/deck";
 
 const WALLPAPER_KEYS = ["default", "raven", "eclipse", "glitch"] as const;
-const WALLPAPERS = WALLPAPER_KEYS.map((k) => {
-  const wp = ALL_WALLPAPERS.find((w) => w.key === k)!;
-  return { key: wp.key, label: wp.label, src: wp.src };
+// a missing key must never crash the room at module load; it is simply not offered.
+const WALLPAPERS = WALLPAPER_KEYS.flatMap((k) => {
+  const wp = ALL_WALLPAPERS.find((w) => w.key === k);
+  return wp ? [{ key: wp.key, label: wp.label.toLowerCase(), src: wp.src }] : [];
 });
 
-
-interface Slide {
-  id: string;
-  title: string;
-  body: string;
-  layout: "title" | "content" | "two-column" | "bullets" | "quote";
-}
-
-const LAYOUTS: { value: Slide["layout"]; label: string }[] = [
-  { value: "title", label: "Title Slide" },
-  { value: "content", label: "Content" },
-  { value: "two-column", label: "Two Column" },
-  { value: "bullets", label: "Bullet Points" },
-  { value: "quote", label: "Quote" },
-];
-
 const SlideshowGeneratorView = () => {
+  const isV2 = useIsV2();
   const [rawData, setRawData] = useState("");
   const [slides, setSlides] = useState<Slide[]>([]);
   const [selectedWallpaper, setSelectedWallpaper] = useState("default");
   const [generating, setGenerating] = useState(false);
   const [aiStructuring, setAiStructuring] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [activeSlide, setActiveSlide] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const slideRef = useRef<HTMLDivElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const wallpaperSrc = WALLPAPERS.find(w => w.key === selectedWallpaper)?.src || getWallpaperSrc("default");
 
+  // the browser owns fullscreen: escape leaves it without telling our state,
+  // so the state follows the document instead of the button.
+  useEffect(() => {
+    const sync = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+  useEffect(() => () => abortRef.current?.abort(), []);
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => setRawData(ev.target?.result as string);
-    reader.readAsText(file);
     e.target.value = "";
+    if (!file) return;
+    if (file.size > DECK_LIMITS.fileBytes) {
+      setNotice(`${file.name} is ${(file.size / 1024 / 1024).toFixed(1)} mb — notes over 2 mb are not read. paste the part that matters.`);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setRawData(String(ev.target?.result || ""));
+      setNotice(null);
+    };
+    reader.onerror = () => setNotice(`${file.name} could not be read as text.`);
+    reader.readAsText(file);
   };
 
   const structureWithAI = useCallback(async () => {
-    if (!rawData.trim()) return;
+    if (!rawData.trim() || aiStructuring) return;
     setAiStructuring(true);
+    setNotice(rawData.length > DECK_LIMITS.promptChars ? `only the first ${DECK_LIMITS.promptChars.toLocaleString()} characters of the notes are sent to shepherd.` : null);
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     let result = "";
     try {
       await streamChat({
@@ -80,33 +96,39 @@ TEXT FITTING RULES (critical for 16:9 @ 1920×1080):
 Return ONLY a valid JSON array. Each slide: { title: string, body: string (use \\n for line breaks), layout: "title" | "content" | "two-column" | "bullets" | "quote" }. Create 5-12 slides. First slide layout "title". Use "bullets" for lists (prefix "- "). Use "quote" for key insights.
 
 Raw data:
-${rawData.slice(0, 8000)}
+${rawData.slice(0, DECK_LIMITS.promptChars)}
 
 Return ONLY the JSON array, no markdown wrapping.`
         }],
         mode: "chat",
+        signal: ctrl.signal,
         onDelta: (chunk) => { result += chunk; },
         onReplace: (text) => { result = text; },
-        onDone: () => {
-          try {
-            const jsonMatch = result.match(/\[[\s\S]*\]/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]) as Slide[];
-              setSlides(parsed.map((s, i) => ({ ...s, id: `sl-${i}-${Date.now()}` })));
-              setActiveSlide(0);
-            }
-          } catch {
-            setSlides([{ id: `sl-0-${Date.now()}`, title: "Slide 1", body: result, layout: "content" }]);
-          }
-          setAiStructuring(false);
-        },
+        onDone: () => {},
       });
-    } catch {
-      setAiStructuring(false);
+      const parsed = parseSlides(result);
+      if (parsed.length) {
+        setSlides(parsed);
+        setActiveSlide(0);
+        setNotice(`${parsed.length} slides proposed — edit any of them below.`);
+      } else {
+        setNotice("shepherd did not answer with slides this time. send it again, or add slides by hand.");
+      }
+    } catch (e) {
+      if (!ctrl.signal.aborted) {
+        const msg = e instanceof Error ? e.message : "no answer";
+        setNotice(`shepherd could not run: ${msg.charAt(0).toLowerCase()}${msg.slice(1)}`);
+      }
     }
-  }, [rawData]);
+    if (abortRef.current === ctrl) abortRef.current = null;
+    setAiStructuring(false);
+  }, [rawData, aiStructuring]);
 
   const addSlide = (layout: Slide["layout"]) => {
+    if (slides.length >= DECK_LIMITS.maxSlides) {
+      setNotice(`a deck here holds at most ${DECK_LIMITS.maxSlides} slides.`);
+      return;
+    }
     const newSlide = { id: `sl-${Date.now()}`, title: "", body: "", layout };
     setSlides(prev => [...prev, newSlide]);
     setActiveSlide(slides.length);
@@ -125,12 +147,15 @@ Return ONLY the JSON array, no markdown wrapping.`
   };
 
   const exportSlideshow = useCallback(async () => {
-    if (slides.length === 0) return;
+    if (slides.length === 0 || generating) return;
     setGenerating(true);
+    setNotice(null);
+    const remembered = activeSlide;
     try {
       const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [1920, 1080] });
       for (let i = 0; i < slides.length; i++) {
         setActiveSlide(i);
+        setNotice(`rendering slide ${i + 1} of ${slides.length}…`);
         await new Promise(r => setTimeout(r, 150));
         if (!slideRef.current) continue;
         const canvas = await html2canvas(slideRef.current, { scale: 2, useCORS: true, backgroundColor: null });
@@ -138,22 +163,22 @@ Return ONLY the JSON array, no markdown wrapping.`
         if (i > 0) pdf.addPage([1920, 1080], "landscape");
         pdf.addImage(imgData, "PNG", 0, 0, 1920, 1080);
       }
-      pdf.save("asherin-slides.pdf");
+      pdf.save("asherin-deck.pdf");
+      setNotice(`asherin-deck.pdf saved — ${slides.length} slides.`);
     } catch (e) {
-      console.error("Slideshow export error:", e);
+      setNotice(`the deck could not be rendered: ${e instanceof Error ? e.message : "unknown error"}`);
     }
+    setActiveSlide(remembered);
     setGenerating(false);
-  }, [slides]);
+  }, [slides, generating, activeSlide]);
 
   const currentSlide = slides[activeSlide];
 
   const toggleFullscreen = () => {
-    if (!isFullscreen) {
-      fullscreenRef.current?.requestFullscreen?.();
-      setIsFullscreen(true);
+    if (!document.fullscreenElement) {
+      fullscreenRef.current?.requestFullscreen?.().catch(() => setNotice("this browser refused fullscreen."));
     } else {
-      document.exitFullscreen?.();
-      setIsFullscreen(false);
+      document.exitFullscreen?.().catch(() => undefined);
     }
   };
 
@@ -229,41 +254,43 @@ Return ONLY the JSON array, no markdown wrapping.`
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="flex-shrink-0 border-b border-border/20 bg-card/20 backdrop-blur-sm px-4 sm:px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Presentation className="h-5 w-5 text-accent" />
-            <div>
-              <h1 className="text-lg font-extralight text-foreground">asherin.slides</h1>
-              <p className="text-[10px] font-extralight text-muted-foreground/60 uppercase hidden sm:block">presentation builder</p>
+      {/* header — in v.2 the shell already names the room; keep only the actions */}
+      <div className="flex-shrink-0 border-b border-border/20 bg-card/20 backdrop-blur-sm px-4 sm:px-6 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            {!isV2 && <Presentation className="h-5 w-5 text-accent" />}
+            <div className="min-w-0">
+              {!isV2 && <h1 className="text-lg font-extralight text-foreground">deck</h1>}
+              <p className="truncate text-[10px] font-extralight text-muted-foreground/60">
+                {slides.length ? `${slides.length} slides · 16:9 · rendered on this device` : "slides you present. you keep the pdf."}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {slides.length > 0 && (
-              <button onClick={toggleFullscreen}
+              <button onClick={toggleFullscreen} type="button" aria-pressed={isFullscreen}
                 className="flex items-center gap-2 rounded-lg border border-border/20 px-3 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                <Maximize2 className="h-3.5 w-3.5" /> Present
+                <Maximize2 className="h-3.5 w-3.5" /> {isFullscreen ? "leave" : "present"}
               </button>
             )}
-            <button onClick={exportSlideshow} disabled={slides.length === 0 || generating}
+            <button onClick={exportSlideshow} type="button" disabled={slides.length === 0 || generating}
+              title={slides.length === 0 ? "add a slide first" : "render every slide to one pdf"}
               className="flex items-center gap-2 rounded-lg bg-accent/20 px-4 py-2 text-xs text-accent hover:bg-accent/30 transition-colors disabled:opacity-40">
               {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-              Download PDF
+              {generating ? "rendering…" : "compile pdf"}
             </button>
           </div>
         </div>
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
-        {/* Left: Input Panel */}
-        <div className="w-full lg:w-[380px] xl:w-[420px] border-r border-border/10 flex flex-col overflow-y-auto p-4 space-y-4">
-          {/* Wallpaper Selector */}
+        {/* left: notes */}
+        <div className="w-full lg:w-[380px] xl:w-[420px] border-b lg:border-b-0 lg:border-r border-border/10 flex flex-col overflow-y-auto p-4 space-y-4 max-h-[46dvh] lg:max-h-none">
           <div>
-            <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 uppercase mb-2">Background Theme</p>
+            <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 mb-2">background</p>
             <div className="flex gap-2">
               {WALLPAPERS.map(wp => (
-                <button key={wp.key} onClick={() => setSelectedWallpaper(wp.key)}
+                <button key={wp.key} type="button" onClick={() => setSelectedWallpaper(wp.key)} aria-pressed={selectedWallpaper === wp.key}
                   className={`relative rounded-lg overflow-hidden border-2 transition-all w-16 h-10 ${selectedWallpaper === wp.key ? "border-accent/50 ring-1 ring-accent/20" : "border-border/20 hover:border-border/40"}`}>
                   <img src={wp.src} alt={wp.label} className="w-full h-full object-cover" />
                   <span className="absolute inset-0 flex items-end justify-center pb-0.5 bg-gradient-to-t from-black/60 to-transparent">
@@ -274,81 +301,81 @@ Return ONLY the JSON array, no markdown wrapping.`
             </div>
           </div>
 
-          {/* Raw Data Input */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 uppercase">Raw Data</p>
+              <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60">notes</p>
               <div className="flex gap-2">
-                <button onClick={() => fileInputRef.current?.click()}
+                <button onClick={() => fileInputRef.current?.click()} type="button"
                   className="flex items-center gap-1.5 rounded-lg border border-border/20 px-3 py-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors">
-                  <Upload className="h-3 w-3" /> Upload
+                  <Upload className="h-3 w-3" /> open a text file
                 </button>
-                <button onClick={structureWithAI} disabled={!rawData.trim() || aiStructuring}
+                <button onClick={structureWithAI} type="button" disabled={!rawData.trim() || aiStructuring}
+                  title={!rawData.trim() ? "paste some notes first" : "ask shepherd to split the notes into slides"}
                   className="flex items-center gap-1.5 rounded-lg bg-accent/15 px-3 py-1.5 text-[10px] text-accent hover:bg-accent/25 transition-colors disabled:opacity-40">
                   {aiStructuring ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                  Generate Slides
+                  {aiStructuring ? "splitting…" : "propose slides"}
                 </button>
               </div>
             </div>
             <input ref={fileInputRef} type="file" className="hidden" accept=".txt,.md,.csv,.json,.xml" onChange={handleFileUpload} />
             <textarea value={rawData} onChange={e => setRawData(e.target.value)}
-              placeholder="Paste or upload data… AI will structure it into presentation slides."
+              aria-label="notes for the deck"
+              placeholder="paste notes. shepherd proposes the slides; you edit them."
               className="w-full h-32 bg-card/30 border border-border/20 rounded-xl p-3 text-xs font-light text-foreground placeholder:text-muted-foreground/30 outline-none focus:border-accent/30 resize-none" />
+            {notice && (
+              <p role="status" aria-live="polite" className="mt-2 text-[11px] font-light text-muted-foreground/80">{notice}</p>
+            )}
           </div>
 
-          {/* Add Slide */}
           <div>
-            <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 uppercase mb-2">Add Slide</p>
+            <p className="text-[10px] font-light tracking-[0.15em] text-muted-foreground/60 mb-2">add a slide</p>
             <div className="flex flex-wrap gap-1">
               {LAYOUTS.map(l => (
-                <button key={l.value} onClick={() => addSlide(l.value)}
-                  className="flex items-center gap-1 rounded-lg border border-border/20 px-2.5 py-1 text-[9px] text-muted-foreground hover:text-foreground transition-colors">
+                <button key={l.value} type="button" onClick={() => addSlide(l.value)}
+                  className="flex items-center gap-1 rounded-lg border border-border/20 px-2.5 py-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors">
                   <Plus className="h-2.5 w-2.5" /> {l.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Slide List */}
-          <div className="space-y-2 flex-1">
+          {/* slide list — a row is a button; the trash is a sibling, never a button inside a button */}
+          <div className="space-y-2 flex-1" role="list" aria-label="slides">
             {slides.map((slide, idx) => (
-              <button key={slide.id} onClick={() => setActiveSlide(idx)}
-                className={`w-full text-left rounded-xl border p-3 transition-all ${idx === activeSlide ? "border-accent/40 bg-accent/5" : "border-border/20 bg-card/20 hover:border-border/40"}`}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[9px] font-light tracking-[0.1em] text-accent/60 uppercase">Slide {idx + 1} · {slide.layout}</span>
-                  <button onClick={e => { e.stopPropagation(); removeSlide(slide.id); }} className="text-muted-foreground/30 hover:text-destructive transition-colors">
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                </div>
-                <p className="text-xs font-light text-foreground truncate">{slide.title || "Untitled"}</p>
-              </button>
+              <div key={slide.id} role="listitem"
+                className={`flex w-full items-start gap-2 rounded-xl border p-3 transition-all ${idx === activeSlide ? "border-accent/40 bg-accent/5" : "border-border/20 bg-card/20 hover:border-border/40"}`}>
+                <button type="button" onClick={() => setActiveSlide(idx)} aria-current={idx === activeSlide ? "true" : undefined} className="min-w-0 flex-1 text-left">
+                  <span className="block text-[9px] font-light tracking-[0.1em] text-accent/60 mb-1">slide {idx + 1} · {LAYOUTS.find((l) => l.value === slide.layout)?.label ?? slide.layout}</span>
+                  <span className="block text-xs font-light text-foreground truncate">{slide.title || "untitled"}</span>
+                </button>
+                <button type="button" onClick={() => removeSlide(slide.id)} aria-label={`remove slide ${idx + 1}`}
+                  className="min-h-8 min-w-8 inline-flex items-center justify-center rounded-md text-muted-foreground/50 hover:text-destructive transition-colors">
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
             ))}
             {slides.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground/30 text-xs font-light">
-                Paste data and click "Generate Slides" or add slides manually
+              <div className="text-center py-8 text-muted-foreground/40 text-xs font-light">
+                no slides yet. paste notes and tap “propose slides”, or add one by hand.
               </div>
             )}
           </div>
         </div>
 
-        {/* Right: Slide Preview + Editor */}
-        <div className="flex-1 flex flex-col overflow-hidden p-4 gap-4">
-          {/* Slide Canvas */}
+        {/* right: preview + editor */}
+        <div className="flex-1 min-h-0 flex flex-col overflow-y-auto p-4 gap-4">
           <div className="flex-1 min-h-0 flex items-center justify-center" ref={fullscreenRef}>
             <div className="relative w-full" style={{ maxWidth: 960, aspectRatio: "16/9" }}>
               <div ref={slideRef}
                 className="absolute inset-0 rounded-xl overflow-hidden"
                 style={{ aspectRatio: "16/9" }}>
-                {/* Wallpaper - VISIBLE, not dimmed */}
                 <img src={wallpaperSrc} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                {/* Light overlay for text readability */}
                 <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.35)" }} />
-                {/* Slide content */}
                 <div className="relative z-10 w-full h-full">
                   {currentSlide ? renderSlideContent(currentSlide) : (
-                    <div className="flex flex-col items-center justify-center h-full text-white/20">
-                      <Image className="h-12 w-12 mb-3" />
-                      <p className="text-sm font-light">Slide preview</p>
+                    <div className="flex flex-col items-center justify-center h-full text-white/30">
+                      <Image className="h-12 w-12 mb-3" aria-hidden="true" />
+                      <p className="text-sm font-light">the slide shows here</p>
                     </div>
                   )}
                 </div>
@@ -356,40 +383,38 @@ Return ONLY the JSON array, no markdown wrapping.`
             </div>
           </div>
 
-          {/* Navigation */}
           {slides.length > 0 && (
             <div className="flex items-center justify-center gap-4">
-              <button onClick={() => setActiveSlide(Math.max(0, activeSlide - 1))} disabled={activeSlide === 0}
+              <button type="button" aria-label="previous slide" onClick={() => setActiveSlide(Math.max(0, activeSlide - 1))} disabled={activeSlide === 0}
                 className="rounded-lg border border-border/20 p-2 text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors">
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <span className="text-xs font-light text-muted-foreground tracking-wide">
                 {activeSlide + 1} / {slides.length}
               </span>
-              <button onClick={() => setActiveSlide(Math.min(slides.length - 1, activeSlide + 1))} disabled={activeSlide === slides.length - 1}
+              <button type="button" aria-label="next slide" onClick={() => setActiveSlide(Math.min(slides.length - 1, activeSlide + 1))} disabled={activeSlide === slides.length - 1}
                 className="rounded-lg border border-border/20 p-2 text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors">
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           )}
 
-          {/* Inline Editor for active slide */}
           {currentSlide && (
             <div className="rounded-xl border border-border/20 bg-card/20 p-4 space-y-3">
               <div className="flex items-center gap-3">
-                <select value={currentSlide.layout}
+                <select value={currentSlide.layout} aria-label="slide layout"
                   onChange={e => updateSlide(currentSlide.id, "layout", e.target.value)}
                   className="bg-card/30 border border-border/20 rounded-lg px-2 py-1 text-[10px] font-light text-foreground outline-none">
                   {LAYOUTS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
                 </select>
-                <input value={currentSlide.title}
+                <input value={currentSlide.title} aria-label="slide title"
                   onChange={e => updateSlide(currentSlide.id, "title", e.target.value)}
-                  placeholder="Slide title…"
+                  placeholder="slide title"
                   className="flex-1 bg-transparent text-sm font-light text-foreground outline-none placeholder:text-muted-foreground/30" />
               </div>
-              <textarea value={currentSlide.body}
+              <textarea value={currentSlide.body} aria-label="slide body"
                 onChange={e => updateSlide(currentSlide.id, "body", e.target.value)}
-                placeholder="Slide body content…"
+                placeholder="slide body — one line per bullet or column row"
                 className="w-full bg-transparent text-xs font-light text-foreground outline-none resize-none min-h-[80px] placeholder:text-muted-foreground/30" />
             </div>
           )}

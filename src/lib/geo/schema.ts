@@ -35,7 +35,7 @@ export function buildOrganization(): Json {
     founder: { "@type": "Person", name: "Asher Newton" },
     ...(ORG_SAME_AS.length ? { sameAs: ORG_SAME_AS } : {}),
     description:
-      "asherin is a sourced research workspace: chat, asherin.cyber, asherin.defender, asherin.arvision, asherin.eye, notes, files and an encrypted vault, with the option to bring your own model key.",
+      "asherin is a sourced research workspace: chat, asherin.cyber, asherin.defender, asherin.arvision, asherin.adam, notes, files and an encrypted vault, with the option to bring your own model key.",
   };
 }
 
@@ -68,7 +68,7 @@ export function buildSoftwareApplication(): Json {
        "asherin.cyber",
        "asherin.defender",
        "asherin.arvision",
-       "asherin.eye",
+       "asherin.adam",
       "Library",
       "Projects",
       "Memory",

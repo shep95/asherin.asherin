@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import ArticleShell from "@/components/seo/ArticleShell";
 import RelatedLinks from "@/components/seo/RelatedLinks";
 import {
@@ -6,27 +5,25 @@ import {
   BreadcrumbJsonLd,
   FaqJsonLd,
 } from "@/components/seo/SeoJsonLd";
-import { applySeoHead } from "@/lib/seoHead";
 
 /**
  * /blog/aureon-legal-advisor-multi-jurisdictional
  *
- * Long-form field report on the July 8, 2026 launch of Asherin & Asher
- * "LAW mode" — a multi-jurisdictional legal-research reflex that surfaces
- * older statutes, colonial-era carryovers, and precedent that quietly
- * supersedes modern law across any country, state, or province.
+ * archived note on the July 8, 2026 "LAW mode" composer toggle — a
+ * multi-jurisdictional legal-research frame. the toggle (and the NAR pill
+ * beside it) is gone from the composer; the frame survives as a prompt.
  */
 const URL = "https://asherin.com/blog/aureon-legal-advisor-multi-jurisdictional";
 const PUBLISHED = "2026-07-08";
 
 const FAQ = [
   {
-    q: "What is LAW mode in Asherin and Asher?",
-    a: "LAW mode is a per-message legal-research setting. It structures a search around the jurisdiction you name, asks for primary authority and conflicts, and requires uncertainty and a not-legal-advice notice. Coverage depends on the sources available and must be verified.",
+    q: "What was LAW mode?",
+    a: "a retired per-message composer toggle. it framed a request around the jurisdiction you named, asked for primary authority and conflicts, and required uncertainty and a not-legal-advice notice. the toggle is gone; the same frame can be written into any prompt to shepherd.",
   },
   {
-    q: "Does LAW mode replace a lawyer?",
-    a: "No. LAW mode is an intelligence layer for legal research and orientation. Every output carries an explicit disclaimer that it is not legal advice and that a licensed attorney in the relevant jurisdiction is required before acting.",
+    q: "Does legal research in chat replace a lawyer?",
+    a: "No. it is orientation, not advice. a licensed attorney in the relevant jurisdiction is required before acting, and shepherd is asked to say so on every legal answer.",
   },
   {
     q: "How does LAW mode handle older laws that override newer ones?",
@@ -39,23 +36,13 @@ const FAQ = [
 ];
 
 const AureonLegalAdvisor = () => {
-  useEffect(() => {
-    applySeoHead({
-      title:
-        "Asherin Legal Advisor (LAW Mode), Multi-Jurisdictional AI Legal Research | Asherin",
-      description:
-        "Asherin legal mode structures jurisdiction-specific research with source requests, uncertainty, and a clear not-legal-advice boundary.",
-      path: "/blog/aureon-legal-advisor-multi-jurisdictional",
-    });
-  }, []);
-
   return (
     <>
       <ArticleJsonLd
         id="legal-advisor"
         url={URL}
-        headline="Asherin Legal Advisor (LAW Mode), Multi-Jurisdictional AI Legal Research"
-        description="A field report on Asherin legal mode: jurisdiction-specific research, source verification, uncertainty, and the boundary between research support and legal advice."
+        headline="law mode, an archived composer toggle for legal research"
+        description="an archived note on the retired law mode toggle: jurisdiction-specific research, source verification, uncertainty, and the boundary between research support and legal advice."
         datePublished={PUBLISHED}
         keywords={[
           "asherin legal advisor",
@@ -69,21 +56,30 @@ const AureonLegalAdvisor = () => {
       <BreadcrumbJsonLd
         id="legal-advisor"
         items={[
-          { name: "Home", url: "/" },
-          { name: "Blog", url: "/blog" },
-          { name: "Asherin Legal Advisor (LAW Mode)", url: URL },
+          { name: "asherin", url: "/" },
+          { name: "blog", url: "/blog" },
+          { name: "law mode, archived", url: URL },
         ]}
       />
       <FaqJsonLd id="legal-advisor" items={FAQ} />
 
       <ArticleShell
-        eyebrow="Field Report"
-        publishedLabel="July 8, 2026"
-        readTime="8 min read"
-        title="Asherin Legal Advisor, LAW mode ships multi-jurisdictional research to every operator"
-        dek="Asherin legal mode structures a request around the named jurisdiction, asks for primary authority and conflicts, preserves uncertainty, and requires a not-legal-advice notice. Source coverage varies and important citations must be checked."
+        eyebrow="archived · composer mode"
+        publishedLabel="Jul 8 2026"
+        readTime="8 min"
+        title="law mode, an archived composer toggle for legal research"
+        dek="a retired per-message setting that framed a request around the named jurisdiction, asked for primary authority and conflicts, preserved uncertainty and required a not-legal-advice notice. the toggle is gone; the frame survives as a prompt you can write yourself."
       >
-        <h2>Why LAW mode exists</h2>
+        <p>
+          <strong>status.</strong> archived. the LAW pill and the NAR pill
+          beside it were removed from the composer when asherin became a
+          local app; there is no legal mode in the code today. the
+          research frame they applied is reproduced below so you can write
+          it into a prompt to shepherd yourself. nothing on this page is
+          legal advice.
+        </p>
+
+        <h2>Why LAW mode existed</h2>
         <p>
           Legal answers fail quietly. A model that quotes the newest
           statute and stops there is confident, fast, and often wrong
@@ -98,12 +94,12 @@ const AureonLegalAdvisor = () => {
 
         <h2>How the reflex works</h2>
         <p>
-          A single toggle in the composer, the <strong>LAW</strong>{" "}
-          pill, sitting next to <strong>NAR</strong>, flips the send
-          path. When it is on, your prompt is wrapped in a legal-research
-          research frame before it reaches the selected model. The frame is
-          consistent across supported chat surfaces, while retrieval quality
-          still depends on the model and sources available for the request.
+          a single toggle in the composer, the <strong>LAW</strong>{" "}
+          pill, sitting next to <strong>NAR</strong>, flipped the send
+          path. when it was on, your prompt was wrapped in a legal-research
+          frame before it reached the selected model. retrieval quality
+          still depended on the model and the sources available for the
+          request. the frame was five steps:
         </p>
         <ol>
           <li>
@@ -176,9 +172,9 @@ const AureonLegalAdvisor = () => {
           being wrong.
         </p>
 
-        <h2>Where LAW mode fits in the operator stack</h2>
+        <h2>Where LAW mode sat in the composer</h2>
         <p>
-          LAW mode sits alongside two other composer toggles:
+          LAW mode sat beside one other toggle, both now removed:
         </p>
         <ul>
           <li>
@@ -213,57 +209,45 @@ const AureonLegalAdvisor = () => {
           output is the honest boundary of what the reflex can do.
         </p>
 
-        <h2>How to use it right now</h2>
+        <h2>How to get the same frame today</h2>
         <ol>
           <li>
-            Open <a href="/dashboard">Asherin Chat</a> or Asher Chat.
+            Open <a href="/dashboard">chat</a> with shepherd.
           </li>
           <li>
-            Click the <strong>LAW</strong> pill in the composer. It
-            glows when active.
+            name the jurisdiction yourself and ask for the five steps
+            above: controlling authority old and new, conflicts named,
+            nothing invented, uncertainty marked, and a closing note that
+            this is research, not advice.
           </li>
           <li>
-            Ask a jurisdictional question, for example, <em>"What are
+            ask a jurisdictional question, for example, <em>"What are
             the current employer notice requirements before terminating
             an at-will employee in Montana, and does any older statute
             override the modern rule?"</em>
           </li>
           <li>
-            Read the structured output: jurisdiction, controlling
-            authority, conflicting instruments, and the mandatory
-            disclaimer.
+            read the structured output, then verify every citation against
+            the primary source before relying on it.
           </li>
         </ol>
-        <p>
-          Toggle LAW off for any non-legal turn so your token budget
-          stays clean.
-        </p>
 
         <RelatedLinks
-          heading="Related in the operator stack"
           links={[
             {
-              to: "/software",
-              label: "asherin software",
-              description: "the current public software catalogue and availability.",
-            },
-            {
-              to: "/updates",
-              label: "Asherin changelog",
-              description:
-                "Daily engineering updates from the operator stack, including the July 8, 2026 LAW mode ship.",
+              to: "/dashboard",
+              label: "chat with shepherd",
+              description: "where the frame above is written into a prompt today.",
             },
             {
               to: "/blog/ai-without-restrictions",
-              label: "AI without restrictions, the operator workflow",
-              description:
-                "How Asherin's model-choice, prompt-discipline, and refusal-detection layers keep long sessions honest.",
+              label: "AI with operator choice, the practical workflow",
+              description: "model choice and prompt discipline for long sessions.",
             },
             {
               to: "/blog/what-is-ai-osint",
-              label: "What is AI OSINT? The analyst's guide",
-              description:
-                "The four-stage OSINT pipeline that feeds the same jurisdictional intelligence layer LAW mode consumes.",
+              label: "what is AI OSINT?",
+              description: "the collection and cross-validation discipline legal research borrows.",
             },
           ]}
         />

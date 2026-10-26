@@ -1,14 +1,15 @@
 // asherin.sentinel — layer 4a, the encrypted local buffer.
 //
-// The promise is that nothing is lost when the network is not there. That means
-// a segment is written to disk BEFORE any upload is attempted, and the upload
-// is a separate, retryable step that clears the row only on a confirmed 2xx.
+// The promise is that a closed turn is never lost between the microphone and
+// the timeline. A segment is written here BEFORE it is written to the timeline
+// tables, and that second write is a separate, retryable step that clears the
+// row only once it has returned.
 //
 // Encryption is AES-256-GCM with a key that is generated on the device, stored
 // non-extractable in IndexedDB, and never leaves it. That is a real boundary:
 // another script on the origin can ask the key to decrypt, but it cannot read
-// the key material out, and nothing on the network ever sees plaintext audio
-// except the transcription call the operator explicitly enabled.
+// the key material out. Nothing in this file, or anything that reads it, puts
+// audio on the network.
 //
 // Retention is a rolling window (72 hours by default). Purge runs on every open
 // and after every write, so a tab left open for a week does not grow forever.
@@ -23,8 +24,8 @@ export const DEFAULT_RETENTION_HOURS = 72;
 /**
  * A recording session: one continuous stretch between "start listening" and
  * "stop listening". It is a ledger entry, not a copy of the audio — the audio
- * lives in the segment store under the same retention window, and the account
- * timeline holds the transcripts. The history list says plainly which of those
+ * lives in the segment store under the same retention window, and the timeline
+ * tables hold the transcripts. The history list says plainly which of those
  * two are still available for a given session rather than offering a download
  * that would silently come back empty.
  */

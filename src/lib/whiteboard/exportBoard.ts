@@ -167,8 +167,8 @@ function elementMarkup(element: WhiteboardElement, byId: Map<string, WhiteboardE
       const h = element.h || 140;
       return (
         `<rect x="${num(x)}" y="${num(y)}" width="${num(w)}" height="${num(h)}" rx="20" fill="rgba(15,23,42,0.88)" stroke="rgba(255,255,255,0.08)" />` +
-        textLines(element.fileName || "Imported file", x + 18, y + 30, 14, "rgba(255,255,255,0.92)", FONT_STACKS.Sans, "600") +
-        textLines(element.fileType || "Document", x + 18, y + 52, 12, "rgba(255,255,255,0.45)", FONT_STACKS.Mono, "400") +
+        textLines(element.fileName || "imported file", x + 18, y + 30, 14, "rgba(255,255,255,0.92)", FONT_STACKS.Sans, "600") +
+        textLines(element.fileType || "document", x + 18, y + 52, 12, "rgba(255,255,255,0.45)", FONT_STACKS.Mono, "400") +
         textLines((element.preview || "").slice(0, 120), x + 18, y + 84, 12, "rgba(255,255,255,0.7)", FONT_STACKS.Sans, "400")
       );
     }
@@ -192,7 +192,7 @@ function elementMarkup(element: WhiteboardElement, byId: Map<string, WhiteboardE
         : "";
       return (
         `<rect x="${num(x)}" y="${num(y)}" width="${num(w)}" height="${num(h)}" rx="22" fill="rgba(2,6,23,0.86)" stroke="rgba(255,255,255,0.08)" />` +
-        textLines(element.text || "Sketch series", x + 18, y + 30, 14, "rgba(255,255,255,0.9)", FONT_STACKS.Sans, "600") +
+        textLines(element.text || "sketch series", x + 18, y + 30, 14, "rgba(255,255,255,0.9)", FONT_STACKS.Sans, "600") +
         textLines("hand-entered — not a live feed", x + 18, y + 50, 11, "rgba(255,255,255,0.45)", FONT_STACKS.Mono, "400") +
         `<rect x="${num(chartX)}" y="${num(chartY)}" width="${num(chartW)}" height="${num(chartH)}" fill="none" stroke="rgba(255,255,255,0.08)" />` +
         line
@@ -203,7 +203,7 @@ function elementMarkup(element: WhiteboardElement, byId: Map<string, WhiteboardE
       const rect = normalizeRect(element.x || 0, element.y || 0, element.w || 0, element.h || 0);
       return (
         `<rect x="${num(rect.x)}" y="${num(rect.y)}" width="${num(rect.w)}" height="${num(rect.h)}" rx="18" fill="rgba(255,255,255,0.02)" stroke="${element.color || "rgba(255,255,255,0.28)"}" stroke-width="${num(element.width || 1.5)}" />` +
-        textLines(element.title || "Frame", rect.x + 4, rect.y - 10, 12, "rgba(255,255,255,0.62)", FONT_STACKS.Mono, "400")
+        textLines(element.title || "frame", rect.x + 4, rect.y - 10, 12, "rgba(255,255,255,0.62)", FONT_STACKS.Mono, "400")
       );
     }
 

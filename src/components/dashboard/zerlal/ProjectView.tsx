@@ -1,11 +1,9 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { ChevronDown, ChevronRight, Search, X, ExternalLink, AlertTriangle, CheckCircle, Clock, Loader2, Copy, Check, FolderOpen, Download, Eye, RefreshCw, LayoutGrid, List } from "lucide-react";
 import { useZerlalFindings, useZerlalProjects, useZerlalScans, useUpdateFinding } from "./useZerlalData";
-import type { FindingSeverity, FindingStatus, ZerlalFinding } from "./types";
+import type { ZerlalFinding } from "./types";
 import { toast } from "sonner";
 import BlueprintFindingsTable from "@/components/charts/BlueprintFindingsTable";
-import LiveScanNarrative from "./LiveScanNarrative";
-import { useActiveScan } from "./scanContext";
 
 interface ProjectViewProps {
   projectId: string | null;
@@ -123,26 +121,12 @@ const ProjectView = ({ projectId, onSelectProject, onSelectFinding, onBack, onRe
 
   const { projects } = useZerlalProjects();
   const { findings, loading: fLoading, refetch } = useZerlalFindings(projectId);
-  const { scans, loading: sLoading } = useZerlalScans(projectId);
+  const { scans } = useZerlalScans(projectId);
   const { markFalsePositive, waiveFinding, resolveFinding, assignFinding } = useUpdateFinding();
-  const { active: activeScan } = useActiveScan();
-  const isLiveForThisProject = activeScan && activeScan.projectId === projectId;
-
-  // Refetch findings + project once the live scan completes
-  const lastStatusRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!isLiveForThisProject) return;
-    if (activeScan!.status === "complete" && lastStatusRef.current !== "complete") {
-      lastStatusRef.current = "complete";
-      refetch();
-    } else {
-      lastStatusRef.current = activeScan!.status;
-    }
-  }, [isLiveForThisProject, activeScan, refetch]);
 
   const project = projects.find(p => p.id === projectId);
-  const displayProjectName = project?.name || (isLiveForThisProject ? activeScan.projectName : "Project");
-  const displaySourceType = project?.source_type || (isLiveForThisProject ? activeScan.input.sourceType : "scan");
+  const displayProjectName = project?.name || "project";
+  const displaySourceType = project?.source_type || "scan";
 
   const filtered = useMemo(() => {
     let f = [...findings];
@@ -159,27 +143,23 @@ const ProjectView = ({ projectId, onSelectProject, onSelectFinding, onBack, onRe
     project.risk_grade === "A" ? "text-emerald-400" : project.risk_grade === "B" ? "text-blue-400" :
     project.risk_grade === "C" ? "text-yellow-400" : project.risk_grade === "D" ? "text-orange-400" : "text-red-400";
 
-  // While a live scan is running for this project, render even if findings are loading
-  if (fLoading && !isLiveForThisProject) {
+  if (fLoading) {
     return <div className="flex-1 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground/20" /></div>;
   }
 
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="p-5 max-w-[1200px] mx-auto space-y-4">
-        {isLiveForThisProject && (
-          <LiveScanNarrative projectId={projectId!} onSelectFinding={onSelectFinding} />
-        )}
         {/* Header */}
         <div className="flex items-center gap-4">
-          <button onClick={onBack} className="text-[10px] text-muted-foreground/30 hover:text-foreground/50">← Back</button>
-          
+          <button onClick={onBack} className="text-[10px] text-muted-foreground/30 hover:text-foreground/50 lowercase">← back</button>
+
           {/* Project Dropdown Switcher */}
           {projects.length > 1 && (
             <div className="relative group">
               <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-foreground/[0.04] border border-border/[0.08] hover:bg-foreground/[0.07] transition-colors">
                 <FolderOpen className="h-3 w-3 text-muted-foreground/40" />
-                <span className="text-[10px] text-foreground/70 max-w-[160px] truncate">{project?.name || "Select Project"}</span>
+                <span className="text-[10px] text-foreground/70 max-w-[160px] truncate">{project?.name || "select project"}</span>
                 <ChevronDown className="h-3 w-3 text-muted-foreground/30" />
               </button>
               <div className="absolute top-full left-0 mt-1 w-64 rounded-xl border border-border/[0.08] bg-background/95 backdrop-blur-xl shadow-xl z-50 py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150">
@@ -203,21 +183,17 @@ const ProjectView = ({ projectId, onSelectProject, onSelectFinding, onBack, onRe
             </div>
           )}
 
-          {(project || isLiveForThisProject) && (
+          {project && (
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3">
                 {projects.length <= 1 && <h2 className="text-sm font-light tracking-wide text-foreground/80">{displayProjectName}</h2>}
-                {project ? (
-                  <span className={`text-lg font-extralight ${gradeColor}`}>{project.risk_grade}</span>
-                ) : (
-                  <span className="text-[9px] px-2 py-0.5 rounded-md border border-border/[0.08] bg-foreground/[0.03] text-muted-foreground/50 uppercase tracking-[0.15em]">intake live</span>
-                )}
+                <span className={`text-lg font-extralight ${gradeColor}`}>{project.risk_grade}</span>
               </div>
               <div className="flex items-center gap-4 mt-0.5">
-                <span className="text-[9px] text-muted-foreground/30 flex items-center gap-1">
-                  <Clock className="h-2.5 w-2.5" /> Last scan: {project?.last_scan_at ? new Date(project.last_scan_at).toLocaleDateString() : "Starting now"}
+                <span className="text-[9px] text-muted-foreground/30 flex items-center gap-1 lowercase">
+                  <Clock className="h-2.5 w-2.5" /> last scan: {project.last_scan_at ? new Date(project.last_scan_at).toLocaleDateString() : "—"}
                 </span>
-                <span className="text-[9px] text-muted-foreground/30">{project?.language || "Queued"} • {displaySourceType}</span>
+                <span className="text-[9px] text-muted-foreground/30">{project.language || "—"} • {displaySourceType}</span>
               </div>
             </div>
           )}
@@ -423,7 +399,6 @@ const ProjectView = ({ projectId, onSelectProject, onSelectFinding, onBack, onRe
                           {copiedId === f.id ? <Check className="h-2.5 w-2.5 text-emerald-400" /> : <Copy className="h-2.5 w-2.5" />}
                           {copiedId === f.id ? "Copied!" : "Copy Report"}
                         </button>
-                        <button className="px-3 py-1.5 rounded-lg bg-foreground/[0.06] text-[9px] text-foreground/60 hover:bg-foreground/[0.1]">Create PR with fix</button>
                         <button onClick={async () => { const name = prompt("Assign to (name/email):"); if (name) { await assignFinding(f.id, name); refetch(); } }} className="px-3 py-1.5 rounded-lg bg-foreground/[0.03] text-[9px] text-muted-foreground/40 hover:text-foreground/60">Assign</button>
                         <button onClick={async () => { await markFalsePositive(f.id); refetch(); }} className="px-3 py-1.5 rounded-lg bg-foreground/[0.03] text-[9px] text-muted-foreground/40 hover:text-foreground/60">False positive</button>
                         <button onClick={async () => { const reason = prompt("Waiver reason:"); if (reason) { await waiveFinding(f.id, reason); refetch(); } }} className="px-3 py-1.5 rounded-lg bg-foreground/[0.03] text-[9px] text-muted-foreground/40 hover:text-foreground/60">Waive</button>

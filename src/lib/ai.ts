@@ -56,7 +56,7 @@ async function raiseByok(reason: string): Promise<never> {
  * Which model answers, and with which key. Explicit selection first, then the
  * only saved key, then the legacy localStorage hint. No key → the BYOK dialog.
  */
-export async function resolveActiveModel(conversationId?: string | null): Promise<ResolvedModel> {
+export async function resolveActiveModel(_conversationId?: string | null): Promise<ResolvedModel> {
   let active = await getActiveModel().catch(() => null);
   if (!active) {
     try {
@@ -68,19 +68,7 @@ export async function resolveActiveModel(conversationId?: string | null): Promis
       /* no hint */
     }
   }
-  if (!active) return raiseByok("connect a model key in settings → ai keys to start chatting.");
-
-  // Per-conversation off switch for the global provider.
-  if (conversationId) {
-    try {
-      const all = JSON.parse(localStorage.getItem("aureon_conv_api_toggles") || "{}");
-      if (all?.[conversationId]?.[active.provider] === false) {
-        return raiseByok(`${active.provider} is switched off for this conversation. turn it back on or pick another provider.`);
-      }
-    } catch {
-      /* respect global */
-    }
-  }
+  if (!active) return raiseByok("connect a model key in settings → intelligence to start chatting.");
 
   let apiKey = "";
   if (providerNeedsKey(active.provider)) {
@@ -90,7 +78,7 @@ export async function resolveActiveModel(conversationId?: string | null): Promis
       if (e instanceof VaultLockedError) return raiseByok(e.message);
       throw e;
     }
-    if (!apiKey) return raiseByok(`no saved key for ${active.provider}. add one in settings → ai keys.`);
+    if (!apiKey) return raiseByok(`no saved key for ${active.provider}. add one in settings → intelligence.`);
   }
   return { provider: active.provider, model: active.model, apiKey };
 }
@@ -139,12 +127,12 @@ export async function streamChat({
   intelligenceContext,
   conversationId,
   turnId: _turnId,
+  taskDirective,
   signal,
   onDelta,
   onReplace,
   onDone,
   onTools,
-  onHands: _onHands,
   onThinkingStart,
   onThinkingDelta,
   onThinkingDone,
@@ -157,12 +145,13 @@ export async function streamChat({
   intelligenceContext?: string;
   conversationId?: string | null;
   turnId?: string | null;
+  /** a task shape for this turn (a room's directive), never a character */
+  taskDirective?: string;
   signal?: AbortSignal;
   onDelta: (text: string) => void;
   onReplace?: (text: string) => void;
   onDone: () => void;
   onTools?: (rows: Array<{ label: string; detail?: string }>) => void;
-  onHands?: (hands: Array<{ surface: string; organ: string; focus?: string }>) => void;
   onThinkingStart?: () => void;
   onThinkingDelta?: (text: string) => void;
   onThinkingDone?: (fullThinking: string) => void;
@@ -181,14 +170,7 @@ export async function streamChat({
   const skillInjection = buildSkillInjectionPrompt(detectRelevantSkills(plain));
   const swarm = buildSwarmContext(plain);
 
-  const numberedFormat = (() => {
-    try {
-      const m = JSON.parse(localStorage.getItem("aureon_numbered_format_off") || "{}");
-      return !(conversationId && m[conversationId] === true);
-    } catch {
-      return true;
-    }
-  })();
+  const numberedFormat = true;
 
   const brainText = brainContext
     ? [brainContext.prompt, ...(brainContext.fileContents ?? []).map((f) => `### ${f.name}\n${f.content.slice(0, 40_000)}`)]
@@ -207,6 +189,7 @@ export async function streamChat({
     hasImage,
     brainContext: [profileText, brainText].filter(Boolean).join("\n\n"),
     intelligenceContext,
+    taskDirective,
     skillInjection,
     swarmInjection: swarm.swarmPrompt,
     activeAgentId: swarm.activeAgent.id,

@@ -33,8 +33,12 @@ export default function SharePanel({ record, persist }: HealthPanelProps) {
   const activeMarkdown = tab === "family" ? familyMarkdown : clinicalMarkdown;
 
   const copyActive = async () => {
-    await navigator.clipboard.writeText(activeMarkdown);
-    toast.success("copied.");
+    try {
+      await navigator.clipboard.writeText(activeMarkdown);
+      toast.success("copied.");
+    } catch {
+      toast.error("the browser refused clipboard access, so nothing was copied.");
+    }
   };
 
   const downloadActive = () => {

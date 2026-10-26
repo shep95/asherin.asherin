@@ -30,7 +30,7 @@ const SovereignAiPlatforms = () => (
       id="sovereign-ai-platforms"
       items={[
         { name: "Asherin", url: "/" },
-        { name: "Blog", url: "/blog" },
+        { name: "blog", url: "/blog" },
         { name: "Sovereign AI Platforms", url: "/blog/sovereign-ai-platforms" },
       ]}
     />
@@ -80,8 +80,7 @@ const SovereignAiPlatforms = () => (
     <ul>
       <li>
         <strong>Four-layer test.</strong> Key, model, refusal, data, all
-        four operator-controlled or it doesn&apos;t qualify (
-        <a href="/glossary/sovereign-ai">see the definition</a>).
+        four operator-controlled or it doesn&apos;t qualify.
       </li>
       <li>
         <strong>Provider breadth.</strong> Count only providers and model
@@ -102,13 +101,14 @@ const SovereignAiPlatforms = () => (
       </li>
     </ul>
 
-    <h2>Where Asherin sits on the map</h2>
+    <h2>Where asherin sits on the map</h2>
     <p>
-      Asherin supports saved provider keys and managed model access under
-      product rules. A saved compatible key is preferred for the calls the
-      operator chooses to make. Coverage varies by provider and modality;
-      the live model picker is the source of truth. Users can remove saved
-      keys and disable individual tools from settings.
+      asherin is the first pattern, taken further: there is no account, no
+      tier and no managed access. shepherd runs on a provider key you save in
+      guardian vault, called straight from this browser, and you pay that
+      provider for inference. coverage varies by provider and modality; the
+      model picker in connect is the source of truth. you can remove a key,
+      disable a tool, export or wipe everything from this device.
     </p>
 
     <h2>What to expect by Q4 2026</h2>
@@ -127,12 +127,12 @@ const SovereignAiPlatforms = () => (
           a: "There is no stable count. Products, hosting models, and key-custody claims change frequently, so evaluate the current architecture and terms rather than relying on a dated list.",
         },
         {
-          q: "Is Asherin a sovereign AI platform?",
-          a: "Asherin supports user-supplied provider keys and managed access. The live model picker shows current provider and modality coverage; users can remove keys and disable individual tools.",
+          q: "Is asherin a sovereign AI platform?",
+          a: "asherin is a local app: no account, no managed access, no server of its own. it runs on a provider key held on your device, and the model picker shows current provider and modality coverage. you can remove keys, disable tools, and export or wipe everything.",
         },
         {
           q: "What's the cheapest way to get started with a sovereign AI platform?",
-          a: "Compare current subscription cost, saved-key support, export controls, provider terms, and hardware needs. A low entry price does not establish data sovereignty or model portability.",
+          a: "compare what you pay the platform, what you pay the provider, saved-key support, export controls, provider terms, and hardware needs. a low entry price does not establish data sovereignty or model portability.",
         },
       ]}
     />
@@ -140,14 +140,14 @@ const SovereignAiPlatforms = () => (
     <RelatedLinks
       links={[
         {
-          to: "/glossary/sovereign-ai",
-          label: "Sovereign AI, full definition",
-          description: "The four-layer test every platform on this map gets evaluated against.",
+          to: "/blog/ai-without-restrictions",
+          label: "AI with operator choice, the practical workflow",
+          description: "model choice and prompt discipline on the key you bring.",
         },
         {
-          to: "/glossary/byok-ai",
-          label: "BYOK AI, definition",
-          description: "The key layer that underpins every sovereign architecture pattern.",
+          to: "/blog/what-is-ai-osint",
+          label: "what is AI OSINT?",
+          description: "the pipeline the sovereign stack is usually bought for.",
         },
       ]}
     />

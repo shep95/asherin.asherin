@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useGoogleApi } from "@/hooks/useGoogleApi";
 import { toast } from "sonner";
+import { CONNECT_UNAVAILABLE, describeFailure } from "../offline";
 
 type Verdict = "clean" | "watch" | "suspect" | "hostile";
 type Kind = "text" | "voicemail" | "missed" | "call" | "other";
@@ -124,19 +125,16 @@ const VoiceForensics = () => {
       setMessages(data?.messages || []);
       setAgg(data?.aggregate || null);
       setRanAt(Date.now());
-      if (!(data?.messages || []).length) toast.info("No Google Voice traffic in this window.");
+      if (!(data?.messages || []).length) toast.info("no google voice traffic in this window.");
     } catch (e: unknown) {
       if (!alive.current) return;
-      console.error("voice_forensics failed:", e);
-      const msg = e instanceof Error ? e.message : "Voice sweep failed.";
-      setError(msg);
-      toast.error(msg);
+      setError(describeFailure(e, "mail organ"));
     } finally {
       if (alive.current) setLoading(false);
     }
   }, [fetchGoogleData]);
 
-  useEffect(() => { if (isConnected) run(days); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [isConnected, days]);
+  useEffect(() => { if (isConnected) void run(days); }, [isConnected, days, run]);
 
   const visible = useMemo(() => {
     const needle = filter.trim().toLowerCase();
@@ -156,8 +154,9 @@ const VoiceForensics = () => {
   if (!isConnected) {
     return (
       <div className="rounded-2xl border border-border/20 bg-card/30 backdrop-blur-md p-8 text-center">
-        <Voicemail className="mx-auto mb-3 h-8 w-8 text-foreground/40" />
-        <p className="text-sm text-foreground/70">Connect the mailbox that receives your Google Voice notifications to read the Voice envelope.</p>
+        <Voicemail className="mx-auto mb-3 h-8 w-8 text-foreground/40" aria-hidden />
+        <p className="text-sm text-foreground/70">voice envelope forensics reads the mailbox that receives your google voice notifications.</p>
+        <p className="mx-auto mt-2 max-w-md text-xs text-muted-foreground">{CONNECT_UNAVAILABLE}</p>
       </div>
     );
   }
@@ -174,20 +173,21 @@ const VoiceForensics = () => {
               <Voicemail className="h-5 w-5 text-foreground/70" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold tracking-wide">VOICEPRINT · Voice Envelope Forensics</h3>
+              <h3 className="text-sm font-light tracking-wide">voiceprint · voice envelope forensics</h3>
               <p className="text-xs text-foreground/55 max-w-xl leading-relaxed">
-                Line attribution, authentication of the notification itself, contact cadence and burst behaviour —
-                read from Voice envelopes only. Message content and voicemail audio are never fetched.
+                line attribution, authentication of the notification itself, contact cadence and burst behaviour —
+                read from voice envelopes only. message content and voicemail audio are never fetched.
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={() => run(days)}
             disabled={loading}
             className="inline-flex items-center gap-2 rounded-lg border border-border/30 px-3 py-1.5 text-xs hover:bg-foreground/5 disabled:opacity-50"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-            {loading ? "Reading envelopes…" : "Re-sweep"}
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden />
+            {loading ? "reading envelopes…" : "re-sweep"}
           </button>
         </div>
 
@@ -239,12 +239,12 @@ const VoiceForensics = () => {
       {error && !loading && (
         <div className="rounded-2xl border border-border/30 bg-card/30 backdrop-blur-md p-5" role="alert">
           <div className="flex items-center gap-2 text-foreground/80">
-            <AlertTriangle className="h-4 w-4" />
-            <span className="text-xs font-semibold uppercase tracking-wider">Sweep failed</span>
+            <AlertTriangle className="h-4 w-4" aria-hidden />
+            <span className="text-xs font-light tracking-wider">sweep did not complete</span>
           </div>
           <p className="mt-1.5 text-xs text-foreground/60">{error}</p>
-          <button onClick={() => run(days)} className="mt-3 rounded-lg border border-border/30 px-3 py-1.5 text-xs hover:bg-foreground/5">
-            Try again
+          <button type="button" onClick={() => run(days)} className="mt-3 rounded-lg border border-border/30 px-3 py-1.5 text-xs hover:bg-foreground/5">
+            try again
           </button>
         </div>
       )}
@@ -260,23 +260,22 @@ const VoiceForensics = () => {
         <div className="rounded-2xl border border-border/25 bg-card/20 backdrop-blur-md p-5 space-y-2">
           <div className="flex items-center gap-2 text-foreground/80">
             <AlertTriangle className="h-4 w-4" />
-            <span className="text-xs font-semibold uppercase tracking-wider">
-              Mirror dependency — degraded collection
+            <span className="text-xs font-light tracking-wider">
+              mirror dependency — degraded collection
             </span>
           </div>
           <p className="text-xs leading-relaxed text-foreground/60">
             {error
-              ? "The envelope sweep did not complete, so this desk is reporting nothing rather than reporting a clean line. An empty VOICEPRINT is a collection state, not a finding."
-              : "No Voice envelope reached the connected mailbox in this window. That is a mirror condition, not proof of no call traffic: Voice only lands here when notification forwarding is enabled on the account Voice delivers to."}
+              ? "the envelope sweep did not complete, so this desk is reporting nothing rather than reporting a clean line. an empty voiceprint is a collection state, not a finding."
+              : "no voice envelope reached the connected mailbox in this window. that is a mirror condition, not proof of no call traffic: voice only lands here when notification forwarding is enabled on the account voice delivers to."}
           </p>
           <ul className="ml-4 list-disc space-y-1 text-xs font-extralight text-foreground/55">
-            <li>Verify Voice notification forwarding is enabled and pointed at a connected account.</li>
+            <li>verify voice notification forwarding is enabled and pointed at a connected account.</li>
             <li>
-              Fallback in place: <span className="text-foreground/80">SIGNAL — Phone Message Intelligence</span> reads
-              on-device Android SMS/MMS independently of this mirror, and <span className="text-foreground/80">LATTICE</span>{" "}
-              still carries per-correspondent cadence from mail traffic.
+              the <span className="text-foreground/80">lattice</span> desk still carries per-correspondent cadence from mail
+              traffic, which does not depend on this mirror.
             </li>
-            <li>Until one of those paths reports, treat this desk's silence as unmeasured, not as clean.</li>
+            <li>until a path reports, treat this desk's silence as unmeasured, not as clean.</li>
           </ul>
         </div>
       )}
@@ -397,9 +396,9 @@ const VoiceForensics = () => {
       {/* ── Correspondents ─────────────────────────────────────────────── */}
       {!loading && !error && peers.length === 0 && (
         <div className="rounded-2xl border border-border/20 bg-card/30 backdrop-blur-md p-8 text-center">
-          <PhoneCall className="mx-auto mb-3 h-7 w-7 text-foreground/35" />
-          <p className="text-sm text-foreground/65">No Google Voice envelopes in the last {days} days.</p>
-          <p className="mt-1 text-xs text-foreground/45">Widen the window, or confirm Voice notifications are delivered to this mailbox.</p>
+          <PhoneCall className="mx-auto mb-3 h-7 w-7 text-foreground/35" aria-hidden />
+          <p className="text-sm text-foreground/65">no google voice envelopes in the last {days} days.</p>
+          <p className="mt-1 text-xs text-foreground/45">widen the window, or confirm voice notifications are delivered to this mailbox.</p>
         </div>
       )}
 

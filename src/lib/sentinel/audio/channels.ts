@@ -1,4 +1,4 @@
-// asherin.sentinel — channels: one input, one lane, one language contract.
+// asherin.sentinel — channels: one input, one lane, one language hint.
 //
 // NARRATIVE CHECK, written before the code.
 //
@@ -9,11 +9,17 @@
 // matters is whether the headset is powered on and inside its own radio range.
 //
 // So the unit of this layer is a CHANNEL, not a device:
-//   • a channel binds one browser audio input to one account device row,
+//   • a channel binds one browser audio input to one lane row in this device's
+//     timeline,
 //   • it carries a name the operator chose ("kitchen", "marcus", "van"),
-//   • it carries its own language contract (what is spoken, what to render),
+//   • it carries a spoken-language hint for the recogniser,
 //   • it runs its own capture engine, independently started and stopped,
 //   • and every turn it produces is tagged to its lane in the one timeline.
+//
+// Words come from the browser's own speech recogniser (transcripts.ts). That
+// recogniser hears only the system default input and only one of them can run
+// per page, so exactly one lane — the one on the default input — gets words.
+// Every other lane records turns as audio and says so on its card.
 //
 // Flaws this file exists to refuse:
 //   • a dropped headset that looks like a quiet room. Every unclean end writes
@@ -27,14 +33,16 @@
 //   • two channels on one input, which would double-bill the same audio and
 //     make the speaker centroids fight each other.
 //
-// Nothing here claims a browser can outlive its tab. The desktop companion owns
-// that, and the channel roster is persisted so it can be handed over.
+// Nothing here claims a browser can outlive its tab. When the tab goes, the
+// watch goes, and the gap is written when the tab comes back.
 
 import { SentinelEngine, deviceLabel, type EngineStatus } from "./captureEngine";
 import type { IngestResult } from "./sync";
-import { closeGap, openGap, renameDevice, setDevicePrefs } from "./sync";
+import { attachPhrase, closeGap, fetchSettings, openGap, renameDevice, setDevicePrefs } from "./sync";
 import { AUTO_SOURCE, NO_TRANSLATION, isLanguageCode } from "./languages";
-import type { VadSensitivity } from "./vad";
+import { isVadSensitivity, type VadSensitivity } from "./vad";
+import { LiveTranscriber, recognitionLang, speechSupport, type RecognitionProcessing, type SpokenPhrase } from "./transcripts";
+import { clearMatcher, matcherFor } from "./phraseRegistry";
 
 const STORE_KEY = "asherin.sentinel.channels.v1";
 const LEGACY_DEVICE_KEY = "asherin.sentinel.ambient.deviceKey";
@@ -45,7 +53,7 @@ const GAP_FLOOR_MS = 4_000;
 
 export interface ChannelConfig {
   id: string;
-  /** account-side device key; stable for the life of the channel */
+  /** lane key in this device's timeline; stable for the life of the channel */
   deviceKey: string;
   /** operator-facing name; defaults to "bluetooth device one" and so on */
   label: string;
@@ -53,7 +61,9 @@ export interface ChannelConfig {
   inputDeviceId: string | null;
   /** what the browser called the input when it was added, for recognition */
   inputLabel: string;
+  /** hint for the recogniser: an iso-639-1 code, or "auto" for the browser's language */
   sourceLang: string;
+  /** kept for older rosters; the local edition translates nothing and never reads it */
   translateTo: string;
   createdAt: number;
   /** liveness bookkeeping, so a reload cannot erase a running watch */
@@ -64,6 +74,14 @@ export interface ChannelConfig {
   openGapReason: string | null;
 }
 
+export type WordsState =
+  | "off"
+  | "other-input"
+  | "unavailable"
+  | "denied"
+  | "starting"
+  | "listening";
+
 export interface ChannelView {
   config: ChannelConfig;
   status: EngineStatus | null;
@@ -72,6 +90,8 @@ export interface ChannelView {
   /** the bound input is currently enumerable on this machine */
   inputPresent: boolean;
   gapOpen: boolean;
+  /** whether, and how, this lane's turns get words right now */
+  words: { state: WordsState; processing: RecognitionProcessing; note: string } | null;
 }
 
 type Listener = () => void;
@@ -93,6 +113,13 @@ let booted = false;
 let sensitivity: VadSensitivity = "balanced";
 let livenessTimer: number | null = null;
 
+// ── the one recogniser ──────────────────────────────────────────────────────
+let transcribeEnabled = true;
+let transcriber: LiveTranscriber | null = null;
+let transcriberChannelId: string | null = null;
+let transcriberState: "stopped" | "listening" | "unavailable" | "denied" = "stopped";
+let browserSupport: { available: boolean; processing: RecognitionProcessing; note: string } | null = null;
+
 const ORDINALS = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
 
 function notify() {
@@ -104,7 +131,7 @@ function persist() {
     localStorage.setItem(STORE_KEY, JSON.stringify(configs));
   } catch {
     /* private mode: the roster is in memory for this session only, and the
-       account device rows still carry the names, so nothing is invented. */
+       lane rows in the timeline still carry the names, so nothing is invented. */
   }
 }
 
@@ -122,7 +149,7 @@ function readStore(): ChannelConfig[] {
         inputDeviceId: c.inputDeviceId ?? null,
         inputLabel: String(c.inputLabel || ""),
         sourceLang: isLanguageCode(c.sourceLang) ? c.sourceLang : AUTO_SOURCE,
-        translateTo: isLanguageCode(c.translateTo) && c.translateTo !== AUTO_SOURCE ? c.translateTo : NO_TRANSLATION,
+        translateTo: NO_TRANSLATION,
         wasListening: Boolean(c.wasListening),
         lastAliveAt: typeof c.lastAliveAt === "number" ? c.lastAliveAt : null,
         openGapId: typeof c.openGapId === "string" ? c.openGapId : null,
@@ -172,8 +199,10 @@ function runtimeFor(cfg: ChannelConfig): Runtime {
   rt.engine = new SentinelEngine(
     {
       onStatus: (s) => {
+        const wasListening = rt.status?.state === "listening";
         rt.status = s;
         notify();
+        if (wasListening !== (s.state === "listening")) syncTranscriber();
       },
       onNote: (n) => {
         if (!rt.notes.includes(n)) rt.notes.unshift(n);
@@ -209,9 +238,9 @@ async function raiseGap(cfg: ChannelConfig, since: number, reason: string): Prom
     const { gapId } = await openGap(cfg.deviceKey, new Date(since).toISOString(), reason);
     patch(cfg.id, { openGapId: gapId ?? null });
   } catch {
-    // The account could not be told. The local marker stays so the room can
-    // still show the hole, and the close attempt will simply have nothing to
-    // update — better than a timeline that pretends nothing was missed.
+    // The store could not be written. The local marker stays so the room can
+    // still show the hole — better than a timeline that pretends nothing was
+    // missed.
   }
 }
 
@@ -246,7 +275,7 @@ export function bootChannels(): void {
   configs = readStore();
   if (!configs.length) {
     // First run, or an operator upgrading from the single-microphone watch.
-    // Reusing the legacy device key keeps their existing timeline attached to
+    // Reusing the legacy lane key keeps their existing timeline attached to
     // this channel instead of orphaning it under a new lane.
     configs = [baseConfig({ deviceKey: legacyDeviceKey(), label: `this machine · ${deviceLabel()}`, inputLabel: "system default input" })];
     persist();
@@ -263,6 +292,20 @@ export function bootChannels(): void {
       patch(cfg.id, { wasListening: false });
     }
   }
+
+  // Stored preferences drive the detector and the recogniser from the first
+  // start, not from the first visit to the settings tab.
+  void fetchSettings()
+    .then((s) => {
+      const prefs = s.prefs as { sensitivity?: unknown; transcribe?: unknown };
+      if (isVadSensitivity(prefs.sensitivity)) setChannelSensitivity(prefs.sensitivity);
+      setTranscribeEnabled(prefs.transcribe !== false);
+    })
+    .catch(() => {});
+  void speechSupport(recognitionLang(configs[0]?.sourceLang ?? AUTO_SOURCE)).then((s) => {
+    browserSupport = s;
+    notify();
+  });
 
   void refreshInputs();
   navigator.mediaDevices?.addEventListener?.("devicechange", () => void refreshInputs());
@@ -287,6 +330,7 @@ export function bootChannels(): void {
 export function shutdownChannels(): void {
   if (livenessTimer) window.clearInterval(livenessTimer);
   livenessTimer = null;
+  stopTranscriber();
 }
 
 // ── inputs ───────────────────────────────────────────────────────────────────
@@ -318,18 +362,121 @@ export async function unlockInputLabels(): Promise<boolean> {
   }
 }
 
+// ── words ────────────────────────────────────────────────────────────────────
+
+/** The recogniser hears the system default input and nothing else. */
+export const isDefaultInput = (cfg: ChannelConfig): boolean => cfg.inputDeviceId === null || cfg.inputDeviceId === "default";
+
+function wordsFor(cfg: ChannelConfig, listening: boolean): ChannelView["words"] {
+  if (!listening) return null;
+  const processing = transcriber?.mode() ?? browserSupport?.processing ?? "unknown";
+  if (!transcribeEnabled) {
+    return { state: "off", processing, note: "words are off — audio stays entirely on this device." };
+  }
+  if (!isDefaultInput(cfg)) {
+    return { state: "other-input", processing, note: "no words on this lane: the browser's recogniser hears only the system default input." };
+  }
+  if (browserSupport && !browserSupport.available) {
+    return { state: "unavailable", processing, note: browserSupport.note };
+  }
+  if (transcriberChannelId !== cfg.id) {
+    return { state: "other-input", processing, note: "another lane on the default input already has the recogniser." };
+  }
+  if (transcriberState === "denied") {
+    return { state: "denied", processing, note: "the speech recogniser was refused, so turns are kept as audio without words." };
+  }
+  if (transcriberState === "unavailable") {
+    return { state: "unavailable", processing, note: "this browser's recogniser could not run for this lane; turns are kept as audio without words." };
+  }
+  if (transcriberState === "listening") {
+    const where =
+      processing === "on-device"
+        ? "words from this browser, on this device"
+        : processing === "browser-service"
+          ? "words from the browser maker's speech service — audio for words leaves this device"
+          : "words from this browser's recogniser; it does not say whether that runs here or at the browser maker";
+    return { state: "listening", processing, note: where };
+  }
+  return { state: "starting", processing, note: "the recogniser is starting." };
+}
+
+function stopTranscriber() {
+  transcriber?.stop();
+  transcriber = null;
+  if (transcriberChannelId) clearMatcher(find(transcriberChannelId)?.deviceKey ?? "");
+  transcriberChannelId = null;
+  transcriberState = "stopped";
+}
+
+/** Keep exactly one recogniser bound to the one lane that can use it. */
+function syncTranscriber() {
+  const target = transcribeEnabled
+    ? configs.find((c) => isDefaultInput(c) && runtimes.get(c.id)?.status?.state === "listening") ?? null
+    : null;
+  if (!target) {
+    if (transcriber) {
+      stopTranscriber();
+      notify();
+    }
+    return;
+  }
+  if (transcriber && transcriberChannelId === target.id) return;
+  stopTranscriber();
+  transcriberChannelId = target.id;
+  const rt = runtimeFor(target);
+  const t = new LiveTranscriber({
+    onPhrase: (phrase: SpokenPhrase) => {
+      const cfg = find(target.id);
+      if (!cfg) return;
+      const turn = matcherFor(cfg.deviceKey).offerPhrase(phrase);
+      if (!turn) return;
+      void attachPhrase(turn.id, phrase).then((r) => {
+        if (r) ingestListeners.forEach((fn) => fn(cfg.id, r));
+      });
+    },
+    onNote: (n) => {
+      if (!rt.notes.includes(n)) rt.notes.unshift(n);
+      rt.notes.splice(6);
+      notify();
+    },
+    onState: (s) => {
+      transcriberState = s;
+      notify();
+    },
+  });
+  transcriber = t;
+  void t.start(recognitionLang(target.sourceLang)).then((ok) => {
+    if (!ok) transcriberState = "unavailable";
+    notify();
+  });
+}
+
+export function setTranscribeEnabled(on: boolean): void {
+  if (transcribeEnabled === on) return;
+  transcribeEnabled = on;
+  syncTranscriber();
+  notify();
+}
+
+export const transcribeEnabledNow = (): boolean => transcribeEnabled;
+
+/** What this browser can do about words, before any lane starts. */
+export const wordsSupport = () => browserSupport;
+
 // ── roster ───────────────────────────────────────────────────────────────────
 
 export function listChannels(): ChannelView[] {
   return configs.map((config) => {
     const rt = runtimes.get(config.id);
+    const listening = rt?.status?.state === "listening";
     return {
       config,
       status: rt?.status ?? null,
       notes: rt?.notes ?? [],
-      listening: rt?.status?.state === "listening",
+      listening,
       inputPresent: config.inputDeviceId === null || inputs.some((d) => d.deviceId === config.inputDeviceId),
       gapOpen: Boolean(config.openGapSince),
+      words: wordsFor(config, listening),
     };
   });
 }
@@ -364,7 +511,7 @@ export function addChannel(input: { inputDeviceId: string | null; inputLabel: st
 }
 
 /** An input may back only one channel: two engines on one microphone would
- *  ingest the same words twice and fight over the same speaker centroid. */
+ *  store the same words twice and fight over the same speaker centroid. */
 export const inputTaken = (deviceId: string): boolean => configs.some((c) => c.inputDeviceId === deviceId);
 
 export async function renameChannel(id: string, label: string): Promise<void> {
@@ -375,34 +522,35 @@ export async function renameChannel(id: string, label: string): Promise<void> {
   try {
     await renameDevice(cfg.deviceKey, clean);
   } catch {
-    /* the local name is already applied; the account row catches up on the
+    /* the local name is already applied; the lane row catches up on the
        next register call when this channel starts. */
   }
 }
 
-export async function setChannelLanguages(id: string, next: { sourceLang?: string; translateTo?: string }): Promise<void> {
+export async function setChannelLanguages(id: string, next: { sourceLang?: string }): Promise<void> {
   const cfg = find(id);
   if (!cfg) return;
   const sourceLang = next.sourceLang !== undefined && isLanguageCode(next.sourceLang) ? next.sourceLang : cfg.sourceLang;
-  const translateTo = next.translateTo !== undefined ? (next.translateTo === NO_TRANSLATION || isLanguageCode(next.translateTo) ? next.translateTo : cfg.translateTo) : cfg.translateTo;
-  patch(id, { sourceLang, translateTo });
-  // The server is authoritative for translation: a patched client must not be
-  // able to render one language while the stored turn says another.
-  await setDevicePrefs(cfg.deviceKey, { sourceLang, translateTo }).catch(() => {});
+  patch(id, { sourceLang });
+  await setDevicePrefs(cfg.deviceKey, { sourceLang }).catch(() => {});
+  // A running recogniser takes its language at start; restart it on the new hint.
+  if (transcriberChannelId === id && transcriber) {
+    stopTranscriber();
+    syncTranscriber();
+  }
 }
 
 export async function startChannel(id: string): Promise<boolean> {
   const cfg = find(id);
   if (!cfg) return false;
-  // Push the language contract before the first turn can be ingested, so no
-  // segment is ever transcribed under a stale target.
-  await setDevicePrefs(cfg.deviceKey, { sourceLang: cfg.sourceLang, translateTo: cfg.translateTo }).catch(() => {});
+  await setDevicePrefs(cfg.deviceKey, { sourceLang: cfg.sourceLang }).catch(() => {});
   const rt = runtimeFor(cfg);
   rt.engine.setSensitivity(sensitivity);
   const ok = await rt.engine.start();
   if (ok) {
     patch(id, { wasListening: true, lastAliveAt: Date.now() });
     await sealGap(id);
+    syncTranscriber();
   }
   return ok;
 }
@@ -411,6 +559,7 @@ export async function stopChannel(id: string): Promise<void> {
   const rt = runtimes.get(id);
   patch(id, { wasListening: false, lastAliveAt: Date.now() });
   await rt?.engine.stop();
+  syncTranscriber();
 }
 
 export async function removeChannel(id: string): Promise<void> {
@@ -428,8 +577,7 @@ export function setChannelSensitivity(s: VadSensitivity): void {
 
 export const channelSensitivity = (): VadSensitivity => sensitivity;
 
-/** Names for the timeline: account device row id is not known client-side
- *  until a turn arrives, so lanes are matched by device key through the
- *  account device list the timeline call returns. */
+/** Lanes are matched to timeline rows by lane key through the device list the
+ *  timeline call returns. */
 export const channelByDeviceKey = (key: string): ChannelConfig | null =>
   configs.find((c) => c.deviceKey === key) ?? null;

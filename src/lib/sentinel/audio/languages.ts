@@ -1,14 +1,13 @@
 // asherin.sentinel — the language table for a channel.
 //
-// Two settings live per channel and they are not the same thing. `sourceLang`
-// is a hint handed to the transcriber about what is being spoken; leaving it on
-// auto is usually right and is never a failure. `translateTo` is the language
-// the turn is rendered in afterwards; leaving it empty means the turn stays in
-// whatever was said, which the room shows as an untranslated lane rather than
-// silently passing raw audio off as a finished translation.
+// One setting lives per channel: `sourceLang`, a hint handed to the browser's
+// speech recogniser about what is being spoken. "auto" follows the browser's
+// own language — the recogniser has no detection mode of its own. The local
+// edition translates nothing: `NO_TRANSLATION` survives only so older stored
+// rosters still parse.
 
 export interface LanguageOption {
-  /** BCP-47 / ISO-639-1 code sent to the transcriber and the translator. */
+  /** ISO-639-1 code handed to the browser's recogniser as its language. */
   code: string;
   label: string;
 }

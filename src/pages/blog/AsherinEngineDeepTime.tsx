@@ -1,26 +1,25 @@
-import { useEffect } from "react";
 import ArticleShell from "@/components/seo/ArticleShell";
 import {
   ArticleJsonLd,
   BreadcrumbJsonLd,
   FaqJsonLd,
 } from "@/components/seo/SeoJsonLd";
-import { applySeoHead } from "@/lib/seoHead";
 
 /**
  * /blog/asherin-engine-deep-time
  *
- * Product briefing for the Asherin Engine — the metadata-first search
- * surface inside the dashboard. Covers GHOST HARVEST fan-out,
- * DEEP TIME era-bucket retrieval, DOCUMENT INTELLIGENCE, ORIGIN link
- * forensics, and the IDENTIFIER SWEEP mode.
+ * archived design note for the "Asherin Engine" — a metadata-first search
+ * design (GHOST HARVEST fan-out, DEEP TIME era buckets, DOCUMENT
+ * INTELLIGENCE, ORIGIN link forensics, IDENTIFIER SWEEP). the room that
+ * shipped is asherin.search; this page is kept so old links resolve to an
+ * honest record.
  */
 
 const URL = "https://asherin.com/blog/asherin-engine-deep-time";
 const TITLE =
-  "Asherin Engine, metadata-first search, DEEP TIME retrieval & identifier sweeps";
+  "asherin engine, an archived design for metadata-first search";
 const DEK =
-  "The field briefing for the Asherin Engine: a metadata-only search surface that fans a single query into sixteen retrieval legs, walks host lifespans backward through era buckets, extracts document metadata from PDFs, and reduces an email or phone number to a deduplicated 'seen on N surfaces' exposure map.";
+  "an archived design note: a metadata-only search surface that fans a single query into sixteen retrieval legs, walks host lifespans backward through era buckets, extracts document metadata from PDFs, and reduces an email or phone number to a deduplicated 'seen on N surfaces' exposure map. the room that shipped is asherin.search.";
 const PUBLISHED = "2026-08-02T00:00:00.000Z";
 
 const Box = ({ children }: { children: React.ReactNode }) => (
@@ -30,15 +29,6 @@ const Box = ({ children }: { children: React.ReactNode }) => (
 );
 
 const AsherinEngineDeepTime = () => {
-  useEffect(() => {
-    applySeoHead({
-      title: TITLE,
-      description:
-        "Asherin Engine product briefing: 16-leg GHOST HARVEST fan-out, DEEP TIME era-bucket retrieval, PDF document metadata extraction, ORIGIN redirect forensics, and IDENTIFIER SWEEP exposure mapping.",
-      path: "/blog/asherin-engine-deep-time",
-    });
-  }, []);
-
   return (
     <>
       <ArticleJsonLd
@@ -47,7 +37,6 @@ const AsherinEngineDeepTime = () => {
         headline={TITLE}
         description={DEK}
         datePublished={PUBLISHED}
-        author="Asherin R&D"
         keywords={[
           "Asherin Engine",
           "metadata search engine",
@@ -62,7 +51,7 @@ const AsherinEngineDeepTime = () => {
         id="asherin-engine-deep-time-crumbs"
         items={[
           { name: "Asherin", url: "/" },
-          { name: "Journal", url: "/blog" },
+          { name: "blog", url: "/blog" },
           { name: "Asherin Engine, DEEP TIME", url: "/blog/asherin-engine-deep-time" },
         ]}
       />
@@ -71,7 +60,7 @@ const AsherinEngineDeepTime = () => {
         items={[
           {
             q: "What is the Asherin Engine?",
-            a: "A metadata-first search surface inside the Asherin dashboard. Instead of returning ten blue links, it fans one query into sixteen retrieval legs and returns structured exposure records, surface, first-seen, last-seen, snippet, and source link.",
+            a: "an archived design for a metadata-first search surface. instead of returning ten blue links it would fan one query into sixteen retrieval legs and return structured exposure records. the room that shipped is asherin.search: web, news, academic, code, data, docs, deep and archive modes, every hit with its source link and tier.",
           },
           {
             q: "What does DEEP TIME do?",
@@ -82,19 +71,31 @@ const AsherinEngineDeepTime = () => {
             a: "Paste an email address or phone number and the engine returns a deduplicated 'seen on N surfaces' list with first and last-seen dates plus a context snippet per hit. Surfaces are classified, directory, breach index, corporate filing, academic, social, document.",
           },
           {
-            q: "Does the engine store the identities I search?",
-            a: "Queries and saved results are isolated to the signed-in owner. Cached records keep their provenance so repeated work can reuse evidence without exposing another user's searches.",
+            q: "Does asherin store the identities I search?",
+            a: "queries and saved results stay in this browser's store. there is no account and no server copy; export or wipe them whenever you like.",
           },
         ]}
       />
 
       <ArticleShell
-        eyebrow="Product Briefing · Asherin Engine"
-        title="Asherin Engine, metadata-first search and DEEP TIME retrieval"
+        eyebrow="archived · design note"
+        title="asherin engine, an archived design for metadata-first search"
         dek={DEK}
         publishedLabel="Aug 2 2026"
         readTime="12 min"
       >
+        <p>
+          <strong>status.</strong> archived design note. the engine described
+          below was designed as a server-side organ and was not built as
+          described. what shipped is{" "}
+          <a href="/dashboard/search">asherin.search</a>: web, news, academic,
+          code, data, docs, deep and archive modes over open indexes, asked
+          from this device, every hit cited and tiered, a source that did not
+          answer saying so. the design is kept because the questions it asks
+          of a result, first seen, last seen, which surface, are still the
+          right ones.
+        </p>
+
         <h2>1. Why a metadata engine and not another search box</h2>
         <p>
           A conventional search engine answers <em>what pages match these
@@ -236,28 +237,29 @@ const AsherinEngineDeepTime = () => {
         </p>
 
         <h2>8. Where the engine sits in the stack</h2>
-        <Box>{`ASHERIN
-  ├── Asherin Chat        ── conversational operator surface
-  ├── Cloud Intelligence  ── email / message / contact dossiers
-  ├── Asherin Eye         ── maps + public cameras + routing
-  └── ASHERIN ENGINE
+        <Box>{`ASHERIN (as designed)
+  ├── chat (shepherd)     ── conversational operator surface
+  ├── asherin.google      ── your own google account, read on request
+  ├── asherin.adam        ── the live globe
+  └── ASHERIN ENGINE      ── not built; asherin.search shipped instead
         ├── GHOST HARVEST        16-leg fan-out
         ├── DEEP TIME            era buckets + host lifespan
         ├── DOCUMENT INTEL       PDF / office metadata
         ├── ORIGIN               redirect walk + EXIF
         └── IDENTIFIER SWEEP     exposure mapping
               │
-              └── feeds Cloud Intelligence contact reports`}</Box>
+              └── would have fed asherin.google contact reports`}</Box>
 
         <h2>9. FAQ</h2>
         <h3>Is the Asherin Engine included?</h3>
         <p>
-          Yes. It ships with the app and runs from your own device on the
-          model key you connect.
+          no. this design was not built. asherin.search ships with the app
+          and runs from your own device, with shepherd on the model key you
+          connect writing the deep-search briefing.
         </p>
-        <h3>Does it index anything itself?</h3>
+        <h3>Does asherin.search index anything itself?</h3>
         <p>
-          No. The engine is a retrieval and normalisation layer over public
+          No. it is a retrieval and normalisation layer over public
           surfaces. It holds no crawl of its own; it holds the structure it
           derives from what it retrieves.
         </p>

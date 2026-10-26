@@ -72,10 +72,10 @@ function ChartBody({ spec: rawSpec }: { spec: ChartSpec }) {
     case "kpi": {
       const d = spec.data[0] ?? {};
       return (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid gap-3 sm:grid-cols-3">
           {(["total", "average", "count"] as const).map((k) => (
             <div key={k} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-              <div className="text-[10px] uppercase tracking-widest text-white/45">{k}</div>
+              <div className="text-[10px] tracking-widest text-white/45">{k}</div>
               <div className="mt-1 text-2xl font-extralight text-white/90">
                 {typeof d[k] === "number" ? Number(d[k]).toLocaleString() : String(d[k] ?? "—")}
               </div>
@@ -167,7 +167,7 @@ function ChartBody({ spec: rawSpec }: { spec: ChartSpec }) {
     case "bullet":
       return (
         <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={spec.data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }} layout={spec.data.length > 12 ? "horizontal" : "horizontal"}>
+          <BarChart data={spec.data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
             <CartesianGrid stroke={gridStroke} strokeDasharray="2 4" vertical={false} />
             <XAxis dataKey={x} tick={axisStyle} tickLine={false} axisLine={{ stroke: gridStroke }} interval="preserveStartEnd" angle={spec.data.length > 8 ? -25 : 0} height={spec.data.length > 8 ? 56 : 30} textAnchor={spec.data.length > 8 ? "end" : "middle"} />
             <YAxis tick={axisStyle} tickLine={false} axisLine={false} width={56} />

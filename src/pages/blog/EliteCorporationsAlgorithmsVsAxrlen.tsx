@@ -22,7 +22,7 @@ const EliteCorporationsAlgorithmsVsAxrlen = () => (
       <img
         src={houseOfAsherBanner}
         alt="House of Asher flag"
-        className="w-full rounded-lg shadow-lg"
+        className="w-full rounded-[4px] border journal-rule"
       />
     }
   >
@@ -43,7 +43,7 @@ const EliteCorporationsAlgorithmsVsAxrlen = () => (
       id="elite-corporations-algorithms-vs-axrlen"
       items={[
         { name: "Asherin", url: "/" },
-        { name: "Blog", url: "/blog" },
+        { name: "blog", url: "/blog" },
         { name: "notes on axrlen forecasting", url: "/blog/elite-corporations-algorithms-vs-axrlen" },
       ]}
     />
@@ -116,9 +116,9 @@ const EliteCorporationsAlgorithmsVsAxrlen = () => (
           description: "the four ingredients that separate a forecast from commentary.",
         },
         {
-          to: "/houseofasher/theories",
-          label: "house of asher theories",
-          description: "the doctrinal notes behind the method.",
+          to: "/blog/the-truth-and-reality-of-wars",
+          label: "the truth and reality of wars",
+          description: "the essay the symbolic reading grew out of.",
         },
       ]}
     />

@@ -381,11 +381,11 @@ export function augurFindings(input: AugurInput): Finding[] {
           expected: "At least one commitment across a seven-day horizon",
           cause: [
             connected
-              ? "The calendar query returned an empty window, and no mail was sampled to project against it."
-              : "No account is linked, so neither calendar nor mail could be read.",
-            "Without either surface, load cannot be projected and no window can be recommended.",
+              ? "the calendar query returned an empty window, and no mail was sampled to project against it."
+              : "no google account is connected, so neither calendar nor mail could be read.",
+            "without either surface, load cannot be projected and no window can be recommended.",
           ],
-          action: connected ? "Run a sweep to populate the mail window Augur projects from." : "Link a Google account to enable forward projection.",
+          action: connected ? "run a sweep to populate the mail window the projection reads from." : "no connect path exists on this device yet — see the station overview for what it would take.",
           connected,
         })
       );

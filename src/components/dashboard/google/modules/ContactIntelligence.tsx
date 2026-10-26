@@ -2,13 +2,12 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users, Clock, Network, Zap, AlertTriangle, RefreshCw, Search,
-  HardDrive, Download, Brain, Activity, MessageSquare, Trash2, ChevronDown, Cloud,
+  HardDrive, Download, Brain, Activity, MessageSquare, Trash2, ChevronDown,
   ScrollText, MapPin,
 } from "lucide-react";
 import { useGoogleApi } from "@/hooks/useGoogleApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAutoSync } from "@/hooks/useAutoSync";
-import { useMeshSyncState } from "@/hooks/useMeshSyncState";
 import { toast } from "sonner";
 
 import {
@@ -19,11 +18,17 @@ import {
   loadCorpus, saveCorpus, mergeCorpus,
   type VaultSnapshot,
 } from "./contactIntel/localVault";
-import {
-  pullRemote, pushRemote, fetchRemoteMeta, listDevices, touchDevice, deviceId,
-  type DeviceRow,
-} from "./contactIntel/remoteVault";
 import { latticeFindings, correspondenceSeries } from "@/lib/cloudIntel/lattice";
+import { CONNECT_UNAVAILABLE, describeFailure } from "../offline";
+
+// lattice — contact intelligence held in a vault on this device.
+//
+// the "device mesh" mirror and the "background sync" line are gone from this
+// desk. the mirror wrote the snapshot into a local table and then read it back
+// as if it had come from another device, and the background line polled a
+// table no scheduler writes, so it read "arming…" forever. what remains is
+// what is true: the vault on this device, and the foreground cadence while
+// this tab is open.
 import { median } from "@/lib/cloudIntel/logic";
 import FindingCard from "../intel/FindingCard";
 import { TrendStat } from "../intel/TrendStat";
@@ -56,7 +61,7 @@ const DELTA_OVERLAP_MS = 2 * 86400000;
 const CORPUS_CEILING = 6000;
 
 const TIER_LABEL: Record<ContactDossier["tier"], string> = {
-  inner: "Inner", active: "Active", periphery: "Periphery", dormant: "Dormant", archive: "Archive",
+  inner: "inner", active: "active", periphery: "periphery", dormant: "dormant", archive: "archive",
 };
 
 const fmtBytes = (b: number) =>
@@ -154,14 +159,6 @@ const ContactIntelligence = () => {
   const [retention, setRetention] = useState<{ held: number; cursor: number | null; added: number } | null>(null);
   const [reportKey, setReportKey] = useState<string | null>(null);
   const [limit, setLimit] = useState(40);
-  // Cross-device mirror posture: which endpoints feed the ledger and how fresh
-  // the authoritative server copy is.
-  const [mesh, setMesh] = useState<{
-    devices: DeviceRow[];
-    remoteSavedAt: number | null;
-    remoteDevice: string | null;
-    syncing: boolean;
-  }>({ devices: [], remoteSavedAt: null, remoteDevice: null, syncing: false });
 
   const alive = useRef(true);
   useEffect(() => () => { alive.current = false; }, []);
@@ -172,21 +169,8 @@ const ContactIntelligence = () => {
     setVaultMeta({ savedAt: snap.savedAt, bytes: vaultBytes(snap) });
   }, []);
 
-  const refreshMesh = useCallback(async (uid: string) => {
-    const [devices, meta] = await Promise.all([listDevices(uid), fetchRemoteMeta(uid)]);
-    if (!alive.current) return;
-    setMesh((m) => ({
-      ...m,
-      devices,
-      remoteSavedAt: meta?.savedAt ?? null,
-      remoteDevice: meta?.deviceLabel ?? null,
-    }));
-  }, []);
-
-  // Offline-first, then mesh-consistent: the device vault paints immediately so
-  // the operator is never staring at an empty roster, and the server mirror is
-  // reconciled right behind it. Newest snapshot wins, in either direction — a
-  // sweep run on the laptop lands on the phone and vice versa.
+  // offline-first: the device vault paints immediately so the operator is
+  // never staring at an empty roster while anything else is decided.
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
@@ -194,43 +178,15 @@ const ContactIntelligence = () => {
       const [local, storedCorpus] = await Promise.all([loadVault(userId), loadCorpus(userId)]);
       if (cancelled || !alive.current) return;
       if (local) applySnapshot(local);
-      // The corpus is what makes a cold open resumable: deep reports work
+      // the corpus is what makes a cold open resumable: deep reports work
       // immediately and the next sweep asks only for the delta.
       if (storedCorpus?.messages.length) {
         setCorpus({ messages: storedCorpus.messages, own: [] });
         setRetention({ held: storedCorpus.messages.length, cursor: storedCorpus.cursor, added: 0 });
       }
-
-      setMesh((m) => ({ ...m, syncing: true }));
-      void touchDevice(userId);
-      try {
-        const meta = await fetchRemoteMeta(userId);
-        if (cancelled || !alive.current) return;
-
-        if (meta && (!local || meta.savedAt > local.savedAt)) {
-          const remote = await pullRemote(userId);
-          if (cancelled || !alive.current) return;
-          if (remote) {
-            applySnapshot(remote);
-            // Hydrate the device cache so the next cold open is instant and
-            // works offline with the freshest ledger.
-            await saveVault(userId, remote.summary, remote.dossiers);
-            if (meta.deviceId !== deviceId()) {
-              toast.success(`Linked ledger from ${meta.deviceLabel ?? "another device"}.`);
-            }
-          }
-        } else if (local && (!meta || local.savedAt > meta.savedAt)) {
-          await pushRemote(userId, local);
-        }
-      } finally {
-        if (!cancelled && alive.current) {
-          setMesh((m) => ({ ...m, syncing: false }));
-          void refreshMesh(userId);
-        }
-      }
     })();
     return () => { cancelled = true; };
-  }, [userId, applySnapshot, refreshMesh]);
+  }, [userId, applySnapshot]);
 
 
   const sweep = useCallback(async () => {
@@ -265,8 +221,8 @@ const ContactIntelligence = () => {
 
       setPhase(
         resumable
-          ? `Resuming from ${held.length.toLocaleString()} retained messages — fetching changes only…`
-          : "Harvesting address book and mail metadata…",
+          ? `resuming from ${held.length.toLocaleString()} retained messages — fetching changes only…`
+          : "reading address book and mail metadata…",
       );
       // allSettled, not all: a revoked Gmail scope must not void the roster.
       const [contactRes, inboxRes, sentRes, backInRes, backSentRes, calRes] = await Promise.allSettled([
@@ -320,7 +276,7 @@ const ContactIntelligence = () => {
       const mailComplete = inboxRes.status === "fulfilled" && sentRes.status === "fulfilled";
       const nextCursor = mailComplete ? Date.now() : (stored?.cursor ?? null);
 
-      setPhase("Fusing identities and profiling language…");
+      setPhase("fusing identities and profiling language…");
       const ownAddresses = accounts.map((a) => a.google_email).filter(Boolean);
       const calendarAttendees = (cal?.events || []).flatMap((e: any) => e.attendeeEmails || []);
 
@@ -339,12 +295,10 @@ const ContactIntelligence = () => {
 
       // Persist the corpus before the dossiers: the record must outlive the
       // projection, so a crash between the two writes loses the cheaper half.
-      setPhase("Committing corpus to device vault…");
+      setPhase("committing corpus to device vault…");
       await saveCorpus(userId, messages, nextCursor, (stored?.evicted ?? 0) + folded.evicted);
 
-      setPhase("Writing to device vault…");
-      // One timestamp for both writes so local and mirror agree exactly and the
-      // monotonic guard can never see this snapshot as two different versions.
+      setPhase("writing to device vault…");
       const savedAt = Date.now();
       const snapshot: VaultSnapshot = { id: userId, savedAt, summary: sum, dossiers: built };
       const ok = await saveVault(userId, sum, built);
@@ -352,33 +306,27 @@ const ContactIntelligence = () => {
         setVaultMeta(ok ? { savedAt, bytes: vaultBytes(snapshot) } : null);
       }
 
-      // Mirror to the mesh so every other signed-in device inherits this run.
-      setPhase("Mirroring to device mesh…");
-      const pushed = await pushRemote(userId, snapshot);
-      if (alive.current && pushed !== "failed") void refreshMesh(userId);
-
-
       if (failed.length) {
-        setError(`Partial sweep — ${failed.join(", ")} unavailable. Results below exclude those sources.`);
+        setError(`partial sweep — ${failed.join(", ")} unavailable. results below exclude those sources.`);
       }
       toast.success(
         resumable
           ? `${folded.added} new message${folded.added === 1 ? "" : "s"} merged — ${built.length} identities across ${messages.length} retained.`
           : `${built.length} identities profiled from ${messages.length} messages.`,
       );
-    } catch (e: any) {
-      console.error("[contact-intel] sweep failed:", e);
-      if (alive.current) setError(e?.message || "Sweep failed. The device vault below still holds the last good run.");
-      // Rethrow so the scheduler can widen its cadence instead of retrying a
-      // revoked credential every interval.
+    } catch (e: unknown) {
+      if (alive.current) setError(describeFailure(e, "google data organ"));
+      // rethrow so the scheduler widens its cadence instead of retrying a
+      // dead organ every interval.
       throw e;
     } finally {
       if (alive.current) { setLoading(false); setPhase(""); }
     }
-  }, [isConnected, fetchGoogleData, accounts, userId, refreshMesh]);
+  }, [isConnected, fetchGoogleData, accounts, userId]);
 
-  // Foreground continuity: sweeps on open, keeps a cadence while the tab is
+  // foreground continuity: sweeps on open, keeps a cadence while the tab is
   // visible, catches up on refocus and reconnect, and yields to sibling tabs.
+  // nothing runs while the tab is closed; the copy says so.
   const auto = useAutoSync({
     key: `contact-intel:${userId}`,
     enabled: Boolean(isConnected && accounts.length && userId),
@@ -386,9 +334,6 @@ const ContactIntelligence = () => {
     intervalMs: 10 * 60_000,
     minGapMs: 3 * 60_000,
   });
-
-  // Background continuity: what the scheduled server sweep did while closed.
-  const { state: serverSync } = useMeshSyncState(userId || undefined);
 
 
   const filtered = useMemo(() => {
@@ -526,7 +471,7 @@ const ContactIntelligence = () => {
     await clearVault(userId);
     setDossiers([]); setSummary(null); setVaultMeta(null);
     setCorpus(null); setRetention(null);
-    toast.success("Device vault purged.");
+    toast.success("device vault purged.");
   };
 
   // A stat card that shows only a level is a photograph of a moving thing.
@@ -566,23 +511,24 @@ const ContactIntelligence = () => {
             <Users className="h-6 w-6 text-foreground/70" />
           </div>
           <div className="flex-1 min-w-0 space-y-2">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-extralight tracking-wide text-foreground">Contact Intelligence</h2>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-lg font-extralight tracking-wide text-foreground">contact intelligence</h2>
               {isConnected && (
                 <button
+                  type="button"
                   onClick={() => void auto.syncNow()}
                   disabled={loading}
                   className="flex items-center gap-1.5 rounded-lg bg-foreground/10 px-3 py-1.5 text-[10px] font-light text-foreground hover:bg-foreground/20 transition-colors disabled:opacity-50 focus-visible:outline focus-visible:outline-1 focus-visible:outline-foreground/40"
                 >
-                  <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`} />
-                  {loading ? "Sweeping" : "Sync Now"}
+                  <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden />
+                  {loading ? "sweeping" : "sweep now"}
                 </button>
               )}
             </div>
             <p className="text-sm font-extralight leading-relaxed text-muted-foreground">
               {isConnected
-                ? "Every identity in reach — address book, inbox, sent mail and calendar — fused into one ledger with message-pattern and language profiling, held on this device. Syncs on open, on a cadence while this tab is visible, and on the server while the app is closed."
-                : "Connect Google to fuse your address book with mail and calendar traffic into ranked dossiers."}
+                ? "every identity in reach — address book, inbox, sent mail and calendar — fused into one ledger with message-pattern and language profiling, held on this device. sweeps on open and on a cadence while this tab is visible; nothing runs while it is closed."
+                : `${CONNECT_UNAVAILABLE} a ledger swept earlier on this device, if any, is still shown below.`}
             </p>
             {loading && phase && (
               <p className="text-[10px] font-light text-muted-foreground/60" aria-live="polite">{phase}</p>
@@ -593,8 +539,7 @@ const ContactIntelligence = () => {
               </p>
             )}
 
-            {/* Sync posture — foreground cadence and the closed-app sweep,
-                stated separately so neither one implies the other. */}
+            {/* foreground cadence only: there is no closed-app sweep on this device. */}
             {isConnected && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1" aria-live="polite">
                 <span className="flex items-center gap-1.5 text-[10px] font-light text-muted-foreground/60">
@@ -606,20 +551,11 @@ const ContactIntelligence = () => {
                           ? "bg-amber-400/80"
                           : "bg-emerald-400/70"
                     }`}
+                    aria-hidden
                   />
                   {loading || auto.syncing
-                    ? "Live sync running"
-                    : `This tab: ${fmtWhen(auto.lastRunAt)}${auto.nextRunAt ? ` · next ${fmtIn(auto.nextRunAt)}` : ""}`}
-                </span>
-                <span className="flex items-center gap-1.5 text-[10px] font-light text-muted-foreground/60">
-                  <Cloud className="h-3 w-3 shrink-0" />
-                  {serverSync
-                    ? serverSync.enabled
-                      ? `Background: ${fmtWhen(serverSync.lastSyncedAt ? Date.parse(serverSync.lastSyncedAt) : null)}` +
-                        `${serverSync.nextDueAt ? ` · next ${fmtIn(Date.parse(serverSync.nextDueAt))}` : ""}` +
-                        `${serverSync.lastStatus === "error" ? " · last run failed" : ""}`
-                      : "Background sync off"
-                    : "Background sync arming…"}
+                    ? "sweep running"
+                    : `this tab: ${fmtWhen(auto.lastRunAt)}${auto.nextRunAt ? ` · next ${fmtIn(auto.nextRunAt)}` : ""}`}
                 </span>
               </div>
             )}
@@ -631,37 +567,37 @@ const ContactIntelligence = () => {
       {/* ── Stat band — level, motion, and population context ──────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <TrendStat
-          label="Identities"
+          label="identities"
           value={summary ? summary.contactCount : "—"}
-          hint={summary ? `${summary.correspondentCount} carry live traffic · ${summary.bulkFiltered} bulk senders excluded` : "Awaiting first sweep"}
+          hint={summary ? `${summary.correspondentCount} carry live traffic · ${summary.bulkFiltered} bulk senders excluded` : "no sweep has run on this device"}
           loading={loading && !summary}
         />
         <TrendStat
-          label="Active roster"
+          label="active roster"
           value={summary ? activeCount : "—"}
           series={volumeSeries}
           hint={summary ? `${Math.round((activeCount / Math.max(1, summary.contactCount)) * 100)}% of the address book is live` : undefined}
           loading={loading && !summary}
         />
         <TrendStat
-          label="Messages read"
+          label="messages read"
           value={summary ? summary.messageCount : "—"}
           population={importancePop}
-          hint={summary?.patterns.peakHour != null ? `Peak transmission ${summary.patterns.peakHour}:00 local` : "No timed traffic yet"}
+          hint={summary?.patterns.peakHour != null ? `peak transmission ${summary.patterns.peakHour}:00 local` : "no timed traffic yet"}
           loading={loading && !summary}
         />
         <TrendStat
-          label="Median cadence"
+          label="median cadence"
           value={cadencePop.length ? `${Math.round(median(cadencePop))}d` : "—"}
           population={cadencePop}
-          hint={cadencePop.length ? `Across ${cadencePop.length} relationships with a measurable rhythm` : "Not enough repeat contact to establish rhythm"}
+          hint={cadencePop.length ? `across ${cadencePop.length} relationships with a measurable rhythm` : "not enough repeat contact to establish rhythm"}
           loading={loading && !summary}
         />
       </div>
 
       {/* ── Synthesis ──────────────────────────────────────────────── */}
       <section className="space-y-2">
-        <h3 className="text-[9px] tracking-[0.22em] text-muted-foreground/40 font-light">SYNTHESIS</h3>
+        <h3 className="text-[9px] tracking-[0.22em] text-muted-foreground/40 font-light">synthesis</h3>
         {findings.map((f) => (
           <FindingCard key={f.id} finding={f} defaultOpen={f.severity === "critical" || f.severity === "elevated"} />
         ))}
@@ -670,13 +606,13 @@ const ContactIntelligence = () => {
 
       {/* ── Device vault ───────────────────────────────────────────── */}
       <div className="rounded-2xl border border-border/20 bg-card/20 backdrop-blur-md p-4 flex flex-wrap items-center gap-3">
-        <HardDrive className="h-4 w-4 text-foreground/60 shrink-0" />
+        <HardDrive className="h-4 w-4 text-foreground/60 shrink-0" aria-hidden />
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-light text-foreground">Device Vault</p>
+          <p className="text-xs font-light text-foreground">device vault</p>
           <p className="text-[10px] font-light text-muted-foreground/60">
             {vaultMeta
-              ? `${fmtBytes(vaultMeta.bytes)} held locally · last written ${new Date(vaultMeta.savedAt).toLocaleString()}`
-              : "Nothing stored on this device yet — run a deep sweep."}
+              ? `${fmtBytes(vaultMeta.bytes)} held in this browser's indexeddb · last written ${new Date(vaultMeta.savedAt).toLocaleString()}`
+              : "nothing stored on this device yet. the vault fills from a sweep, and a sweep needs a connected account."}
           </p>
           {retention && (
             <p className="text-[10px] font-extralight text-muted-foreground/50" aria-live="polite">
@@ -689,64 +625,21 @@ const ContactIntelligence = () => {
           )}
         </div>
         <button
+          type="button"
           onClick={onExport}
           disabled={!summary}
           className="flex items-center gap-1.5 rounded-lg bg-foreground/10 px-3 py-1.5 text-[10px] font-light text-foreground hover:bg-foreground/20 transition-colors disabled:opacity-40"
         >
-          <Download className="h-3 w-3" /> Export Ledger
+          <Download className="h-3 w-3" aria-hidden /> export ledger
         </button>
         <button
+          type="button"
           onClick={onPurge}
           disabled={!vaultMeta}
           className="flex items-center gap-1.5 rounded-lg bg-foreground/5 px-3 py-1.5 text-[10px] font-light text-muted-foreground hover:bg-foreground/10 transition-colors disabled:opacity-40"
         >
-          <Trash2 className="h-3 w-3" /> Purge
+          <Trash2 className="h-3 w-3" aria-hidden /> purge
         </button>
-      </div>
-
-      {/* ── Device mesh — the cross-endpoint mirror ─────────────────── */}
-      <div className="rounded-2xl border border-border/20 bg-card/20 backdrop-blur-md p-4 space-y-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <Cloud className="h-4 w-4 text-foreground/60 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-light text-foreground">Device Mesh</p>
-            <p className="text-[10px] font-light text-muted-foreground/60" aria-live="polite">
-              {mesh.syncing
-                ? "Reconciling with the mesh…"
-                : mesh.remoteSavedAt
-                  ? `Authoritative ledger written ${fmtWhen(mesh.remoteSavedAt)} by ${mesh.remoteDevice ?? "an unnamed device"} · ${mesh.devices.length} endpoint${mesh.devices.length === 1 ? "" : "s"} linked`
-                  : "No mirrored ledger yet — the next sweep publishes this device's copy."}
-            </p>
-          </div>
-          <button
-            onClick={() => userId && refreshMesh(userId)}
-            disabled={!userId || mesh.syncing}
-            className="flex items-center gap-1.5 rounded-lg bg-foreground/5 px-3 py-1.5 text-[10px] font-light text-muted-foreground hover:bg-foreground/10 transition-colors disabled:opacity-40"
-          >
-            <RefreshCw className={`h-3 w-3 ${mesh.syncing ? "animate-spin motion-reduce:animate-none" : ""}`} /> Recheck
-          </button>
-        </div>
-        {mesh.devices.length > 0 && (
-          <ul className="grid sm:grid-cols-2 gap-2">
-            {mesh.devices.map((d) => (
-              <li
-                key={d.device_id}
-                className="flex items-center gap-2 rounded-xl border border-border/20 bg-foreground/5 px-3 py-2 min-w-0"
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full shrink-0 ${d.device_id === deviceId() ? "bg-emerald-400/80" : "bg-foreground/30"}`}
-                />
-                <span className="text-[10px] font-light text-foreground truncate">
-                  {d.label || "Unknown device"}
-                  {d.device_id === deviceId() ? " · this device" : ""}
-                </span>
-                <span className="ml-auto text-[10px] font-light text-muted-foreground/50 shrink-0">
-                  {d.last_push_at ? `pushed ${fmtWhen(Date.parse(d.last_push_at))}` : `seen ${fmtWhen(Date.parse(d.last_seen_at))}`}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
 
 
@@ -755,28 +648,28 @@ const ContactIntelligence = () => {
         <div className="rounded-2xl border border-border/20 bg-card/20 backdrop-blur-md p-5 space-y-4">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-light tracking-wide text-foreground flex items-center gap-2">
-              <Brain className="h-4 w-4" /> Your Correspondence Baseline
+              <Brain className="h-4 w-4" aria-hidden /> your correspondence baseline
             </h3>
             <span className="text-[10px] font-light text-muted-foreground/50">
               {summary.psych.evidence} evidence · {summary.psych.tokens} tokens
             </span>
           </div>
           <div className="grid md:grid-cols-2 gap-x-6 gap-y-2.5">
-            <Bar label="Warmth" value={summary.psych.composites.warmth} />
-            <Bar label="Assertiveness" value={summary.psych.composites.assertiveness} />
-            <Bar label="Formality" value={summary.psych.composites.formalityIndex} />
-            <Bar label="Pressure load" value={summary.psych.composites.stressLoad} />
+            <Bar label="warmth" value={summary.psych.composites.warmth} />
+            <Bar label="assertiveness" value={summary.psych.composites.assertiveness} />
+            <Bar label="formality" value={summary.psych.composites.formalityIndex} />
+            <Bar label="pressure load" value={summary.psych.composites.stressLoad} />
           </div>
           <div className="grid sm:grid-cols-2 gap-4 pt-1">
             <div>
-              <p className="text-[10px] font-light text-muted-foreground/50 mb-1.5">Hour of day</p>
+              <p className="text-[10px] font-light text-muted-foreground/50 mb-1.5">hour of day</p>
               <Sparkline data={summary.patterns.hourHistogram} />
               <p className="text-[10px] font-light text-muted-foreground/50 mt-1">
                 Peak {summary.patterns.peakHour ?? "—"}:00 · {Math.round(summary.patterns.afterHoursShare * 100)}% after hours
               </p>
             </div>
             <div>
-              <p className="text-[10px] font-light text-muted-foreground/50 mb-1.5">Day of week</p>
+              <p className="text-[10px] font-light text-muted-foreground/50 mb-1.5">day of week</p>
               <Sparkline data={summary.patterns.dayHistogram} labels={["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]} />
               <p className="text-[10px] font-light text-muted-foreground/50 mt-1">
                 {Math.round(summary.patterns.questionRate * 100)}% ask a question · {Math.round(summary.patterns.emojiRate * 100)}% carry emoji
@@ -803,11 +696,11 @@ const ContactIntelligence = () => {
       {summary && summary.patterns.sampleSize > 0 && (
         <div className="rounded-2xl border border-border/20 bg-card/20 backdrop-blur-md p-5 space-y-4">
           <h3 className="text-xs font-light tracking-wide text-foreground flex items-center gap-2">
-            <Activity className="h-3.5 w-3.5" /> Correspondence Rhythm
+            <Activity className="h-3.5 w-3.5" aria-hidden /> correspondence rhythm
           </h3>
           <div className="space-y-3">
             <div>
-              <p className="text-[9px] tracking-[0.18em] text-muted-foreground/40 font-light mb-1.5">BY HOUR (LOCAL)</p>
+              <p className="text-[9px] tracking-[0.18em] text-muted-foreground/40 font-light mb-1.5">by hour (local)</p>
               <div className="flex items-end gap-[2px] h-12">
                 {summary.patterns.hourHistogram.map((v, h) => {
                   const peak = Math.max(1, ...summary.patterns.hourHistogram);
@@ -829,7 +722,7 @@ const ContactIntelligence = () => {
               </div>
             </div>
             <div>
-              <p className="text-[9px] tracking-[0.18em] text-muted-foreground/40 font-light mb-1.5">BY WEEKDAY</p>
+              <p className="text-[9px] tracking-[0.18em] text-muted-foreground/40 font-light mb-1.5">by weekday</p>
               <div className="flex items-end gap-1 h-9">
                 {summary.patterns.dayHistogram.map((v, d) => {
                   const peak = Math.max(1, ...summary.patterns.dayHistogram);
@@ -863,11 +756,11 @@ const ContactIntelligence = () => {
       {dossiers.filter((d) => d.total > 0).length >= 3 && (
         <div className="rounded-2xl border border-border/20 bg-card/20 backdrop-blur-md p-5 space-y-3">
           <h3 className="text-xs font-light tracking-wide text-foreground flex items-center gap-2">
-            <Network className="h-3.5 w-3.5" /> Relationship Lattice
+            <Network className="h-3.5 w-3.5" aria-hidden /> relationship lattice
           </h3>
           <RelationGraph
             nodes={[
-              { id: "__ego__", label: "You", ring: 0, cluster: 0, weight: 40 },
+              { id: "__ego__", label: "you", ring: 0, cluster: 0, weight: 40 },
               ...dossiers
                 .filter((d) => d.total > 0)
                 .slice(0, 42)
@@ -886,8 +779,8 @@ const ContactIntelligence = () => {
             clusterNames={orgClusters}
           />
           <p className="text-[10px] font-extralight text-muted-foreground/55 leading-relaxed">
-            Rings are relationship tiers — inner, active, periphery — placed by measured volume, latency and recency.
-            Edge thickness is exchanged message count. Adjacency on a ring means shared organisation, the only grouping
+            rings are relationship tiers — inner, active, periphery — placed by measured volume, latency and recency.
+            edge thickness is exchanged message count. adjacency on a ring means shared organisation, the only grouping
             the corpus can prove; no co-occurrence is inferred where none was observed.
           </p>
         </div>
@@ -897,7 +790,7 @@ const ContactIntelligence = () => {
       {/* ── Alerts ─────────────────────────────────────────────────── */}
       <div className="rounded-2xl border border-border/20 bg-card/20 backdrop-blur-md p-5 space-y-3">
         <h3 className="text-xs font-light tracking-wide text-foreground flex items-center gap-2">
-          <AlertTriangle className="h-3.5 w-3.5" /> Relationship Alerts
+          <AlertTriangle className="h-3.5 w-3.5" aria-hidden /> relationship alerts
         </h3>
         <div className="space-y-1.5">
           {alerts.length > 0 ? (
@@ -914,8 +807,8 @@ const ContactIntelligence = () => {
               <Zap className="h-3 w-3 text-muted-foreground/30 shrink-0 mt-0.5" />
               <span className="text-[10px] font-extralight text-muted-foreground/60">
                 {dossiers.length
-                  ? "No overdue, one-way, or unread-heavy relationships in the current window."
-                  : "Run a deep sweep to surface drift, one-way threads and unanswered mail."}
+                  ? "no overdue, one-way, or unread-heavy relationships in the current window."
+                  : "a sweep would surface drift, one-way threads and unanswered mail. none has run on this device."}
               </span>
             </div>
           )}
@@ -926,7 +819,7 @@ const ContactIntelligence = () => {
       <div className="rounded-2xl border border-border/20 bg-card/20 backdrop-blur-md p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-sm font-light tracking-wide text-foreground flex items-center gap-2">
-            <Network className="h-4 w-4" /> Identity Ledger
+            <Network className="h-4 w-4" aria-hidden /> identity ledger
           </h3>
           <div className="flex items-center gap-2">
             {dossiers.filter((d) => d.location).length > 0 && (
@@ -937,20 +830,20 @@ const ContactIntelligence = () => {
                       .filter((d) => d.location)
                       .map((d) => ({ name: d.name, email: d.emails[0], location: d.location, organization: d.organization, source: "contact_intelligence" }))
                   );
-                  navigate("/dashboard/asherin-eye");
+                  navigate("/dashboard/asherin-adam");
                 }}
                 className="flex items-center gap-1 rounded-lg bg-foreground/10 px-3 py-1.5 text-[10px] font-light text-foreground hover:bg-foreground/20 transition-all"
               >
-                <MapPin className="h-3 w-3" /> Plot contacts
+                <MapPin className="h-3 w-3" aria-hidden /> plot contacts
               </button>
             )}
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/40" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/40" aria-hidden />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search name, address, org, theme…"
-                aria-label="Search contacts"
+                placeholder="search name, address, org, theme…"
+                aria-label="search contacts"
                 className="w-48 sm:w-64 rounded-lg border border-border/20 bg-foreground/5 pl-7 pr-2 py-1.5 text-[11px] font-light text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-foreground/30"
               />
             </div>
@@ -967,7 +860,7 @@ const ContactIntelligence = () => {
                 tierFilter === t ? "bg-foreground/20 text-foreground" : "bg-foreground/5 text-muted-foreground/60 hover:bg-foreground/10"
               }`}
             >
-              {t === "all" ? `All (${dossiers.length})` : `${TIER_LABEL[t]} (${summary?.tiers[t] ?? 0})`}
+              {t === "all" ? `all (${dossiers.length})` : `${TIER_LABEL[t]} (${summary?.tiers[t] ?? 0})`}
             </button>
           ))}
         </div>
@@ -980,7 +873,7 @@ const ContactIntelligence = () => {
           </div>
         ) : filtered.length === 0 ? (
           <p className="text-[11px] font-extralight text-muted-foreground/60 py-6 text-center">
-            {dossiers.length ? "No identity matches this filter." : "No dossiers yet — connect Google and run a deep sweep."}
+            {dossiers.length ? "no identity matches this filter." : "no dossiers on this device. a sweep builds them, and a sweep needs a connected account."}
           </p>
         ) : (
           <>
@@ -1097,22 +990,22 @@ const ContactIntelligence = () => {
                             disabled={!corpus}
                             className="flex items-center gap-1.5 rounded-lg bg-foreground/10 px-3 py-1.5 text-[10px] font-light text-foreground hover:bg-foreground/20 transition-colors disabled:opacity-40"
                           >
-                            <ScrollText className="h-3 w-3" /> Deep Intelligence Report
+                            <ScrollText className="h-3 w-3" aria-hidden /> deep report
                           </button>
                           {d.location && (
                             <button
                               onClick={() => {
                                 setPendingContacts([{ name: d.name, email: d.emails[0], location: d.location, organization: d.organization, source: "contact_intelligence" }]);
-                                navigate("/dashboard/asherin-eye");
+                                navigate("/dashboard/asherin-adam");
                               }}
                               className="flex items-center gap-1.5 rounded-lg bg-foreground/10 px-3 py-1.5 text-[10px] font-light text-foreground hover:bg-foreground/20 transition-colors"
                             >
-                              <MapPin className="h-3 w-3" /> Plot on map
+                              <MapPin className="h-3 w-3" aria-hidden /> plot on map
                             </button>
                           )}
                           {!corpus && (
                             <p className="text-[10px] font-extralight text-muted-foreground/50 mt-1.5 w-full">
-                              The report reads raw traffic, which this session has not loaded. Run a deep sweep to enable it.
+                              the report reads raw traffic, which this session has not loaded. a sweep would load it.
                             </p>
                           )}
                         </div>
@@ -1139,7 +1032,7 @@ const ContactIntelligence = () => {
                 onClick={() => setLimit((l) => l + 60)}
                 className="w-full rounded-lg bg-foreground/5 py-2 text-[10px] font-light text-muted-foreground hover:bg-foreground/10 transition-colors"
               >
-                Show more — {filtered.length - limit} remaining
+                show more — {filtered.length - limit} remaining
               </button>
             )}
           </>
@@ -1151,9 +1044,9 @@ const ContactIntelligence = () => {
       )}
 
       <p className="text-[10px] font-extralight text-muted-foreground/40 flex items-start gap-1.5 px-1">
-        <Activity className="h-3 w-3 shrink-0 mt-0.5" />
-        Derived from Google People records and Gmail metadata only. Language markers are lexical counts over
-        subjects and snippets, reported with their evidence weight — not clinical assessments. Absent evidence
+        <Activity className="h-3 w-3 shrink-0 mt-0.5" aria-hidden />
+        derived from google people records and gmail metadata only. language markers are lexical counts over
+        subjects and snippets, reported with their evidence weight — not clinical assessments. absent evidence
         prints as “—”, never as zero.
       </p>
     </div>

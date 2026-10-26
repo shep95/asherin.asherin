@@ -5,7 +5,7 @@ import { DOMAIN_META, type MoonEventDomain } from "@/lib/vedic/moonEvents";
 import { calculateSweVedicChart, type SweVedicPlanet } from "@/lib/vedic/sweChart";
 import { computeSensitivePoints, type SensitivePoints } from "@/lib/vedic/sensitivePoints";
 import { detectWindows } from "@/lib/vedic/wealthSoulmateWindows";
-import { computeLifeSequence, type LifeEvent } from "@/lib/vedic/lifeSequence";
+import { computeLifeSequence } from "@/lib/vedic/lifeSequence";
 import type { CompanyFoundation } from "@/data/vedic/companyCharts";
 import type { CurrentDashaPath, DashaPeriod } from "@/lib/vedic/dasha";
 
@@ -59,7 +59,7 @@ function weekLabel(d: Date) {
   const sameMonth = s.getMonth() === e.getMonth();
   const sFmt = `${MONTH_NAMES[s.getMonth()].slice(0,3)} ${s.getDate()}`;
   const eFmt = sameMonth ? `${e.getDate()}` : `${MONTH_NAMES[e.getMonth()].slice(0,3)} ${e.getDate()}`;
-  return `Week of ${sFmt}–${eFmt}, ${e.getFullYear()}`;
+  return `week of ${sFmt}–${eFmt}, ${e.getFullYear()}`;
 }
 
 interface NatalRef {
@@ -79,10 +79,11 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
   const [mode, setMode] = useState<"user" | string>("user"); // "user" or company symbol
   const [companyRef, setCompanyRef] = useState<NatalRef | null>(null);
   const [resolvingCompany, setResolvingCompany] = useState(false);
+  const [computeError, setComputeError] = useState<string | null>(null);
 
   const userRef: NatalRef = useMemo(() => ({
     ascendant: natalAscendant, lat, lon,
-    label: userChartName || "Your Chart", kind: "user",
+    label: userChartName || "your chart", kind: "user",
     key: `user:${chartKey ?? `${natalAscendant.toFixed(3)}:${lat}:${lon}`}`,
     points: natalPlanets ? computeSensitivePoints(natalPlanets, natalAscendant) : null,
     planets: natalPlanets ? natalPlanets.map((p) => ({ name: p.name, sid: p.sid })) : null,
@@ -95,6 +96,7 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
     if (!co) return;
     let cancelled = false;
     setResolvingCompany(true);
+    setComputeError(null);
     (async () => {
       try {
         const c = await calculateSweVedicChart({
@@ -109,6 +111,9 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
           points: computeSensitivePoints(c.planets, c.ascendant),
           planets: c.planets.map((p) => ({ name: p.name, sid: p.sid })),
         });
+      } catch (e) {
+        console.warn("[vedic] company chart failed", e);
+        if (!cancelled) { setComputeError(`the ${co.name} chart could not be computed — showing your chart instead`); setMode("user"); }
       } finally {
         if (!cancelled) setResolvingCompany(false);
       }
@@ -129,7 +134,6 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
   const periodEnd   = useMemo(() => (granularity === "week" ? weekEnd(cursor)   : monthEnd(cursor)),   [cursor, granularity]);
   const periodLabel = granularity === "week" ? weekLabel(cursor) : monthLabel(cursor);
   const isCurrentPeriod = today.getTime() >= periodStart.getTime() && today.getTime() <= periodEnd.getTime();
-  const isCurrentMonth = isCurrentPeriod;
 
   // ── Ingresses — anchored at today, horizon auto-extended for chosen month ──
   // Cache key is independent of `chosen` so flipping months stays instant.
@@ -170,6 +174,9 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
         if (cancelled) return;
         ingressCacheRef.current.set(key, list);
         setIngresses(list);
+      } catch (e) {
+        console.warn("[vedic] ingress scan failed", e);
+        if (!cancelled) { setIngresses([]); setComputeError("the transit scan could not finish on this device — the forecast below is moon-only"); }
       } finally {
         if (!cancelled) setLoadingFuture(false);
       }
@@ -186,6 +193,7 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
   // and rendered in the user's local timezone.
   const [moonEvents, setMoonEvents] = useState<import("@/lib/vedic/moonEvents").MoonEvent[] | null>(null);
   const [loadingMoon, setLoadingMoon] = useState(false);
+  const [moonError, setMoonError] = useState<string | null>(null);
   const moonCacheRef = useRef<Map<string, import("@/lib/vedic/moonEvents").MoonEvent[]>>(new Map());
   // Domain filter chips — all on by default
   const ALL_DOMAINS: MoonEventDomain[] = [
@@ -206,6 +214,7 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
     if (cached) { setMoonEvents(cached); return; }
     let cancelled = false;
     setLoadingMoon(true);
+    setMoonError(null);
     (async () => {
       try {
         const { computeMoonEvents } = await import("@/lib/vedic/moonEvents");
@@ -219,8 +228,8 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
         moonCacheRef.current.set(cacheKey, list);
         setMoonEvents(list);
       } catch (e) {
-        console.error("[moon-events] failed:", e);
-        if (!cancelled) setMoonEvents([]);
+        console.warn("[vedic] moon events failed", e);
+        if (!cancelled) { setMoonEvents([]); setMoonError("the moon could not be traced for this period on this device — try another period or reload"); }
       } finally {
         if (!cancelled) setLoadingMoon(false);
       }
@@ -295,8 +304,8 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
       <div className="flex items-center justify-between gap-3 border-b border-border/15 pb-3 flex-wrap">
         <div className="flex items-center gap-2">
           <Orbit className="h-4 w-4 text-foreground/70" />
-          <h3 className="text-sm font-light tracking-[0.15em] text-foreground uppercase">{granularity === "week" ? "Weekly" : "Monthly"} Transit Forecast</h3>
-          <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70 ml-2 inline-flex items-center gap-1">
+          <h3 className="text-sm font-light tracking-[0.15em] text-foreground">{granularity === "week" ? "weekly" : "monthly"} transit forecast</h3>
+          <span className="text-[10px] tracking-[0.18em] text-muted-foreground/70 ml-2 inline-flex items-center gap-1">
             {activeRef.kind === "user" ? <User2 className="h-3 w-3" /> : <Building2 className="h-3 w-3" />}
             {subjectLabel}
           </span>
@@ -312,33 +321,34 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
                   setGranularity(g);
                   setCursor(g === "week" ? midOfWeek(cursor) : midOfMonth(cursor));
                 }}
-                className={`text-[10px] uppercase tracking-[0.15em] px-2 py-1 transition ${granularity === g ? "bg-foreground/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                aria-pressed={granularity === g}
+                className={`text-[10px] tracking-[0.15em] px-2 py-1 transition ${granularity === g ? "bg-foreground/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
                 {g}
               </button>
             ))}
           </div>
-          <button onClick={() => shiftYear(-1)} title="Previous year" className="p-1.5 rounded border border-border/25 text-muted-foreground hover:text-foreground hover:bg-foreground/[0.05] transition">
+          <button onClick={() => shiftYear(-1)} title="previous year" aria-label="previous year" className="p-1.5 rounded border border-border/25 text-muted-foreground hover:text-foreground hover:bg-foreground/[0.05] transition">
             <ChevronsLeft className="h-3.5 w-3.5" />
           </button>
-          <button onClick={() => shiftPeriod(-1)} title={`Previous ${granularity}`} className="p-1.5 rounded border border-border/25 text-muted-foreground hover:text-foreground hover:bg-foreground/[0.05] transition">
+          <button onClick={() => shiftPeriod(-1)} title={`previous ${granularity}`} aria-label={`previous ${granularity}`} className="p-1.5 rounded border border-border/25 text-muted-foreground hover:text-foreground hover:bg-foreground/[0.05] transition">
             <ChevronLeft className="h-3.5 w-3.5" />
           </button>
-          <div className="px-3 py-1 rounded border border-foreground/30 bg-foreground/[0.05] min-w-[12rem] text-center">
-            <div className="text-xs font-light tracking-[0.15em] text-foreground uppercase">{periodLabel}</div>
-            {isCurrentPeriod && <div className="text-[9px] uppercase tracking-[0.2em] text-emerald-300/80">This {granularity}</div>}
+          <div className="px-3 py-1 rounded border border-foreground/30 bg-foreground/[0.05] min-w-[9rem] sm:min-w-[12rem] text-center">
+            <div className="text-xs font-light tracking-[0.15em] text-foreground">{periodLabel}</div>
+            {isCurrentPeriod && <div className="text-[9px] tracking-[0.2em] text-emerald-300/80">this {granularity}</div>}
           </div>
-          <button onClick={() => shiftPeriod(1)} title={`Next ${granularity}`} className="p-1.5 rounded border border-border/25 text-muted-foreground hover:text-foreground hover:bg-foreground/[0.05] transition">
+          <button onClick={() => shiftPeriod(1)} title={`next ${granularity}`} aria-label={`next ${granularity}`} className="p-1.5 rounded border border-border/25 text-muted-foreground hover:text-foreground hover:bg-foreground/[0.05] transition">
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
-          <button onClick={() => shiftYear(1)} title="Next year" className="p-1.5 rounded border border-border/25 text-muted-foreground hover:text-foreground hover:bg-foreground/[0.05] transition">
+          <button onClick={() => shiftYear(1)} title="next year" aria-label="next year" className="p-1.5 rounded border border-border/25 text-muted-foreground hover:text-foreground hover:bg-foreground/[0.05] transition">
             <ChevronsRight className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={jumpToNow}
-            className="ml-2 text-[10px] uppercase tracking-[0.18em] px-2 py-1 rounded border border-border/30 text-muted-foreground hover:text-foreground hover:bg-foreground/[0.05] transition"
+            className="ml-2 text-[10px] tracking-[0.18em] px-2 py-1 rounded border border-border/30 text-muted-foreground hover:text-foreground hover:bg-foreground/[0.05] transition"
           >
-            Now
+            now
           </button>
         </div>
       </div>
@@ -346,21 +356,23 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
       {/* Chart-source switcher */}
       {companyCharts && companyCharts.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/70">Chart Subject</span>
+          <span className="text-[10px] tracking-[0.2em] text-muted-foreground/70">chart subject</span>
           <button
             onClick={() => setMode("user")}
-            className={`text-[10px] uppercase tracking-[0.15em] px-2.5 py-1 rounded border transition inline-flex items-center gap-1.5 ${mode === "user" ? "border-foreground/40 bg-foreground/[0.08] text-foreground" : "border-border/25 text-muted-foreground hover:text-foreground"}`}
+            aria-pressed={mode === "user"}
+            className={`text-[10px] tracking-[0.15em] px-2.5 py-1 rounded border transition inline-flex items-center gap-1.5 ${mode === "user" ? "border-foreground/40 bg-foreground/[0.08] text-foreground" : "border-border/25 text-muted-foreground hover:text-foreground"}`}
           >
-            <User2 className="h-3 w-3" /> {userChartName || "Your Chart"}
+            <User2 className="h-3 w-3" /> {userChartName || "your chart"}
           </button>
           <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded border border-border/25">
             <Building2 className="h-3 w-3 text-muted-foreground/80" />
             <select
               value={mode === "user" ? "" : mode}
               onChange={(e) => setMode(e.target.value || "user")}
+              aria-label="company chart"
               className="bg-transparent text-[11px] font-light text-foreground outline-none cursor-pointer max-w-[14rem]"
             >
-              <option value="" className="bg-background">— Company chart —</option>
+              <option value="" className="bg-background">— company chart —</option>
               {companyCharts.map((c) => (
                 <option key={c.symbol} value={c.symbol} className="bg-background">{c.symbol} · {c.name}</option>
               ))}
@@ -369,6 +381,7 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
           {resolvingCompany && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
         </div>
       )}
+      {computeError && <div role="alert" className="text-[11px] text-amber-300/90 font-light">{computeError}</div>}
 
       {/* MOON-ONLY MONTHLY BRIEF — 100% Moon transits: house ingresses + conjunctions with natal planets, rendered in the user's local time. */}
       {(
@@ -376,12 +389,12 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
         <div className="rounded-lg border border-border/35 bg-background/40 p-4 space-y-3">
           <div className="flex items-center gap-2">
             <ScrollText className="h-4 w-4 text-foreground/80" />
-            <h4 className="text-xs font-light tracking-[0.18em] text-foreground uppercase">
-              What's gonna happen this {granularity === "week" ? "week" : "month"} · <span className="text-muted-foreground/80 normal-case tracking-normal">{subjectLabel}</span>
+            <h4 className="text-xs font-light tracking-[0.18em] text-foreground">
+              what the moon does this {granularity === "week" ? "week" : "month"} · <span className="text-muted-foreground/80 tracking-normal">{subjectLabel}</span>
             </h4>
           </div>
           <p className="text-[10.5px] text-muted-foreground/75 italic leading-relaxed">
-            100% Moon-driven, filtered to <span className="text-foreground/85">Wealth (Equity/Liquidity), Love, Power, Mental &amp; Physical Health</span>. Personalized to your ascendant — each event lists the natal planets sitting in the house being activated. Timestamps in your local time.
+            moon-driven only, filtered to <span className="text-foreground/85">wealth (equity / liquidity), love, power, mental and physical health</span>. read against this ascendant — each event lists the natal planets sitting in the house being activated. times are this device's local time.
           </p>
           {/* Domain filter chips */}
           {(
@@ -393,7 +406,8 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
                     key={d}
                     type="button"
                     onClick={() => toggleDomain(d)}
-                    className={`text-[9.5px] uppercase tracking-[0.18em] px-2 py-1 rounded border transition ${
+                    aria-pressed={on}
+                    className={`text-[9.5px] tracking-[0.18em] px-2 py-1 rounded border transition ${
                       on ? "border-foreground/45 bg-foreground/[0.08] text-foreground"
                          : "border-border/30 bg-background/30 text-muted-foreground/60 hover:text-foreground/80"
                     }`}
@@ -405,14 +419,17 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
             </div>
           )}
           {loadingMoon && !moonEvents ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Tracing the Moon across {periodLabel}…</div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> tracing the Moon across {periodLabel}…</div>
           ) : (() => {
             const filtered = (moonEvents ?? []).filter((ev) => ev.domains.some((d) => activeDomains.has(d)));
+            if (moonError) {
+              return <div role="alert" className="text-[11.5px] text-amber-300/90">{moonError}</div>;
+            }
             if (!moonEvents || moonEvents.length === 0) {
-              return <div className="text-[11.5px] text-muted-foreground/70 italic">No Moon events resolved for this {granularity}. Try a different period.</div>;
+              return <div className="text-[11.5px] text-muted-foreground/70 italic">no Moon events resolved for this {granularity}. try a different period.</div>;
             }
             if (filtered.length === 0) {
-              return <div className="text-[11.5px] text-muted-foreground/70 italic">No events match the selected domains this {granularity}. Toggle more chips above.</div>;
+              return <div className="text-[11.5px] text-muted-foreground/70 italic">no events match the selected domains this {granularity}. switch more chips on above.</div>;
             }
             return (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -432,32 +449,32 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-1.5">
                           <span className="text-foreground/80 text-sm leading-none">☽</span>
-                          <span className={`text-[10px] uppercase tracking-[0.2em] ${
+                          <span className={`text-[10px] tracking-[0.2em] ${
                             tone === "bad" ? "text-red-200/90"
                             : tone === "good" ? "text-emerald-200/90"
                             : "text-foreground/85"
                           }`}>{ev.label}</span>
-                          <span className={`text-[9px] uppercase tracking-[0.18em] ${
+                          <span className={`text-[9px] tracking-[0.18em] ${
                             tone === "bad" ? "text-red-300/70"
                             : tone === "good" ? "text-emerald-300/70"
                             : "text-muted-foreground/60"
                           }`}>· {isConj ? "conjunction" : "ingress"}</span>
                         </div>
-                        <span className="text-[9.5px] uppercase tracking-[0.16em] text-foreground/85 font-mono">{localStr}</span>
+                        <span className="text-[9.5px] tracking-[0.16em] text-foreground/85 font-mono">{localStr}</span>
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {ev.domains.map((d) => (
-                          <span key={d} className="text-[8.5px] uppercase tracking-[0.18em] px-1.5 py-0.5 rounded border border-border/30 bg-background/40 text-muted-foreground/80">
+                          <span key={d} className="text-[8.5px] tracking-[0.18em] px-1.5 py-0.5 rounded border border-border/30 bg-background/40 text-muted-foreground/80">
                             {d.replace("-", " · ")}
                           </span>
                         ))}
                       </div>
                       <div className="text-[12px] font-light text-foreground leading-snug">{ev.headline}</div>
                       <div className="pt-1.5 mt-1 border-t border-border/15 space-y-1">
-                        <div className="text-[8.5px] uppercase tracking-[0.22em] text-muted-foreground/60">What to expect</div>
+                        <div className="text-[8.5px] tracking-[0.22em] text-muted-foreground/60">what to expect</div>
                         <p className="text-[10.5px] leading-relaxed font-light text-muted-foreground/85">{ev.expect}</p>
                         {ev.natalEnrich && (
-                          <p className="text-[10.5px] leading-relaxed font-light text-foreground/75 italic">↳ Your chart: {ev.natalEnrich}</p>
+                          <p className="text-[10.5px] leading-relaxed font-light text-foreground/75 italic">↳ your chart: {ev.natalEnrich}</p>
                         )}
                       </div>
                     </div>
@@ -475,7 +492,7 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
       {lifeSequence && (() => {
         const ls = lifeSequence;
         const gradePill = (g: string) =>
-          `text-[8.5px] uppercase tracking-[0.18em] px-1.5 py-0.5 rounded border ${
+          `text-[8.5px] tracking-[0.18em] px-1.5 py-0.5 rounded border ${
             g === "peak" ? "border-foreground/40 bg-foreground/[0.06] text-foreground"
             : g === "strong" ? "border-foreground/25 bg-foreground/[0.03] text-foreground/85"
             : "border-border/40 bg-background/40 text-foreground/70"
@@ -483,23 +500,23 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
         const wp = ls.wealthPotential;
         const pp = ls.powerPotential;
         const wealthTierLabel: Record<typeof wp.tier, string> = {
-          billionaire: "Billionaire-grade capacity",
-          millionaire: "Millionaire-grade capacity",
-          comfortable: "Comfortable capacity",
-          none: "Not supported by chart",
+          billionaire: "billionaire-grade capacity",
+          millionaire: "millionaire-grade capacity",
+          comfortable: "comfortable capacity",
+          none: "not supported by the chart",
         };
         const powerTierLabel: Record<typeof pp.tier, string> = {
-          "global-icon": "Global-icon capacity",
-          "national-figure": "National-figure capacity",
-          "regional-influencer": "Regional-influencer capacity",
-          local: "Local-reach capacity",
-          none: "Not supported by chart",
+          "global-icon": "global-icon capacity",
+          "national-figure": "national-figure capacity",
+          "regional-influencer": "regional-influencer capacity",
+          local: "local-reach capacity",
+          none: "not supported by the chart",
         };
         const POWER_TYPE_META: Record<typeof pp.primaryType, { label: string; icon: typeof Crown; tag: string }> = {
-          public: { label: "Public / Celebrity", icon: Megaphone, tag: "Mass appeal, fame, visibility" },
-          political: { label: "Political / Executive", icon: Crown, tag: "Governance, command, formal authority" },
-          behindScenes: { label: "Behind-the-Scenes", icon: ScrollText, tag: "Kingmaker, operator, hidden influence" },
-          institutional: { label: "Global Institutional", icon: Building2, tag: "Academies, doctrines, foreign institutions" },
+          public: { label: "public / celebrity", icon: Megaphone, tag: "mass appeal, fame, visibility" },
+          political: { label: "political / executive", icon: Crown, tag: "governance, command, formal authority" },
+          behindScenes: { label: "behind the scenes", icon: ScrollText, tag: "kingmaker, operator, hidden influence" },
+          institutional: { label: "global institutional", icon: Building2, tag: "academies, doctrines, foreign institutions" },
         };
         const Bar = ({ pct }: { pct: number }) => (
           <div className="h-1.5 w-full rounded-full bg-foreground/10 overflow-hidden">
@@ -510,8 +527,8 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
           <div className="rounded-lg border border-border/40 bg-background/40 p-4 space-y-3">
             <div className="flex items-center gap-2 flex-wrap">
               <Trophy className="h-4 w-4 text-muted-foreground" />
-              <h4 className="text-xs font-light tracking-[0.18em] text-foreground/85 uppercase">Wealth &amp; Power Calculator</h4>
-              <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/70 ml-auto">Natal capacity · Dasha + Transit timing</span>
+              <h4 className="text-xs font-light tracking-[0.18em] text-foreground/85">wealth and power calculator</h4>
+              <span className="text-[9px] tracking-[0.2em] text-muted-foreground/70 ml-auto">natal capacity · dasha + transit timing</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -523,8 +540,8 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
               }`}>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <Gem className={`h-3.5 w-3.5 ${ls.wealthEvent ? "text-emerald-300" : "text-muted-foreground/60"}`} />
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-emerald-200/90">Wealth capacity</span>
-                  <span className={`text-[8.5px] uppercase tracking-[0.2em] px-1.5 py-0.5 rounded border ${
+                  <span className="text-[10px] tracking-[0.2em] text-emerald-200/90">wealth capacity</span>
+                  <span className={`text-[8.5px] tracking-[0.2em] px-1.5 py-0.5 rounded border ${
                     wp.tier === "billionaire" ? "border-foreground/50 text-foreground" :
                     wp.tier === "millionaire" ? "border-emerald-400/40 text-emerald-200/90" :
                     wp.tier === "comfortable" ? "border-border/40 text-muted-foreground" :
@@ -532,7 +549,7 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
                   }`}>
                     {wp.tier} · {wp.score}%
                   </span>
-                  {ls.wealthEvent && <span className={gradePill(ls.wealthEvent.grade)}>{ls.wealthEvent.grade.toUpperCase()}</span>}
+                  {ls.wealthEvent && <span className={gradePill(ls.wealthEvent.grade)}>{ls.wealthEvent.grade}</span>}
                 </div>
 
                 <div className="text-[11px] font-light text-foreground/85">{wealthTierLabel[wp.tier]}</div>
@@ -542,37 +559,37 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
                 <div className="flex items-start gap-1.5 pt-0.5">
                   <Activity className="h-3 w-3 text-foreground/70 mt-[2px] shrink-0" />
                   <div className="text-[10px] leading-snug">
-                    <span className="uppercase tracking-[0.18em] text-foreground/85">{ls.wealthVelocity.label}</span>
+                    <span className="tracking-[0.18em] text-foreground/85">{ls.wealthVelocity.label.toLowerCase()}</span>
                     <span className="text-muted-foreground/75"> — {ls.wealthVelocity.detail}</span>
                   </div>
                 </div>
 
                 {ls.wealthEvent ? (
                   <>
-                    <div className="text-[9.5px] uppercase tracking-[0.18em] text-muted-foreground/70 pt-1 border-t border-border/15">When you reach it</div>
+                    <div className="text-[9.5px] tracking-[0.18em] text-muted-foreground/70 pt-1 border-t border-border/15">when the chart times it</div>
                     <div className="text-[12px] font-light text-foreground">
                       {fmtDateTime(ls.wealthEvent.start)} → {fmtDateTime(ls.wealthEvent.end)}
                     </div>
                     <div className="text-[10.5px] font-light text-muted-foreground/85 leading-relaxed">{ls.wealthEvent.window.headline}</div>
-                    <div className="text-[9.5px] uppercase tracking-[0.16em] text-emerald-200/70">
-                      Dasha: {ls.wealthEvent.dasha?.mahaLord} MD / {ls.wealthEvent.dasha?.antarLord} AD
+                    <div className="text-[9.5px] tracking-[0.16em] text-emerald-200/70">
+                      dasha: {ls.wealthEvent.dasha?.mahaLord} maha / {ls.wealthEvent.dasha?.antarLord} antar
                     </div>
                     {ls.wealthEvent.convergingLords.length > 0 && (
-                      <div className="text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground/80">
-                        Converging lords: {ls.wealthEvent.convergingLords.join(" + ")}
+                      <div className="text-[9.5px] tracking-[0.16em] text-muted-foreground/80">
+                        converging lords: {ls.wealthEvent.convergingLords.join(" + ")}
                       </div>
                     )}
                     {wp.reasons.length > 0 && (
                       <div className="text-[9.5px] text-muted-foreground/70 pt-1 border-t border-border/10 leading-relaxed">
-                        Why supported: {wp.reasons.join(" · ")}
+                        why supported: {wp.reasons.join(" · ")}
                       </div>
                     )}
                   </>
                 ) : (
                   <div className="text-[11px] text-muted-foreground/70 italic">
                     {wp.tier === "none"
-                      ? `Dhana-yoga score ${wp.score}% — chart does not currently support millionaire/billionaire-grade wealth. No false-hope window will be shown.`
-                      : `No dasha-backed wealth window inside scan horizon. Wealth lords: ${ls.wealthLords.join(", ")}.`}
+                      ? `dhana-yoga score ${wp.score}% — the chart does not support millionaire- or billionaire-grade wealth, so no window is invented.`
+                      : `no dasha-backed wealth window inside the scan horizon. wealth lords: ${ls.wealthLords.join(", ")}.`}
                   </div>
                 )}
               </div>
@@ -589,8 +606,8 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
                   }`}>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <PowerIcon className={`h-3.5 w-3.5 ${ls.powerEvent ? "text-amber-200" : "text-muted-foreground/60"}`} />
-                      <span className="text-[10px] uppercase tracking-[0.2em] text-amber-200/90">Power capacity</span>
-                      <span className={`text-[8.5px] uppercase tracking-[0.2em] px-1.5 py-0.5 rounded border ${
+                      <span className="text-[10px] tracking-[0.2em] text-amber-200/90">power capacity</span>
+                      <span className={`text-[8.5px] tracking-[0.2em] px-1.5 py-0.5 rounded border ${
                         pp.tier === "global-icon" ? "border-foreground/50 text-foreground" :
                         pp.tier === "national-figure" ? "border-amber-400/40 text-amber-200/90" :
                         pp.tier === "regional-influencer" ? "border-border/40 text-muted-foreground" :
@@ -599,7 +616,7 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
                       }`}>
                         {pp.tier} · {pp.total}%
                       </span>
-                      {ls.powerEvent && <span className={gradePill(ls.powerEvent.grade)}>{ls.powerEvent.grade.toUpperCase()}</span>}
+                      {ls.powerEvent && <span className={gradePill(ls.powerEvent.grade)}>{ls.powerEvent.grade}</span>}
                     </div>
 
                     <div className="text-[11px] font-light text-foreground/85">{powerTierLabel[pp.tier]} · primary: {meta.label}</div>
@@ -625,30 +642,30 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
 
                     {ls.powerEvent ? (
                       <>
-                        <div className="text-[9.5px] uppercase tracking-[0.18em] text-muted-foreground/70 pt-1 border-t border-border/15">When you reach it</div>
+                        <div className="text-[9.5px] tracking-[0.18em] text-muted-foreground/70 pt-1 border-t border-border/15">when the chart times it</div>
                         <div className="text-[12px] font-light text-foreground">
                           {fmtDateTime(ls.powerEvent.start)} → {fmtDateTime(ls.powerEvent.end)}
                         </div>
                         <div className="text-[10.5px] font-light text-muted-foreground/85 leading-relaxed">{ls.powerEvent.window.headline}</div>
-                        <div className="text-[9.5px] uppercase tracking-[0.16em] text-amber-200/70">
-                          Dasha: {ls.powerEvent.dasha?.mahaLord} MD / {ls.powerEvent.dasha?.antarLord} AD
+                        <div className="text-[9.5px] tracking-[0.16em] text-amber-200/70">
+                          dasha: {ls.powerEvent.dasha?.mahaLord} maha / {ls.powerEvent.dasha?.antarLord} antar
                         </div>
                         {ls.powerEvent.convergingLords.length > 0 && (
-                          <div className="text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground/80">
-                            Converging lords: {ls.powerEvent.convergingLords.join(" + ")}
+                          <div className="text-[9.5px] tracking-[0.16em] text-muted-foreground/80">
+                            converging lords: {ls.powerEvent.convergingLords.join(" + ")}
                           </div>
                         )}
                         {pp.reasons.length > 0 && (
                           <div className="text-[9.5px] text-muted-foreground/70 pt-1 border-t border-border/10 leading-relaxed">
-                            Why supported: {pp.reasons.join(" · ")}
+                            why supported: {pp.reasons.join(" · ")}
                           </div>
                         )}
                       </>
                     ) : (
                       <div className="text-[11px] text-muted-foreground/70 italic">
                         {pp.tier === "none"
-                          ? `Power score ${pp.total}% — chart does not currently support large-scale power. No false-hope window will be shown.`
-                          : `No dasha-backed power window inside scan horizon. Power lords: ${ls.powerLords.join(", ")}.`}
+                          ? `power score ${pp.total}% — the chart does not support large-scale power, so no window is invented.`
+                          : `no dasha-backed power window inside the scan horizon. power lords: ${ls.powerLords.join(", ")}.`}
                       </div>
                     )}
                   </div>
@@ -659,13 +676,13 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
             {/* Additional candidates */}
             {(ls.wealthCandidates.length > 1 || ls.powerCandidates.length > 1) && (
               <details className="group">
-                <summary className="flex items-center gap-2 cursor-pointer list-none select-none text-[10px] uppercase tracking-[0.18em] text-muted-foreground/80 hover:text-foreground">
+                <summary className="flex items-center gap-2 cursor-pointer list-none select-none text-[10px] tracking-[0.18em] text-muted-foreground/80 hover:text-foreground">
                   <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />
-                  All dasha-backed candidates ({ls.wealthCandidates.length} wealth · {ls.powerCandidates.length} power)
+                  all dasha-backed candidates ({ls.wealthCandidates.length} wealth · {ls.powerCandidates.length} power)
                 </summary>
                 <div className="pt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <div className="text-[9px] uppercase tracking-[0.2em] text-emerald-300/80">Wealth windows</div>
+                    <div className="text-[9px] tracking-[0.2em] text-emerald-300/80">wealth windows</div>
                     {ls.wealthCandidates.slice(0, 6).map((e, i) => (
                       <div key={`w-${i}`} className="text-[10.5px] text-foreground/80 border border-border/20 rounded px-2 py-1 flex justify-between gap-2">
                         <span>{fmtDate(e.start)}</span>
@@ -675,7 +692,7 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
                     ))}
                   </div>
                   <div className="space-y-1">
-                    <div className="text-[9px] uppercase tracking-[0.2em] text-amber-300/80">Power windows</div>
+                    <div className="text-[9px] tracking-[0.2em] text-amber-300/80">power windows</div>
                     {ls.powerCandidates.slice(0, 6).map((e, i) => (
                       <div key={`p-${i}`} className="text-[10.5px] text-foreground/80 border border-border/20 rounded px-2 py-1 flex justify-between gap-2">
                         <span>{fmtDate(e.start)}</span>
@@ -689,7 +706,7 @@ const TransitsPanel = ({ natalAscendant, natalPlanets, lat, lon, chartKey, userC
             )}
 
             <div className="text-[10px] text-muted-foreground/60 italic leading-relaxed">
-              Method: scores your natal chart (Jupiter/Venus dignity, dhana-house lords, Atmakaraka, 10th/11th strength, Sun/Mars/Saturn/Jupiter/Rahu placements) for wealth tier and 4 power archetypes — then cross-references your Vimshottari Mahadasha + Antardasha with live transit windows firing the same lords. Earliest convergence = when you reach that level.
+              method: scores the natal chart (Jupiter/Venus dignity, dhana-house lords, atmakaraka, 10th/11th strength, Sun/Mars/Saturn/Jupiter/Rahu placements) for a wealth tier and four power archetypes, then cross-references the Vimshottari mahadasha + antardasha with transit windows firing the same lords. the earliest convergence is the window shown. a rule-based read of a tradition, not a measurement.
             </div>
           </div>
         );

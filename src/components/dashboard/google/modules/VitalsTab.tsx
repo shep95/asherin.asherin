@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity, HeartPulse, RefreshCw, Droplets, Brain, ShieldCheck, AlertTriangle,
+  Activity, HeartPulse, RefreshCw, Droplets, Brain, ShieldCheck,
   CircleDot, Layers, Fingerprint, Gauge, CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import {
   organismAcknowledge, organismDesignate, organismPulse, organismState,
   type OrganismEntity, type OrganismEvent, type OrganismFinding, type OrganismState,
 } from "@/lib/organism/organismClient";
+import OrganOffline from "../OrganOffline";
+import { describeFailure } from "../offline";
 
 /**
  * VITALS — the organism read as one body rather than as a rack of tools.
@@ -33,11 +35,11 @@ const SEV: Record<string, string> = {
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  self: "SELF",
-  trusted: "TRUSTED",
-  unknown: "UNRECOGNISED",
-  suspect: "SUSPECT",
-  hostile: "HOSTILE",
+  self: "self",
+  trusted: "trusted",
+  unknown: "unrecognised",
+  suspect: "suspect",
+  hostile: "hostile",
 };
 
 const rel = (iso: string | null | undefined): string => {
@@ -52,7 +54,7 @@ const rel = (iso: string | null | undefined): string => {
 
 const Stat = ({ icon: Icon, label, value, sub }: { icon: React.ElementType; label: string; value: string; sub?: string }) => (
   <Card className="border-border/60 bg-card/40 p-3">
-    <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+    <div className="flex items-center gap-2 text-[10px] tracking-[0.18em] text-muted-foreground">
       <Icon className="h-3.5 w-3.5" aria-hidden />
       {label}
     </div>
@@ -64,7 +66,7 @@ const Stat = ({ icon: Icon, label, value, sub }: { icon: React.ElementType; labe
 const VitalsTab = () => {
   const [loading, setLoading] = useState(true);
   const [pulsing, setPulsing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [state, setState] = useState<OrganismState | null>(null);
   const [findings, setFindings] = useState<OrganismFinding[]>([]);
   const [events, setEvents] = useState<OrganismEvent[]>([]);
@@ -84,7 +86,7 @@ const VitalsTab = () => {
       setError(null);
     } catch (e) {
       if (!alive.current) return;
-      setError("The bloodstream could not be read. This is a failure to look, not an all-clear.");
+      setError(e ?? new Error("the organism did not answer"));
     } finally {
       if (alive.current) setLoading(false);
     }
@@ -97,13 +99,13 @@ const VitalsTab = () => {
     try {
       const r = await organismPulse(72);
       toast.success(
-        `Metabolism complete — ${r.stories.length} stor${r.stories.length === 1 ? "y" : "ies"}, ` +
+        `metabolism complete — ${r.stories.length} stor${r.stories.length === 1 ? "y" : "ies"}, ` +
         `${r.immuneChanges} immune change(s), ${r.decayed} belief(s) decayed`,
         { description: r.calibrationNote },
       );
       await load();
-    } catch {
-      toast.error("The pulse could not complete. The last known vitals are still shown.");
+    } catch (e) {
+      toast.error(describeFailure(e, "organism"));
     } finally {
       if (alive.current) setPulsing(false);
     }
@@ -136,61 +138,61 @@ const VitalsTab = () => {
     <div className="space-y-4" aria-live="polite">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-foreground">
-            <HeartPulse className="h-4 w-4" aria-hidden /> Vitals — the organism
+          <h2 className="flex items-center gap-2 text-sm font-light tracking-[0.18em] text-foreground">
+            <HeartPulse className="h-4 w-4" aria-hidden /> vitals — the organism
           </h2>
           <p className="mt-1 max-w-3xl text-xs leading-relaxed text-muted-foreground">
-            Every collector on this account writes what it sensed into one shared bloodstream. This panel is the body
+            every collector on this account writes what it sensed into one shared bloodstream. this panel is the body
             reading itself: what is circulating, what it recognises as its own, the stories it has assembled from
             more than one organ agreeing, and how often it has been right before.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={pulse} disabled={pulsing} className="shrink-0">
-          <RefreshCw className={`mr-2 h-3.5 w-3.5 ${pulsing ? "animate-spin" : ""}`} aria-hidden />
-          {pulsing ? "Metabolising" : "Pulse"}
+        <Button variant="outline" size="sm" onClick={pulse} disabled={pulsing || error !== null} className="shrink-0">
+          <RefreshCw className={`mr-2 h-3.5 w-3.5 ${pulsing ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden />
+          {pulsing ? "metabolising" : "pulse"}
         </Button>
       </header>
 
-      {error && (
-        <Card className="border-foreground/30 bg-foreground/[0.04] p-3 text-xs text-foreground">
-          <AlertTriangle className="mr-2 inline h-3.5 w-3.5" aria-hidden /> {error}
-        </Card>
+      {error !== null && (
+        <OrganOffline error={error} organ="organism" onRetry={() => void load()} />
       )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat
           icon={Gauge}
-          label="Posture"
+          label="posture"
           value={vitals ? `${vitals.posture}` : "—"}
-          sub={vitals ? `100 is healthy. Weighted by story severity, never by alert volume.` : "No metabolism pass yet."}
+          sub={vitals ? `100 is healthy. weighted by story severity, never by alert volume.` : error !== null ? "unread." : "no metabolism pass yet."}
         />
         <Stat
           icon={Droplets}
-          label="Circulation"
+          label="circulation"
           value={vitals ? `${vitals.circulation}` : "—"}
-          sub={`${organCounts.length} organ(s) reporting in the last 72h`}
+          sub={error !== null ? "unread." : `${organCounts.length} organ(s) reporting in the last 72h`}
         />
         <Stat
           icon={Layers}
-          label="Memory"
+          label="memory"
           value={vitals ? `${vitals.memory}` : "—"}
           sub={vitals ? `${vitals.selfKnown} recognised as self · ${vitals.strangers} unrecognised` : "—"}
         />
         <Stat
           icon={CheckCircle2}
-          label="Calibration"
+          label="calibration"
           value={state ? `${Math.round(Number(state.calibration) * 100)}%` : "—"}
-          sub={vitals?.calibrationNote ?? "Confidence gain, learned from how past falsifiers resolved."}
+          sub={vitals?.calibrationNote ?? (error !== null ? "unread." : "confidence gain, learned from how past falsifiers resolved.")}
         />
       </div>
 
       <Card className="border-border/60 bg-card/40 p-3">
-        <div className="mb-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          <Activity className="h-3.5 w-3.5" aria-hidden /> Organs reporting
+        <div className="mb-2 flex items-center gap-2 text-[10px] tracking-[0.18em] text-muted-foreground">
+          <Activity className="h-3.5 w-3.5" aria-hidden /> organs reporting
         </div>
         {organCounts.length === 0 ? (
           <p className="text-xs text-muted-foreground">
-            Nothing has circulated in 72 hours. That is an absence of collection, not an absence of threat.
+            {error !== null
+              ? "the bloodstream could not be read, so no organ can be listed."
+              : "nothing has circulated in 72 hours. that is an absence of collection, not an absence of threat."}
           </p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
@@ -204,13 +206,14 @@ const VitalsTab = () => {
       </Card>
 
       <Card className="border-border/60 bg-card/40">
-        <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          <Brain className="h-3.5 w-3.5" aria-hidden /> Stories — assembled across organs
+        <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-[10px] tracking-[0.18em] text-muted-foreground">
+          <Brain className="h-3.5 w-3.5" aria-hidden /> stories — assembled across organs
         </div>
         {findings.length === 0 ? (
           <p className="p-3 text-xs leading-relaxed text-muted-foreground">
-            No story currently reproduces from the shared window. Single-organ sensations are still being logged; a
-            story is only told once at least two independent collectors describe the same subject or the same hour.
+            {error !== null
+              ? "unread."
+              : "no story currently reproduces from the shared window. single-organ sensations are still being logged; a story is only told once at least two independent collectors describe the same subject or the same hour."}
           </p>
         ) : (
           <ScrollArea className="max-h-[26rem]">
@@ -235,7 +238,7 @@ const VitalsTab = () => {
                   <h3 className="mt-1.5 text-sm font-medium text-foreground">{f.title}</h3>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{f.narrative}</p>
                   <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground/90">
-                    <span className="uppercase tracking-[0.14em]">Falsifier</span> — {f.falsifier}
+                    <span className="tracking-[0.14em]">falsifier</span> — {f.falsifier}
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     {f.organs.map((o) => (
@@ -249,10 +252,10 @@ const VitalsTab = () => {
                         try {
                           await organismAcknowledge(f.id);
                           setFindings((prev) => prev.filter((x) => x.id !== f.id));
-                        } catch { toast.error("Could not acknowledge this story."); }
+                        } catch (e) { toast.error(describeFailure(e, "organism")); }
                       }}
                     >
-                      Acknowledge
+                      acknowledge
                     </Button>
                   </div>
                 </li>
@@ -263,13 +266,14 @@ const VitalsTab = () => {
       </Card>
 
       <Card className="border-border/60 bg-card/40">
-        <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> Immune roster — not-self
+        <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-[10px] tracking-[0.18em] text-muted-foreground">
+          <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> immune roster — not-self
         </div>
         {strangers.length === 0 ? (
           <p className="p-3 text-xs text-muted-foreground">
-            Everything in memory is currently recognised as yours or benign. Designations you set by hand always
-            outrank the model's own guess.
+            {error !== null
+              ? "unread."
+              : "everything in memory is currently recognised as yours or benign. designations you set by hand always outrank the model's own guess."}
           </p>
         ) : (
           <ul className="divide-y divide-border/50">
@@ -294,11 +298,11 @@ const VitalsTab = () => {
                     try {
                       await organismDesignate(e.id, "self");
                       setEntities((prev) => prev.map((x) => (x.id === e.id ? { ...x, self_status: "self" } : x)));
-                      toast.success("Designated as yours — the immune model will not override this.");
-                    } catch { toast.error("Could not update the designation."); }
+                      toast.success("designated as yours — the immune model will not override this.");
+                    } catch (e) { toast.error(describeFailure(e, "organism")); }
                   }}
                 >
-                  This is mine
+                  this is mine
                 </Button>
               </li>
             ))}
@@ -307,11 +311,11 @@ const VitalsTab = () => {
       </Card>
 
       <Card className="border-border/60 bg-card/40">
-        <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          <CircleDot className="h-3.5 w-3.5" aria-hidden /> Bloodstream — raw circulation
+        <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-[10px] tracking-[0.18em] text-muted-foreground">
+          <CircleDot className="h-3.5 w-3.5" aria-hidden /> bloodstream — raw circulation
         </div>
         {events.length === 0 ? (
-          <p className="p-3 text-xs text-muted-foreground">No sensations in the window.</p>
+          <p className="p-3 text-xs text-muted-foreground">{error !== null ? "unread." : "no sensations in the window."}</p>
         ) : (
           <ScrollArea className="max-h-72">
             <ul className="divide-y divide-border/40">
@@ -329,8 +333,8 @@ const VitalsTab = () => {
       </Card>
 
       <p className="text-[11px] leading-relaxed text-muted-foreground">
-        Last metabolism {rel(state?.last_metabolism_at)}. The involuntary pass runs on the server every 30 minutes
-        whether or not this page is open; the Pulse button only asks for it early.
+        last metabolism {rel(state?.last_metabolism_at)}. a pass runs only when pulse is pressed on this device; nothing
+        runs while this page is closed.
       </p>
     </div>
   );

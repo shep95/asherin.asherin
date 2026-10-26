@@ -119,7 +119,8 @@ const qualityColor: Record<string, string> = {
 
 const PromptEnhancerPanel = ({ conversation }: Props) => {
   const [open, setOpen] = useState<boolean>(() => {
-    try { return localStorage.getItem(STORAGE_OPEN) !== "0"; } catch { return true; }
+    // closed until the operator opens it: an open rail spends two extra model calls per message on their key
+    try { return localStorage.getItem(STORAGE_OPEN) === "1"; } catch { return false; }
   });
   const [width, setWidth] = useState<number>(() => {
     try {
@@ -139,6 +140,8 @@ const PromptEnhancerPanel = ({ conversation }: Props) => {
   // Watch for the most recent USER message; treat it as a new submission.
   useEffect(() => {
     if (!conversation) return;
+    // a closed rail does no work: no model call rides along with every message
+    if (!open) return;
     const msgs = conversation.messages || [];
     const lastUser = [...msgs].reverse().find(m => m.role === "user");
     if (!lastUser) return;
@@ -154,7 +157,7 @@ const PromptEnhancerPanel = ({ conversation }: Props) => {
     launchEnhancement(lastUser.id, lastUser.content, msgs);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversation?.id, conversation?.messages.length]);
+  }, [conversation?.id, conversation?.messages.length, open]);
 
   // Reset seen-set when the active conversation changes
   useEffect(() => {

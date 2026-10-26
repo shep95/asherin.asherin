@@ -1,14 +1,14 @@
 // intake subsystem: genetics files, wearable exports, pasted/scanned bloodwork, and richer
 // history entry. every save writes through persist() to the device-local record only.
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Dna, FileText, History, Loader2, Trash2, Upload, Watch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { invokeWithByokRetry } from "@/lib/byokInvoke";
 import type { HealthPanelProps } from "@/lib/health/panel";
+import { readLabPhoto, type LabsReadValue } from "@/lib/health/shepherd";
 import { newId } from "@/lib/health/store";
 import { GENE_DEFS, type GeneEntry } from "@/lib/health/genetics";
 import { parseGeneticsFile } from "@/lib/health/import/geneticsFile";
@@ -52,7 +52,7 @@ function splitDataUrl(dataUrl: string): { mime: string; b64: string } {
   return { mime, b64: b64 ?? "" };
 }
 
-export default function IntakePanel({ record, persist, onEvent, resolveByok }: HealthPanelProps) {
+export default function IntakePanel({ record, persist, onEvent }: HealthPanelProps) {
   const [tab, setTab] = useState<Tab>("genetics");
 
   return (
@@ -82,7 +82,7 @@ export default function IntakePanel({ record, persist, onEvent, resolveByok }: H
 
       {tab === "genetics" && <GeneticsTab record={record} persist={persist} onEvent={onEvent} />}
       {tab === "wearables" && <WearablesTab record={record} persist={persist} onEvent={onEvent} />}
-      {tab === "bloodwork" && <BloodworkTab record={record} persist={persist} onEvent={onEvent} resolveByok={resolveByok} />}
+      {tab === "bloodwork" && <BloodworkTab record={record} persist={persist} onEvent={onEvent} />}
       {tab === "history" && <HistoryTab record={record} persist={persist} onEvent={onEvent} />}
     </div>
   );
@@ -285,22 +285,7 @@ function WearablesTab({ record, persist, onEvent }: Pick<HealthPanelProps, "reco
 
 // ───────────────────────────── bloodwork ─────────────────────────────
 
-interface LabsReadValue {
-  key: string;
-  label: string;
-  value: number;
-  unit?: string;
-  refLow?: number;
-  refHigh?: number;
-  collectedAt?: string;
-}
-
-function BloodworkTab({
-  record,
-  persist,
-  onEvent,
-  resolveByok,
-}: Pick<HealthPanelProps, "record" | "persist" | "onEvent" | "resolveByok">) {
+function BloodworkTab({ record, persist, onEvent }: Pick<HealthPanelProps, "record" | "persist" | "onEvent">) {
   const [text, setText] = useState("");
   const [preview, setPreview] = useState<ReturnType<typeof normaliseLabDocument> | null>(null);
   const [scanBusy, setScanBusy] = useState(false);
@@ -334,16 +319,13 @@ function BloodworkTab({
     setScanValues([]);
     setUnreadable([]);
     try {
+      if (!file.type.startsWith("image/")) throw new Error("that file is not a photograph. take a photo or screenshot of the report — jpeg, png or webp.");
       const dataUrl = await readFileDataUrl(file);
       const { mime, b64 } = splitDataUrl(dataUrl);
-      const byok = resolveByok ? await resolveByok() : undefined;
-      const data = await invokeWithByokRetry<{ values?: LabsReadValue[]; unreadable?: string[]; error?: string }>("asherin-health-ai", {
-        body: { action: "labs.read", document: { mime, b64 }, ...(byok ? { byok } : {}) },
-      });
-      if (data?.error) throw new Error(data.error);
-      setScanValues(data?.values ?? []);
-      setUnreadable(data?.unreadable ?? []);
-      if (!data?.values || data.values.length === 0) throw new Error("nothing readable came back from that document.");
+      const data = await readLabPhoto({ mime, b64 });
+      setScanValues(data.values);
+      setUnreadable(data.unreadable);
+      if (data.values.length === 0) throw new Error("nothing readable came back from that photograph. try closer, in even light.");
     } catch (e) {
       setScanError(e instanceof Error ? e.message : "that document could not be read.");
     } finally {
@@ -361,7 +343,7 @@ function BloodworkTab({
     const additions: LabValue[] = recognised.map((v) => ({ key: v.key, value: v.value, takenAt: v.collectedAt }));
     persist({ ...record, labs: [...record.labs, ...additions] });
     onEvent?.(
-      `${additions.length} lab value${additions.length === 1 ? "" : "s"} were just read from a photographed or scanned report. ` +
+      `${additions.length} lab value${additions.length === 1 ? "" : "s"} were just read from a photographed report. ` +
         `explain what stands out and what to bring to a clinician.`,
     );
     toast.success(`${additions.length} value${additions.length === 1 ? "" : "s"} saved.`);
@@ -416,17 +398,18 @@ function BloodworkTab({
 
       <div className="space-y-2 border-t border-white/[0.06] pt-4">
         <p className="text-[11px] font-light leading-relaxed text-foreground/50">
-          or send a photo or pdf of a report to be read by the assistant's vision model. this leaves the device only for this one read.
+          or photograph the report and have shepherd transcribe it, using the model key held on this device. the photograph
+          leaves the device only for this one read, to the provider you connected. a pdf is not read — photograph or screenshot the page.
         </p>
-        <input ref={fileRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => void onScanFile(e.target.files?.[0] ?? null)} />
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => void onScanFile(e.target.files?.[0] ?? null)} />
         <Button variant="outline" size="sm" className="h-8 w-full gap-2 text-[11px]" disabled={scanBusy} onClick={() => fileRef.current?.click()}>
           {scanBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-          {scanBusy ? "reading document" : "scan a lab report"}
+          {scanBusy ? "reading the photograph" : "photograph a lab report"}
         </Button>
         {scanError && <p className="text-[11px] font-light text-red-300/80">{scanError}</p>}
         {scanValues.length > 0 && (
           <div className="space-y-2 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
-            <p className="text-[10px] uppercase tracking-[0.22em] text-foreground/35">read from document</p>
+            <p className="text-[10px] uppercase tracking-[0.22em] text-foreground/35">read from the photograph</p>
             {scanValues.map((v, i) => (
               <p key={i} className="text-[11px] font-light text-foreground/75">
                 {v.label} ({v.key}): {v.value} {v.unit ?? ""}

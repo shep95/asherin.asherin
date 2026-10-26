@@ -16,7 +16,9 @@ const HUD_CSS = `
     --ink: hsl(var(--foreground));
     --mute: hsl(var(--muted-foreground));
     --line: hsl(var(--border));
-    --accent: hsl(var(--accent));
+    /* --accent is inherited from the app theme as a raw hsl triple and used as hsl(var(--accent)).
+       it must never be redefined here: "--accent: hsl(var(--accent))" on the same element is a
+       cycle, the property becomes invalid, and every accent button renders transparent. */
     --accent-ink: hsl(var(--accent-foreground));
     --ok: hsl(var(--accent));
     --warn: hsl(var(--accent));
@@ -47,7 +49,7 @@ const HUD_CSS = `
     padding: 12px 16px; pointer-events: auto; min-width: 0; max-width: min(280px, calc(100% - 80px));
     font: 300 12px/1.5 inherit; color: var(--ink);
   }
-  .misb b { color: var(--accent); font-weight: 500; }
+  .misb b { color: hsl(var(--accent)); font-weight: 500; }
   .misb .m { color: var(--mute); font-size: 11px; }
   .compass {
     position: absolute; top: 16px; right: 16px; z-index: 8;
@@ -62,7 +64,11 @@ const HUD_CSS = `
   .compass svg rect { fill: hsl(var(--accent)); }
   .compass svg circle { stroke: hsl(var(--border)); }
   .compass.dim { opacity: .45; }
-  .layers { display: none !important; }
+  .layers {
+    position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 8;
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+    width: max-content; max-width: min(640px, calc(100% - 400px)); pointer-events: auto;
+  }
   .tog {
     border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; cursor: pointer;
     color: var(--mute); font: 400 12px/1 inherit; background: hsl(var(--card) / .55);
@@ -692,6 +698,17 @@ function bootArvision(wrap, root, emitPull) {
     S.devices = all.filter((d) => d.kind === "videoinput");
   }
 
+  // a browser error name, said in the operator's words
+  function plainWhy(why) {
+    const w = String(why || "");
+    if (/NotAllowed|PermissionDenied/i.test(w)) return "this site is blocked from the camera in the browser's site settings";
+    if (/NotFound|DevicesNotFound/i.test(w)) return "no camera is attached to this device";
+    if (/NotReadable|TrackStart/i.test(w)) return "another app is holding the camera";
+    if (/Overconstrained/i.test(w)) return "no camera matched the requested side";
+    if (!w || /getUserMedia failed/i.test(w)) return "the camera did not open";
+    return w.charAt(0).toLowerCase() + w.slice(1);
+  }
+
   async function haltCam(why) {
     S.halted = true;
     try {
@@ -701,7 +718,15 @@ function bootArvision(wrap, root, emitPull) {
     try {
       cam.srcObject = null;
     } catch (_) {}
-    note("asherin.arvision halted — this box, not the feed. " + String(why || ""));
+    const reason = plainWhy(why);
+    note("camera stopped on this device — " + reason);
+    // the gate sits over everything, so the reason must be on the gate itself,
+    // and its one button must be a real retry
+    const gateP = wrap.querySelector("#gate p");
+    if (gateP) gateP.textContent = "the camera did not open — " + reason + ". fix that, then try again.";
+    const allowBtn = $("allow");
+    if (allowBtn) allowBtn.textContent = "try again";
+    $("gate").hidden = false;
     try {
       emitPull({
         organ: "arvision",
@@ -715,7 +740,7 @@ function bootArvision(wrap, root, emitPull) {
 
   async function startCam(deviceId, isRetry, exactFacing) {
     if (S.halted && !isRetry) {
-      note("camera halted — tap cam to retry once");
+      note("camera stopped — tap try again");
       return false;
     }
     S.halted = false;
@@ -744,13 +769,13 @@ function bootArvision(wrap, root, emitPull) {
         lastErr = e;
         const name = e && e.name;
         if (name === "NotAllowedError" || name === "PermissionDeniedError") {
-          note("camera permission blocked on this box");
+          note("camera permission blocked in this browser");
           await haltCam(name);
           return false;
         }
         if (name === "NotFoundError" || name === "DevicesNotFoundError") {
           if (exactFacing) continue;
-          note("no camera on this box");
+          note("no camera on this device");
           await haltCam(name);
           return false;
         }
@@ -760,7 +785,7 @@ function bootArvision(wrap, root, emitPull) {
             return startCam(deviceId, true, exactFacing);
           }
           if (exactFacing) continue;
-          note("camera in use on this box — CANNOT_RESOLVE");
+          note("camera in use by another app on this device");
           await haltCam(name);
           return false;
         }
@@ -908,10 +933,10 @@ function bootArvision(wrap, root, emitPull) {
       a.href = URL.createObjectURL(blob);
       a.download = "arvision-still.png";
       a.click();
-      window.open("https://yandex.com/images/", "_blank", "noopener");
-      window.open("https://www.google.com/search?tbm=isch&q=upload", "_blank", "noopener");
-      window.open("https://tineye.com/", "_blank", "noopener");
-      note("still saved — drop it into the reverse tabs (InVID workflow)");
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      // nothing is opened or uploaded for the operator: the still is theirs to
+      // drop into a reverse image search by hand if they choose to
+      note("still saved on this device — upload it to a reverse image search yourself if you want one");
     }, "image/png");
   }
 
@@ -929,7 +954,7 @@ function bootArvision(wrap, root, emitPull) {
       runIntel();
     } catch (e) {
       S.ocr = "";
-      note("ocr CANNOT_RESOLVE");
+      note("ocr could not run — the text engine did not load; check the connection and try again");
     }
   }
 
@@ -1364,20 +1389,32 @@ function bootArvision(wrap, root, emitPull) {
       frame_intel: S.intel,
       still_jpeg: still,
     };
+    // there is no server behind this room. the packet is written to this
+    // device's own table and handed to the operator as a file; neither step
+    // sends a byte anywhere.
+    let stored = false;
     try {
-      const r = await fetch("/api/packet", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(packet),
+      const { error } = await supabase.from("arvision_packets").insert({
+        captured_at: packet.misb_analog && packet.misb_analog.zulu,
+        packet: packet,
       });
-      const j = await r.json();
-      note(j.ok ? "packet saved in asherin" : "packet miss");
+      stored = !error;
     } catch {
+      /* the device table refused; the download below still carries the packet */
+    }
+    try {
+      const blob = new Blob([JSON.stringify(packet)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = "data:application/json," + encodeURIComponent(JSON.stringify(packet));
-      a.download = "arvision-packet.json";
+      a.href = url;
+      a.download = "arvision-packet-" + new Date().toISOString().replace(/[:.]/g, "-") + ".json";
+      document.body.appendChild(a);
       a.click();
-      note("packet downloaded (api miss)");
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      note(stored ? "packet kept on this device and downloaded" : "packet downloaded — the device table refused the copy");
+    } catch {
+      note(stored ? "packet kept on this device" : "packet could not be saved or downloaded");
     }
   }
 
@@ -2099,7 +2136,7 @@ function bootArvision(wrap, root, emitPull) {
   async function probeStrongest() {
     const bt = navigator.bluetooth;
     if (!bt || !bt.requestDevice) {
-      note("bluetooth picker not in this browser — companion for live ads");
+      note("this browser has no bluetooth picker");
       return;
     }
     note("pick a bluetooth device…");
@@ -2391,8 +2428,9 @@ function bootArvision(wrap, root, emitPull) {
     }
   }
 
+  // the gate button is the retry after a refusal, so it must bypass the halted latch
   $("allow").onclick = () =>
-    startCam().catch((e) => {
+    startCam(undefined, true).catch((e) => {
       haltCam(String((e && (e.name || e.message)) || e));
     });
   layerChips();

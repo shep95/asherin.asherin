@@ -24,7 +24,7 @@ const SafetyView = () => {
   const { user } = useAuth();
   const { snapshot, review, setRules, setAllowlist, deleteBundle } = useSafetyConsole();
   const vision = useVisionSafety();
-  const operator = user?.id ? `operator ${user.id.slice(0, 8)}` : "unauthenticated session";
+  const operator = user?.id ? `operator ${user.id.slice(0, 8)}` : "this device";
   const allowlist = useMemo(() => safetyHub().getAllowlist(), [snapshot.atMs]);
 
   return (

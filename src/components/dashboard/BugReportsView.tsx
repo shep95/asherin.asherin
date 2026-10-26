@@ -1,363 +1,443 @@
-import { useState, useEffect, useMemo } from "react";
-import { Bug, Lightbulb, Send, Loader2, Filter, Calendar, Sparkles, Check, Clock, AlertTriangle, ChevronDown } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+// asherin.bugs — what broke and what you want, logged on this device.
+//
+// the hosted era promised "submit reports privately — only the admin team can
+// see them". on a device there is no team and nothing is sent: the log is the
+// operator's own, shepherd (the model they connected) can summarise it from
+// this browser, and an export (json or markdown) is the way it reaches anyone.
+// nothing here estimates, pretends to deliver, or waits on a server.
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { format } from "date-fns";
+import { Bug, Lightbulb, Plus, Loader2, Sparkles, ChevronDown, Trash2, FileJson, FileText, Check, Clock, Ban, Circle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { isOwnerEmail } from "@/lib/adminEmail";
-interface BugReport {
-  id: string;
-  user_id: string;
-  type: "bug" | "feature";
-  title: string;
-  description: string;
-  severity: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
-}
+import { useIsV2 } from "@/lib/dashboardUiContext";
+import { V2Action, v2ActionClass } from "@/components/dashboard/v2/V2PageShell";
+import { onTableChange } from "@/lib/local/db";
+import {
+  addReport, addSummary, countByType, digestFor, downloadText, exportFilename, filterReports, readReports, readSummaries,
+  removeReport, setReportStatus, summaryPrompt, toExportBundle, toMarkdown,
+  DESCRIPTION_MAX, SEVERITIES, STATUSES, STATUS_LABEL, TITLE_MAX, TYPE_LABEL,
+  type BugReport, type BugSummary, type ReportFilter, type ReportType, type Severity, type Status,
+} from "@/lib/bugs/bugLog";
 
-interface Summary {
-  id: string;
-  summary: string;
-  report_ids: string[];
-  bug_count: number;
-  feature_count: number;
-  created_at: string;
-}
+const SEVERITY_CLASS: Record<Severity, string> = {
+  critical: "text-red-400 bg-red-500/10 border-red-500/20",
+  high: "text-orange-400 bg-orange-500/10 border-orange-500/20",
+  medium: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+  low: "text-muted-foreground bg-muted/30 border-border/20",
+};
 
-type FilterType = "all" | "bug" | "feature";
-type FilterDate = "all" | "today" | "week" | "month";
-type FilterStatus = "all" | "open" | "in_progress" | "resolved" | "dismissed";
+const STATUS_ICON: Record<Status, React.ElementType> = {
+  open: Circle,
+  in_progress: Clock,
+  resolved: Check,
+  dismissed: Ban,
+};
+
+const when = (iso: string): string => {
+  const t = new Date(iso);
+  return Number.isNaN(t.getTime()) ? "time unknown" : format(t, "d MMM yyyy HH:mm");
+};
+
+const message = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+const fieldClass =
+  "w-full rounded-xl border border-border/20 bg-card/30 px-4 py-3 text-xs font-light text-foreground outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-foreground/30";
+const selectClass =
+  "rounded-lg border border-border/20 bg-card/30 px-2 py-1 text-[10px] font-light text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const quietButton =
+  "inline-flex items-center gap-1.5 rounded-xl border border-border/20 px-3 py-1.5 text-xs font-light text-muted-foreground transition-colors hover:text-foreground hover:bg-foreground/5 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 const BugReportsView = () => {
+  const v2 = useIsV2();
   const { user } = useAuth();
-  const { toast } = useToast();
-  const isAdmin = isOwnerEmail(user?.email);
 
-  // Submit form state
-  const [type, setType] = useState<"bug" | "feature">("bug");
+  const [reports, setReports] = useState<BugReport[]>([]);
+  const [summaries, setSummaries] = useState<BugSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // compose
+  const [composing, setComposing] = useState(false);
+  const [type, setType] = useState<ReportType>("bug");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [severity, setSeverity] = useState("medium");
-  const [submitting, setSubmitting] = useState(false);
+  const [severity, setSeverity] = useState<Severity>("medium");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Admin state
-  const [reports, setReports] = useState<BugReport[]>([]);
-  const [summaries, setSummaries] = useState<Summary[]>([]);
-  const [loading, setLoading] = useState(true);
+  // list
+  const [filter, setFilter] = useState<ReportFilter>({ type: "all", status: "all" });
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const [rowError, setRowError] = useState<string | null>(null);
+
+  // summary
   const [summarizing, setSummarizing] = useState(false);
-  const [filterType, setFilterType] = useState<FilterType>("all");
-  const [filterDate, setFilterDate] = useState<FilterDate>("all");
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   const [expandedSummary, setExpandedSummary] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    loadData();
+  const load = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const [r, s] = await Promise.all([readReports(user.id), readSummaries(user.id)]);
+      setReports(r);
+      setSummaries(s);
+      setLoadError(null);
+    } catch (e) {
+      setLoadError(message(e));
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
-  const loadData = async () => {
-    setLoading(true);
-    const { data: reportData } = await supabase
-      .from("bug_reports")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (reportData) setReports(reportData as any);
+  useEffect(() => {
+    void load();
+    const offReports = onTableChange("bug_reports", () => { void load(); });
+    const offSummaries = onTableChange("bug_report_summaries", () => { void load(); });
+    return () => {
+      offReports();
+      offSummaries();
+    };
+  }, [load]);
 
-    if (isAdmin) {
-      const { data: summaryData } = await supabase
-        .from("bug_report_summaries")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (summaryData) setSummaries(summaryData as any);
-    }
-    setLoading(false);
-  };
+  const shown = useMemo(() => filterReports(reports, filter), [reports, filter]);
+  const counts = useMemo(() => countByType(reports), [reports]);
+  const canSave = title.trim().length > 0 && description.trim().length > 0 && !saving;
 
-  const handleSubmit = async () => {
-    if (!title.trim() || !description.trim() || !user) return;
-    setSubmitting(true);
-    const { error } = await supabase.from("bug_reports").insert({
-      user_id: user.id,
-      type,
-      title: title.trim(),
-      description: description.trim(),
-      severity,
-    });
-    if (error) {
-      toast({ title: "Failed to submit", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: type === "bug" ? "Bug report submitted" : "Feature request submitted", description: "Thank you — this has been sent privately to the team." });
+  const save = async () => {
+    if (!user || !canSave) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await addReport(user.id, { type, title, description, severity });
       setTitle("");
       setDescription("");
       setSeverity("medium");
-      loadData();
+      setComposing(false);
+    } catch (e) {
+      setSaveError(message(e));
+    } finally {
+      setSaving(false);
     }
-    setSubmitting(false);
   };
 
-  const handleSummarize = async () => {
-    setSummarizing(true);
+  const changeStatus = async (id: string, status: Status) => {
+    setRowError(null);
+    setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
     try {
-      // local edition: the summary is written by the model the operator connected,
-      // from this device, over the reports held on this device.
-      if (reports.length === 0) {
-        toast({ title: "Nothing to summarize", description: "File a report first." });
-        return;
-      }
-      const { askModel } = await import("@/lib/ai");
-      const digest = reports
-        .slice(0, 60)
-        .map((r) => `- [${r.type} · ${r.severity} · ${r.status}] ${r.title}: ${r.description.slice(0, 400)}`)
-        .join("\n");
-      const summary = await askModel(
-        `summarize these product reports for the person who filed them. group by theme, name the most severe bug first, then feature asks. plain lowercase prose, under 200 words.\n\n${digest}`,
-      );
-      const bugCount = reports.filter((r) => r.type === "bug").length;
-      const featureCount = reports.filter((r) => r.type === "feature").length;
-      const { error } = await supabase.from("bug_report_summaries").insert({
-        user_id: user?.id,
-        summary,
-        report_ids: reports.map((r) => r.id),
-        bug_count: bugCount,
-        feature_count: featureCount,
-      } as never);
-      if (error) {
-        toast({ title: "Summarization failed", description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: "Summary generated", description: `${bugCount} bugs, ${featureCount} features summarized.` });
-        loadData();
-      }
+      await setReportStatus(id, status);
     } catch (e) {
-      toast({ title: "Summarization failed", description: e instanceof Error ? e.message : "the model did not answer", variant: "destructive" });
+      setRowError(message(e));
+      void load();
+    }
+  };
+
+  const remove = async (id: string) => {
+    setRowError(null);
+    setConfirmRemove(null);
+    try {
+      await removeReport(id);
+    } catch (e) {
+      setRowError(message(e));
+    }
+  };
+
+  const summarize = async () => {
+    if (!user || reports.length === 0) return;
+    setSummarizing(true);
+    setSummaryError(null);
+    try {
+      // the model the operator connected answers from this browser; only the digest leaves.
+      const { askModel } = await import("@/lib/ai");
+      const text = (await askModel(summaryPrompt(digestFor(reports)), { maxTokens: 600 })).trim();
+      if (!text) throw new Error("shepherd returned an empty answer.");
+      const s = await addSummary(user.id, text, reports);
+      setExpandedSummary(s.id);
+    } catch (e) {
+      setSummaryError(message(e));
     } finally {
       setSummarizing(false);
     }
   };
 
-  const updateStatus = async (id: string, status: string) => {
-    await supabase.from("bug_reports").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
-    setReports(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+  const exportAs = (kind: "json" | "md") => {
+    if (!user) return;
+    const meta = { deviceId: user.id, exportedAt: new Date() };
+    const name = exportFilename(kind, meta.exportedAt);
+    if (kind === "json") downloadText(name, JSON.stringify(toExportBundle(reports, summaries, meta), null, 2), "application/json");
+    else downloadText(name, toMarkdown(reports, summaries, meta), "text/markdown");
   };
 
-  const filteredReports = useMemo(() => {
-    let filtered = reports;
-    if (filterType !== "all") filtered = filtered.filter(r => r.type === filterType);
-    if (filterStatus !== "all") filtered = filtered.filter(r => r.status === filterStatus);
-    if (filterDate !== "all") {
-      const now = new Date();
-      const cutoff = new Date();
-      if (filterDate === "today") cutoff.setHours(0, 0, 0, 0);
-      else if (filterDate === "week") cutoff.setDate(now.getDate() - 7);
-      else if (filterDate === "month") cutoff.setMonth(now.getMonth() - 1);
-      filtered = filtered.filter(r => new Date(r.created_at) >= cutoff);
-    }
-    return filtered;
-  }, [reports, filterType, filterDate, filterStatus]);
-
-  const severityColor = (s: string) => {
-    switch (s) {
-      case "critical": return "text-red-400 bg-red-500/10";
-      case "high": return "text-orange-400 bg-orange-500/10";
-      case "medium": return "text-amber-400 bg-amber-500/10";
-      default: return "text-muted-foreground bg-muted/30";
-    }
-  };
-
-  const statusIcon = (s: string) => {
-    switch (s) {
-      case "resolved": return <Check className="h-3 w-3 text-emerald-400" />;
-      case "in_progress": return <Clock className="h-3 w-3 text-amber-400" />;
-      case "dismissed": return <AlertTriangle className="h-3 w-3 text-muted-foreground" />;
-      default: return <div className="h-2 w-2 rounded-full bg-accent" />;
-    }
-  };
-
-  if (loading) return <div className="flex justify-center items-center h-full"><Loader2 className="h-5 w-5 animate-spin text-accent" /></div>;
+  const exportButtons = (
+    <>
+      <button type="button" onClick={() => exportAs("md")} disabled={loading || reports.length === 0} className={v2 ? v2ActionClass : quietButton} aria-label="export the log as markdown">
+        <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+        export .md
+      </button>
+      <button type="button" onClick={() => exportAs("json")} disabled={loading || reports.length === 0} className={v2 ? v2ActionClass : quietButton} aria-label="export the log as json">
+        <FileJson className="h-3.5 w-3.5" aria-hidden="true" />
+        export .json
+      </button>
+    </>
+  );
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-shrink-0 p-6 border-b border-border/20">
-        <h1 className="text-xl font-extralight tracking-wide text-foreground">Bug Reports & Feature Requests</h1>
-        <p className="text-xs font-extralight text-muted-foreground mt-1">
-          {isAdmin ? "Review all submissions — generate AI summaries for action." : "Submit reports privately — only the admin team can see them."}
-        </p>
-      </div>
-
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <Tabs defaultValue={isAdmin ? "reports" : "submit"} className="flex flex-col h-full">
-          <div className="flex-shrink-0 px-6 pt-4">
-            <TabsList className="bg-card/30 border border-border/20">
-              <TabsTrigger value="submit" className="text-xs font-light data-[state=active]:bg-foreground/10">Submit</TabsTrigger>
-              {isAdmin && <TabsTrigger value="reports" className="text-xs font-light data-[state=active]:bg-foreground/10">All Reports ({reports.length})</TabsTrigger>}
-              {isAdmin && <TabsTrigger value="summaries" className="text-xs font-light data-[state=active]:bg-foreground/10">AI Summaries ({summaries.length})</TabsTrigger>}
-              {!isAdmin && <TabsTrigger value="my-reports" className="text-xs font-light data-[state=active]:bg-foreground/10">My Reports</TabsTrigger>}
-            </TabsList>
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
+        {v2 ? (
+          <V2Action>{exportButtons}</V2Action>
+        ) : (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="text-xl font-extralight tracking-wide text-foreground">asherin.bugs</h1>
+              <p className="mt-1 text-sm font-extralight text-muted-foreground">
+                what broke and what you want, logged on this device. nobody receives it unless you send the export.
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">{exportButtons}</div>
           </div>
+        )}
 
-          {/* Submit Tab */}
-          <TabsContent value="submit" className="flex-1 min-h-0 overflow-auto">
-            <div className="max-w-xl mx-auto p-6 space-y-5">
-              <div className="flex gap-2">
-                <button onClick={() => setType("bug")} className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-light transition-colors ${type === "bug" ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-card/20 text-muted-foreground border border-border/20 hover:bg-foreground/5"}`}>
-                  <Bug className="h-3.5 w-3.5" /> Bug Report
-                </button>
-                <button onClick={() => setType("feature")} className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-light transition-colors ${type === "feature" ? "bg-accent/10 text-accent border border-accent/20" : "bg-card/20 text-muted-foreground border border-border/20 hover:bg-foreground/5"}`}>
-                  <Lightbulb className="h-3.5 w-3.5" /> Feature Request
-                </button>
-              </div>
+        {loading && (
+          <div className="space-y-3" aria-busy="true" aria-label="reading the log">
+            {[0, 1, 2].map((i) => <div key={i} className="h-20 rounded-xl border border-border/15 bg-card/5 animate-pulse" />)}
+          </div>
+        )}
 
-              <div className="space-y-1">
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Title</label>
-                <input value={title} onChange={e => setTitle(e.target.value)} placeholder={type === "bug" ? "e.g. Chat messages not loading after refresh" : "e.g. Add dark mode toggle to settings"} className="w-full bg-card/30 border border-border/20 rounded-xl px-4 py-3 text-xs text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-accent/30 transition-colors" />
-              </div>
+        {!loading && loadError && (
+          <div role="alert" className="rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 space-y-2">
+            <p className="text-xs font-light text-foreground">the log did not load.</p>
+            <p className="text-[10px] text-muted-foreground/50">{loadError}</p>
+            <button type="button" onClick={() => { setLoading(true); void load(); }} className="text-[10px] px-2.5 py-1 rounded-lg border border-border/30 hover:border-border/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              try again
+            </button>
+          </div>
+        )}
 
-              <div className="space-y-1">
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Description</label>
-                <textarea value={description} onChange={e => setDescription(e.target.value)} rows={6} placeholder={type === "bug" ? "Steps to reproduce, expected vs actual behavior, browser/device info…" : "Describe the feature, why it would be useful, and any examples…"} className="w-full bg-card/30 border border-border/20 rounded-xl px-4 py-3 text-xs text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-accent/30 transition-colors resize-none" />
-              </div>
+        {!loading && !loadError && (
+          <>
+            {/* compose */}
+            <div className="rounded-xl border border-border/20 bg-card/20 backdrop-blur-sm">
+              <button
+                type="button"
+                onClick={() => setComposing((c) => !c)}
+                aria-expanded={composing}
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
+              >
+                <span className="flex items-center gap-2 text-xs font-light text-foreground">
+                  <Plus className={`h-3.5 w-3.5 transition-transform ${composing ? "rotate-45" : ""}`} aria-hidden="true" />
+                  new entry
+                </span>
+                <span className="text-[10px] text-muted-foreground/60">{reports.length === 0 ? "the log is empty" : `${counts.bugs} ${counts.bugs === 1 ? "bug" : "bugs"} · ${counts.features} ${counts.features === 1 ? "request" : "requests"}`}</span>
+              </button>
 
-              {type === "bug" && (
-                <div className="space-y-1">
-                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Severity</label>
-                  <div className="flex gap-2">
-                    {["low", "medium", "high", "critical"].map(s => (
-                      <button key={s} onClick={() => setSeverity(s)} className={`rounded-lg px-3 py-1.5 text-[10px] font-light capitalize transition-colors ${severity === s ? severityColor(s) + " border border-current/20" : "bg-card/20 text-muted-foreground border border-border/20 hover:bg-foreground/5"}`}>{s}</button>
-                    ))}
+              {composing && (
+                <div className="space-y-4 border-t border-border/10 px-4 pb-4 pt-4">
+                  <div className="flex gap-2" role="radiogroup" aria-label="kind of entry">
+                    {(["bug", "feature"] as ReportType[]).map((t) => {
+                      const Icon = t === "bug" ? Bug : Lightbulb;
+                      const on = type === t;
+                      return (
+                        <button
+                          key={t}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          onClick={() => setType(t)}
+                          className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-light transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                            on ? "border-foreground/30 bg-foreground/10 text-foreground" : "border-border/20 bg-card/20 text-muted-foreground hover:bg-foreground/5"
+                          }`}
+                        >
+                          <Icon className="h-3.5 w-3.5" aria-hidden="true" /> {TYPE_LABEL[t]}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <label className="block space-y-1">
+                    <span className="text-[10px] tracking-wider text-muted-foreground">title</span>
+                    <input
+                      value={title}
+                      maxLength={TITLE_MAX}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder={type === "bug" ? "e.g. chat loses the draft on refresh" : "e.g. export a conversation as pdf"}
+                      className={fieldClass}
+                    />
+                  </label>
+
+                  <label className="block space-y-1">
+                    <span className="text-[10px] tracking-wider text-muted-foreground">description</span>
+                    <textarea
+                      value={description}
+                      maxLength={DESCRIPTION_MAX}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={5}
+                      placeholder={type === "bug" ? "steps to reproduce, what you expected, what happened, browser and device" : "what it would do, why it matters, an example"}
+                      className={`${fieldClass} resize-none`}
+                    />
+                  </label>
+
+                  {type === "bug" && (
+                    <div className="space-y-1">
+                      <span className="text-[10px] tracking-wider text-muted-foreground">severity</span>
+                      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="severity">
+                        {SEVERITIES.map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            role="radio"
+                            aria-checked={severity === s}
+                            onClick={() => setSeverity(s)}
+                            className={`rounded-lg border px-3 py-1.5 text-[10px] font-light transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                              severity === s ? SEVERITY_CLASS[s] : "border-border/20 bg-card/20 text-muted-foreground hover:bg-foreground/5"
+                            }`}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {saveError && (
+                    <p role="alert" className="text-[10px] text-destructive">the entry was not saved: {saveError}</p>
+                  )}
+
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[10px] text-muted-foreground/50">kept in this browser's store. nothing is sent.</p>
+                    <button
+                      type="button"
+                      onClick={() => void save()}
+                      disabled={!canSave}
+                      className="inline-flex items-center gap-2 rounded-xl border border-foreground/20 bg-foreground/10 px-4 py-2.5 text-xs font-light text-foreground transition-colors hover:bg-foreground/15 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Plus className="h-3.5 w-3.5" aria-hidden="true" />}
+                      add to the log
+                    </button>
                   </div>
                 </div>
               )}
-
-              <button onClick={handleSubmit} disabled={!title.trim() || !description.trim() || submitting} className="inline-flex items-center gap-2 rounded-xl bg-accent/10 border border-accent/20 text-accent px-5 py-3 text-xs font-light hover:bg-accent/15 transition-colors disabled:opacity-40">
-                {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                Submit {type === "bug" ? "Bug Report" : "Feature Request"}
-              </button>
             </div>
-          </TabsContent>
 
-          {/* My Reports (non-admin) */}
-          {!isAdmin && (
-            <TabsContent value="my-reports" className="flex-1 min-h-0">
-              <ScrollArea className="h-full">
-                <div className="p-6 space-y-2">
-                  {reports.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-10">No reports submitted yet.</p>
-                  ) : reports.map(r => (
-                    <div key={r.id} className="rounded-xl border border-border/20 bg-card/20 p-4 space-y-2">
-                      <div className="flex items-center gap-2">
-                        {r.type === "bug" ? <Bug className="h-3.5 w-3.5 text-red-400" /> : <Lightbulb className="h-3.5 w-3.5 text-accent" />}
-                        <span className="text-sm font-light text-foreground">{r.title}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[9px] ${severityColor(r.severity)}`}>{r.severity}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground/70 leading-relaxed">{r.description}</p>
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground/50">
-                        {statusIcon(r.status)}
-                        <span className="capitalize">{r.status.replace("_", " ")}</span>
-                        <span>·</span>
-                        <span>{new Date(r.created_at).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </TabsContent>
-          )}
-
-          {/* Admin: All Reports */}
-          {isAdmin && (
-            <TabsContent value="reports" className="flex-1 min-h-0 flex flex-col">
-              <div className="flex-shrink-0 px-6 py-3 flex flex-wrap items-center gap-2 border-b border-border/10">
-                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-                <select value={filterType} onChange={e => setFilterType(e.target.value as FilterType)} className="bg-card/30 border border-border/20 rounded-lg px-2 py-1 text-[10px] text-foreground outline-none">
-                  <option value="all">All Types</option>
-                  <option value="bug">Bugs</option>
-                  <option value="feature">Features</option>
-                </select>
-                <select value={filterDate} onChange={e => setFilterDate(e.target.value as FilterDate)} className="bg-card/30 border border-border/20 rounded-lg px-2 py-1 text-[10px] text-foreground outline-none">
-                  <option value="all">All Time</option>
-                  <option value="today">Today</option>
-                  <option value="week">This Week</option>
-                  <option value="month">This Month</option>
-                </select>
-                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as FilterStatus)} className="bg-card/30 border border-border/20 rounded-lg px-2 py-1 text-[10px] text-foreground outline-none">
-                  <option value="all">All Status</option>
-                  <option value="open">Open</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="resolved">Resolved</option>
-                  <option value="dismissed">Dismissed</option>
-                </select>
-                <div className="ml-auto">
-                  <button onClick={handleSummarize} disabled={summarizing} className="inline-flex items-center gap-1.5 rounded-xl bg-accent/10 border border-accent/20 text-accent px-3 py-1.5 text-[10px] font-light hover:bg-accent/15 transition-colors disabled:opacity-40">
-                    {summarizing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                    Generate AI Summary
-                  </button>
+            {/* the log */}
+            <div className="rounded-xl border border-border/20 bg-card/20 p-4 backdrop-blur-sm space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-light tracking-wider text-muted-foreground">the log</span>
+                <div className="ml-auto flex items-center gap-2">
+                  <select value={filter.type} onChange={(e) => setFilter({ ...filter, type: e.target.value as ReportFilter["type"] })} className={selectClass} aria-label="filter by kind">
+                    <option value="all">bugs and requests</option>
+                    <option value="bug">bugs</option>
+                    <option value="feature">requests</option>
+                  </select>
+                  <select value={filter.status} onChange={(e) => setFilter({ ...filter, status: e.target.value as ReportFilter["status"] })} className={selectClass} aria-label="filter by status">
+                    <option value="all">any status</option>
+                    {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                  </select>
                 </div>
               </div>
-              <ScrollArea className="flex-1">
-                <div className="p-6 space-y-2">
-                  {filteredReports.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-10">No reports match filters.</p>
-                  ) : filteredReports.map(r => (
-                    <div key={r.id} className="rounded-xl border border-border/20 bg-card/20 p-4 space-y-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {r.type === "bug" ? <Bug className="h-3.5 w-3.5 text-red-400" /> : <Lightbulb className="h-3.5 w-3.5 text-accent" />}
-                        <span className="text-sm font-light text-foreground">{r.title}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[9px] ${severityColor(r.severity)}`}>{r.severity}</span>
-                        <span className="text-[9px] text-muted-foreground/50 ml-auto">{new Date(r.created_at).toLocaleDateString()}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground/70 leading-relaxed">{r.description}</p>
-                      <div className="flex items-center gap-2">
-                        <select value={r.status} onChange={e => updateStatus(r.id, e.target.value)} className="bg-card/30 border border-border/20 rounded-lg px-2 py-1 text-[10px] text-foreground outline-none">
-                          <option value="open">Open</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="resolved">Resolved</option>
-                          <option value="dismissed">Dismissed</option>
-                        </select>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </TabsContent>
-          )}
 
-          {/* Admin: AI Summaries */}
-          {isAdmin && (
-            <TabsContent value="summaries" className="flex-1 min-h-0">
-              <ScrollArea className="h-full">
-                <div className="p-6 space-y-3">
-                  {summaries.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-10">No summaries generated yet. Go to Reports → Generate AI Summary.</p>
-                  ) : summaries.map(s => (
-                    <div key={s.id} className="rounded-xl border border-border/20 bg-card/20 overflow-hidden">
-                      <button onClick={() => setExpandedSummary(expandedSummary === s.id ? null : s.id)} className="w-full flex items-center justify-between p-4 hover:bg-foreground/5 transition-colors text-left">
-                        <div className="flex items-center gap-3">
-                          <Sparkles className="h-4 w-4 text-accent" />
-                          <div>
-                            <span className="text-xs font-light text-foreground">{new Date(s.created_at).toLocaleDateString()} — {new Date(s.created_at).toLocaleTimeString()}</span>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] text-red-400">{s.bug_count} bugs</span>
-                              <span className="text-[10px] text-accent">{s.feature_count} features</span>
-                              <span className="text-[10px] text-muted-foreground/50">{s.report_ids?.length || 0} reports</span>
-                            </div>
-                          </div>
+              {rowError && (
+                <p role="alert" className="text-[10px] text-destructive">that change did not save: {rowError}</p>
+              )}
+
+              {shown.length === 0 ? (
+                <p className="py-6 text-center text-xs font-extralight text-muted-foreground">
+                  {reports.length === 0 ? "nothing logged yet. the first entry you add appears here." : "no entry matches that filter."}
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {shown.map((r) => {
+                    const StatusIcon = STATUS_ICON[r.status];
+                    return (
+                      <li key={r.id} className="space-y-2 rounded-xl border border-border/10 bg-background/20 p-4">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {r.type === "bug" ? <Bug className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" /> : <Lightbulb className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />}
+                          <span className="min-w-0 flex-1 break-words text-sm font-light text-foreground">{r.title || "(untitled)"}</span>
+                          {r.type === "bug" && (
+                            <span className={`rounded-full border px-2 py-0.5 text-[9px] ${SEVERITY_CLASS[r.severity]}`}>{r.severity}</span>
+                          )}
                         </div>
-                        <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${expandedSummary === s.id ? "rotate-180" : ""}`} />
-                      </button>
-                      {expandedSummary === s.id && (
-                        <div className="px-4 pb-4 border-t border-border/10 pt-3">
-                          <div className="prose prose-invert prose-xs max-w-none text-xs text-muted-foreground/80 leading-relaxed whitespace-pre-wrap">{s.summary}</div>
+                        <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-muted-foreground/70">{r.description}</p>
+                        <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground/50">
+                          <StatusIcon className="h-3 w-3" aria-hidden="true" />
+                          <select value={r.status} onChange={(e) => void changeStatus(r.id, e.target.value as Status)} className={selectClass} aria-label={`status of ${r.title}`}>
+                            {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                          </select>
+                          <span className="tabular-nums">logged {when(r.created_at)}</span>
+                          <span className="ml-auto flex items-center gap-2">
+                            {confirmRemove === r.id ? (
+                              <>
+                                <span>remove this entry?</span>
+                                <button type="button" onClick={() => void remove(r.id)} className="rounded-lg border border-destructive/30 px-2 py-0.5 text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">remove</button>
+                                <button type="button" onClick={() => setConfirmRemove(null)} className="rounded-lg border border-border/30 px-2 py-0.5 transition-colors hover:border-border/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">keep</button>
+                              </>
+                            ) : (
+                              <button type="button" onClick={() => setConfirmRemove(r.id)} className="rounded-lg p-1 transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`remove ${r.title}`}>
+                                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                              </button>
+                            )}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+
+            {/* shepherd summaries */}
+            <div className="rounded-xl border border-border/20 bg-card/20 p-4 backdrop-blur-sm space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-light tracking-wider text-muted-foreground">shepherd's summary</span>
+                  <p className="text-[10px] text-muted-foreground/50">written by the model you connected, from this browser. only the titles and clipped descriptions are sent to it.</p>
                 </div>
-              </ScrollArea>
-            </TabsContent>
-          )}
-        </Tabs>
+                <button type="button" onClick={() => void summarize()} disabled={summarizing || reports.length === 0} className={quietButton}>
+                  {summarizing ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />}
+                  {summarizing ? "asking shepherd" : "summarize the log"}
+                </button>
+              </div>
+
+              {summaryError && (
+                <p role="alert" className="text-[10px] text-destructive">shepherd did not answer: {summaryError}</p>
+              )}
+
+              {summaries.length === 0 ? (
+                <p className="py-4 text-center text-xs font-extralight text-muted-foreground">
+                  {reports.length === 0 ? "add an entry first; a summary needs something to read." : "no summary yet."}
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {summaries.map((s) => {
+                    const open = expandedSummary === s.id;
+                    return (
+                      <li key={s.id} className="overflow-hidden rounded-xl border border-border/10 bg-background/20">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedSummary(open ? null : s.id)}
+                          aria-expanded={open}
+                          className="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <span className="min-w-0">
+                            <span className="block text-xs font-light text-foreground tabular-nums">{when(s.created_at)}</span>
+                            <span className="block text-[10px] text-muted-foreground/60">{s.bug_count} {s.bug_count === 1 ? "bug" : "bugs"} · {s.feature_count} {s.feature_count === 1 ? "request" : "requests"} · {s.report_ids.length} entries read</span>
+                          </span>
+                          <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />
+                        </button>
+                        {open && (
+                          <p className="whitespace-pre-wrap border-t border-border/10 px-3 pb-3 pt-3 text-xs leading-relaxed text-muted-foreground/80">{s.summary}</p>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

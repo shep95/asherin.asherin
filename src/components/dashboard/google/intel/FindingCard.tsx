@@ -6,12 +6,14 @@ import type { Finding, Severity } from "@/lib/cloudIntel/logic";
 // incapable of hiding the baseline, the deviation, the evidence, or the
 // falsifier — those are required props of the model it renders.
 
-const SEVERITY_STYLE: Record<Severity, { ring: string; dot: string; label: string; Icon: any }> = {
-  critical: { ring: "border-destructive/40", dot: "bg-destructive", label: "CRITICAL", Icon: AlertTriangle },
-  elevated: { ring: "border-amber-500/30", dot: "bg-amber-400", label: "ELEVATED", Icon: TrendingUp },
-  notable: { ring: "border-border/30", dot: "bg-foreground/50", label: "NOTABLE", Icon: Info },
-  baseline: { ring: "border-border/20", dot: "bg-muted-foreground/40", label: "BASELINE", Icon: Info },
-  positive: { ring: "border-emerald-500/25", dot: "bg-emerald-400", label: "NOMINAL", Icon: CheckCircle2 },
+// labels are lowercase tracking type, not shouted: the doctrine reserves
+// weight for the finding itself, never for its chrome.
+const SEVERITY_STYLE: Record<Severity, { ring: string; dot: string; label: string; Icon: React.ElementType }> = {
+  critical: { ring: "border-destructive/40", dot: "bg-destructive", label: "critical", Icon: AlertTriangle },
+  elevated: { ring: "border-amber-500/30", dot: "bg-amber-400", label: "elevated", Icon: TrendingUp },
+  notable: { ring: "border-border/30", dot: "bg-foreground/50", label: "notable", Icon: Info },
+  baseline: { ring: "border-border/20", dot: "bg-muted-foreground/40", label: "baseline", Icon: Info },
+  positive: { ring: "border-emerald-500/25", dot: "bg-emerald-400", label: "nominal", Icon: CheckCircle2 },
 };
 
 const FindingCard = ({ finding, defaultOpen = false }: { finding: Finding; defaultOpen?: boolean }) => {
@@ -29,7 +31,7 @@ const FindingCard = ({ finding, defaultOpen = false }: { finding: Finding; defau
         <div className="flex-1 min-w-0 space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[9px] tracking-[0.2em] text-muted-foreground/50 font-light">{s.label}</span>
-            <span className="text-[9px] tracking-[0.2em] text-muted-foreground/30 font-light">· {finding.module.toUpperCase()}</span>
+            <span className="text-[9px] tracking-[0.2em] text-muted-foreground/30 font-light">· {finding.module.toLowerCase()}</span>
             {finding.onset && (
               <span className="text-[9px] text-muted-foreground/40 font-light">· {finding.onset}</span>
             )}
@@ -39,15 +41,15 @@ const FindingCard = ({ finding, defaultOpen = false }: { finding: Finding; defau
           {/* Rule 1: never a number without its baseline and consequence. */}
           <div className="grid grid-cols-3 gap-2 pt-1">
             <div>
-              <p className="text-[9px] text-muted-foreground/40 font-light">OBSERVED</p>
+              <p className="text-[9px] text-muted-foreground/40 font-light">observed</p>
               <p className="text-xs font-light text-foreground truncate" title={finding.current}>{finding.current}</p>
             </div>
             <div>
-              <p className="text-[9px] text-muted-foreground/40 font-light">YOUR NORMAL</p>
+              <p className="text-[9px] text-muted-foreground/40 font-light">your normal</p>
               <p className="text-xs font-extralight text-muted-foreground truncate" title={finding.normal}>{finding.normal}</p>
             </div>
             <div>
-              <p className="text-[9px] text-muted-foreground/40 font-light">DEVIATION</p>
+              <p className="text-[9px] text-muted-foreground/40 font-light">deviation</p>
               <p className="text-xs font-light text-foreground truncate" title={finding.deviation}>{finding.deviation}</p>
             </div>
           </div>
@@ -59,7 +61,7 @@ const FindingCard = ({ finding, defaultOpen = false }: { finding: Finding; defau
         <div className="px-4 pb-4 pt-1 space-y-3 border-t border-border/10">
           {/* Rule 3 — root cause ladder. */}
           <section>
-            <p className="text-[9px] tracking-[0.2em] text-muted-foreground/40 font-light mb-1.5">ROOT CAUSE</p>
+            <p className="text-[9px] tracking-[0.2em] text-muted-foreground/40 font-light mb-1.5">root cause</p>
             <ol className="space-y-1">
               {finding.why.map((w, i) => (
                 <li key={i} className="flex gap-2 text-[11px] font-extralight text-muted-foreground leading-relaxed">
@@ -73,7 +75,7 @@ const FindingCard = ({ finding, defaultOpen = false }: { finding: Finding; defau
           {/* Rule 4 — threat chain. */}
           {finding.chain && (
             <section>
-              <p className="text-[9px] tracking-[0.2em] text-muted-foreground/40 font-light mb-1.5">CONSEQUENCE CHAIN</p>
+              <p className="text-[9px] tracking-[0.2em] text-muted-foreground/40 font-light mb-1.5">consequence chain</p>
               <div className="space-y-1">
                 {[finding.chain.primary, finding.chain.secondary, finding.chain.tertiary]
                   .filter(Boolean)
@@ -89,14 +91,14 @@ const FindingCard = ({ finding, defaultOpen = false }: { finding: Finding; defau
 
           {finding.projection && (
             <section>
-              <p className="text-[9px] tracking-[0.2em] text-muted-foreground/40 font-light mb-1.5">PROJECTION</p>
+              <p className="text-[9px] tracking-[0.2em] text-muted-foreground/40 font-light mb-1.5">projection</p>
               <p className="text-[11px] font-extralight text-muted-foreground leading-relaxed">{finding.projection}</p>
             </section>
           )}
 
           {/* Rule 5 — auditable basis. */}
           <section>
-            <p className="text-[9px] tracking-[0.2em] text-muted-foreground/40 font-light mb-1.5">EVIDENCE</p>
+            <p className="text-[9px] tracking-[0.2em] text-muted-foreground/40 font-light mb-1.5">evidence</p>
             <ul className="space-y-1">
               {finding.basis.map((b, i) => (
                 <li key={i} className="text-[11px] font-extralight text-muted-foreground/80 leading-relaxed">· {b}</li>
@@ -106,7 +108,7 @@ const FindingCard = ({ finding, defaultOpen = false }: { finding: Finding; defau
 
           <div className="flex items-start gap-4 flex-wrap pt-1">
             <div className="min-w-[120px]">
-              <p className="text-[9px] tracking-[0.2em] text-muted-foreground/40 font-light">CONFIDENCE</p>
+              <p className="text-[9px] tracking-[0.2em] text-muted-foreground/40 font-light">confidence</p>
               <div className="flex items-center gap-2 mt-1">
                 <div className="h-1 w-16 rounded-full bg-foreground/10 overflow-hidden">
                   <div className="h-full bg-foreground/50 rounded-full" style={{ width: `${finding.confidence}%` }} />
@@ -115,7 +117,7 @@ const FindingCard = ({ finding, defaultOpen = false }: { finding: Finding; defau
               </div>
             </div>
             <div className="flex-1 min-w-[180px]">
-              <p className="text-[9px] tracking-[0.2em] text-muted-foreground/40 font-light">WRONG IF</p>
+              <p className="text-[9px] tracking-[0.2em] text-muted-foreground/40 font-light">wrong if</p>
               <p className="text-[11px] font-extralight text-muted-foreground mt-1 leading-relaxed">{finding.falsifier}</p>
             </div>
           </div>

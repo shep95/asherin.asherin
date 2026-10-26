@@ -199,6 +199,7 @@ export function recordCount(record: HealthRecord): number {
     record.pain.length +
     record.symptoms.length +
     record.herbs.length +
+    record.photoReads.length +
     record.snapshots.length +
     record.wearables.length +
     record.sessions.length

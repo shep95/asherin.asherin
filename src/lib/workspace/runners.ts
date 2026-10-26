@@ -6,9 +6,6 @@ import {
   cameraRunner,
   evidenceRunner,
   geocodeMapRunner,
-  researchCardRunner,
-  researchGraphRunner,
-  researchTimelineRunner,
   sensorCardRunner,
   sensorMapRunner,
   sensorTimelineRunner,
@@ -31,12 +28,7 @@ export function buildRunners(plan: WorkspacePlan, ctx: RunnerContext): LaneRunne
     ];
   }
   if (plan.lane === "research") {
-    return [
-      researchCardRunner(ctx.conversationId),
-      researchGraphRunner(ctx.conversationId),
-      researchTimelineRunner(ctx.conversationId),
-      geocodeMapRunner(ctx.message),
-    ];
+    return [geocodeMapRunner(ctx.message)];
   }
   if (plan.lane === "spatial") {
     return [geocodeMapRunner(ctx.message)];

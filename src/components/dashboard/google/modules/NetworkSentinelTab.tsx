@@ -6,6 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Loader2, RefreshCw, Trash2, Wifi } from "lucide-react";
 import { isNativeApp } from "@/lib/native/nativeRuntime";
+import OrganOffline from "../OrganOffline";
+import { describeFailure } from "../offline";
 
 /**
  * NETWORK SENTINEL — the missing half of the Wi-Fi report.
@@ -56,7 +58,7 @@ function linkFacts(): { linkType: string; effectiveType: string } {
 export default function NetworkSentinelTab() {
   const [rows, setRows] = useState<NetRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [running, setRunning] = useState(false);
   const alive = useRef(true);
 
@@ -67,7 +69,7 @@ export default function NetworkSentinelTab() {
     setLoadError(null);
     const { data, error } = await supabase.functions.invoke("wifi-sentinel", { body: { action: "list" } });
     if (!alive.current) return;
-    if (error) setLoadError("Could not read the network ledger. Retry, or check you are still signed in.");
+    if (error) setLoadError(error);
     else setRows(((data as { networks?: NetRow[] })?.networks ?? []));
     setLoading(false);
   }, []);
@@ -85,13 +87,13 @@ export default function NetworkSentinelTab() {
       if (force) {
         toast.success(
           res?.network
-            ? `Report ready — ${res.network.operator ?? "unattributed uplink"} · risk ${res.network.riskLevel}${res.notified ? " · sent to your alerts" : ""}`
-            : "Report ready",
+            ? `report ready — ${res.network.operator ?? "unattributed uplink"} · risk ${res.network.riskLevel}${res.notified ? " · sent to your alerts" : ""}`
+            : "report ready",
         );
       }
       await load();
-    } catch {
-      if (force) toast.error("Network report failed. The egress could not be attributed from this connection.");
+    } catch (e) {
+      if (force) toast.error(describeFailure(e, "network sentinel organ"));
     } finally {
       if (alive.current) setRunning(false);
     }
@@ -117,31 +119,28 @@ export default function NetworkSentinelTab() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="outline" onClick={() => run(true)} disabled={running}>
-          {running ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Wifi className="h-3.5 w-3.5 mr-1" />}
-          Report this network
+        <Button size="sm" variant="outline" onClick={() => run(true)} disabled={running || loadError !== null}>
+          {running ? <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none mr-1" aria-hidden /> : <Wifi className="h-3.5 w-3.5 mr-1" aria-hidden />}
+          report this network
         </Button>
         <Button size="sm" variant="ghost" onClick={() => load()} disabled={loading}>
-          <RefreshCw className="h-3.5 w-3.5 mr-1" /> Refresh
+          <RefreshCw className="h-3.5 w-3.5 mr-1" aria-hidden /> read again
         </Button>
       </div>
 
       <p className="text-[11px] leading-relaxed text-muted-foreground">
         {isNativeApp()
-          ? "Native companion: the full six-question report runs on connect — owner, distance, encryption grade, resolvers, segment population and evil-twin history."
-          : "In a browser the network name, hardware address and signal strength are withheld by the platform, so encryption grade, transmitter distance and evil-twin history cannot be judged here. What is judged is the public egress your traffic actually leaves through — who operates it, and whether it is a carrier or somebody's datacentre relay. Install the Asherin companion for the full report."}
+          ? "native companion: the full six-question report runs on connect — owner, distance, encryption grade, resolvers, segment population and evil-twin history."
+          : "in a browser the network name, hardware address and signal strength are withheld by the platform, so encryption grade, transmitter distance and evil-twin history cannot be judged here. what could be judged is the public egress your traffic leaves through — and that judgement ran on a server."}
       </p>
 
       {loading ? (
         <div className="space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-24 w-full" />)}</div>
-      ) : loadError ? (
-        <div className="rounded border border-border p-4 text-sm">
-          <p className="text-muted-foreground">{loadError}</p>
-          <Button size="sm" variant="outline" className="mt-2" onClick={() => load()}>Retry</Button>
-        </div>
+      ) : loadError !== null ? (
+        <OrganOffline error={loadError} organ="network sentinel organ" onRetry={() => void load()} />
       ) : rows.length === 0 ? (
         <div className="rounded border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          No networks assessed yet. The sentinel judges each connection automatically — the first report appears here within a minute of coming online.
+          no networks assessed yet.
         </div>
       ) : (
         <ScrollArea className="h-[520px] pr-3">
@@ -161,7 +160,7 @@ export default function NetworkSentinelTab() {
                     <span className={`text-[11px] uppercase tracking-wider ${SEV_CLASS[n.risk_level] ?? "text-muted-foreground"}`}>
                       {n.risk_level} · {n.risk_score}/100
                     </span>
-                    <Button size="icon" variant="ghost" aria-label="Forget network" onClick={() => forget(n.bssid)}>
+                    <Button size="icon" variant="ghost" aria-label="forget network" onClick={() => forget(n.bssid)}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>

@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { HealthPanelProps } from "@/lib/health/panel";
-import { newId } from "@/lib/health/store";
 import { TERRITORIES } from "@/lib/health/territory";
 import {
   HERBS,
@@ -65,7 +64,7 @@ export default function HerbalPanel({ record, persist, onEvent, onHighlights }: 
   );
 
   const previewReview = (herb: HerbDef) =>
-    safetyReview([...record.herbs, herb.key].filter((k, i, arr) => arr.indexOf(k) === i), {
+    safetyReview(Array.from(new Set([...record.herbs, herb.key])), {
       medications: record.medications.map((m) => ({ name: m.name, drugKey: m.drugKey })),
       pregnant,
       conditions,
@@ -80,7 +79,7 @@ export default function HerbalPanel({ record, persist, onEvent, onHighlights }: 
     const newBlocking = check.blocking.filter((w) => !review.blocking.some((r) => r.detail === w.detail));
     persist({ ...record, herbs: [...record.herbs, herb.key] });
     onHighlights?.(
-      herb.territoryKeys.map((k) => ({
+      herb.territoryKeys.map(() => ({
         partIds: [],
         color: "#4f9e86",
         intensity: 0.5,
@@ -160,7 +159,7 @@ export default function HerbalPanel({ record, persist, onEvent, onHighlights }: 
               key={t}
               onClick={() => setTradition(t)}
               className={cn(
-                "rounded-full border px-2.5 py-1 text-[10px] font-light capitalize",
+                "rounded-full border px-2.5 py-1 text-[10px] font-light",
                 tradition === t ? "border-amber-400/50 bg-amber-400/10 text-amber-200" : "border-white/[0.08] bg-white/[0.02] text-foreground/60",
               )}
             >

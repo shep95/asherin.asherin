@@ -35,7 +35,7 @@ interface Props {
 const V2_LABELS: Partial<Record<string, string>> = {
   "asherin-defender": "asherin.defender",
   "asherin-arvision": "asherin.arvision",
-  "asherin-eye": "asherin.eye",
+  "asherin-adam": "asherin.adam",
   "asherin-sentinel": "asherin.sentinel",
   memory: "asherin.vault",
 };
@@ -44,7 +44,7 @@ const V2_LABELS: Partial<Record<string, string>> = {
 const V2_ORDER: DashboardView[] = [
   "asherin-defender",
   "asherin-arvision",
-  "asherin-eye",
+  "asherin-adam",
   "asherin-sentinel",
   "pdf-generator",
   "library",
@@ -52,7 +52,6 @@ const V2_ORDER: DashboardView[] = [
   "memory",
   "guardian-vault",
   "whiteboard",
-  "teams",
   "stats",
   "settings",
   "api-keys",
@@ -315,7 +314,7 @@ const DashboardSidebarV2 = ({
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-full flex-col m-2 rounded-2xl border border-border/50 bg-background/95 backdrop-blur-xl overflow-hidden lg:m-3 lg:border-border/30 lg:bg-card/40">
+        <div className="flex h-[calc(100%-1rem)] flex-col m-2 rounded-2xl border border-border/50 bg-background/95 backdrop-blur-xl overflow-hidden lg:m-3 lg:h-[calc(100%-1.5rem)] lg:border-border/30 lg:bg-card/40">
           {/* wordmark + new chat */}
           <div className="flex-shrink-0 flex items-center justify-between gap-2 p-4 border-b border-border/20">
             <span className="text-sm font-extralight tracking-[0.06em] text-foreground/90">asherin</span>
@@ -328,7 +327,7 @@ const DashboardSidebarV2 = ({
               />
               <button
                 onClick={onNewConversation}
-                title="New chat"
+                title="new chat"
                 className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
               >
                 <Plus className="h-4 w-4" />
@@ -343,7 +342,7 @@ const DashboardSidebarV2 = ({
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search conversations…"
+                placeholder="search conversations…"
                 className="flex-1 bg-transparent text-xs font-light text-foreground placeholder:text-muted-foreground/40 outline-none"
               />
             </div>
@@ -356,7 +355,7 @@ const DashboardSidebarV2 = ({
               )}
               {groups.map((group) => (
                 <div key={group.label}>
-                  <p className="px-3 py-1 text-[10px] font-light tracking-[0.15em] text-muted-foreground/50 uppercase">
+                  <p className="px-3 py-1 text-[11px] font-light tracking-[0.08em] text-muted-foreground/50 lowercase">
                     {group.label}
                   </p>
                   <div className="space-y-0.5">
@@ -433,14 +432,14 @@ const DashboardSidebarV2 = ({
                           <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => unarchive(conv.id)}
-                              title="Restore"
+                              title="restore"
                               className="p-1 rounded hover:text-foreground"
                             >
                               <ArchiveRestore className="h-3 w-3" />
                             </button>
                             <button
                               onClick={() => deleteArchived(conv.id)}
-                              title="Delete permanently"
+                              title="delete permanently"
                               className="p-1 rounded hover:text-destructive"
                             >
                               <Trash2 className="h-3 w-3" />
@@ -465,7 +464,7 @@ const DashboardSidebarV2 = ({
                   >
                     <span className="flex items-center gap-2.5">
                       <Workflow className="h-4 w-4" />
-                      Agents
+                      agents
                     </span>
                     <ChevronDown
                       className={`h-3.5 w-3.5 transition-transform duration-200 ${showAgents ? "rotate-180" : ""}`}

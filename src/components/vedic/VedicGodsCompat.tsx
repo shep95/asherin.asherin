@@ -22,11 +22,11 @@ const Row = ({ m }: { m: Match }) => (
       <div className="flex items-center gap-2">
         <PantheonIcon p={m.pantheon} />
         <span className="text-sm font-light tracking-wide text-foreground">{m.name}</span>
-        <span className="text-[10px] font-extralight tracking-[0.2em] uppercase text-muted-foreground/70">{m.pantheon}</span>
+        <span className="text-[10px] font-extralight tracking-[0.2em] text-muted-foreground/70">{m.pantheon}</span>
       </div>
       <span className="font-mono text-sm tracking-wider text-foreground">{m.percent}%</span>
     </div>
-    <div className="text-[11px] font-extralight uppercase tracking-[0.2em] text-muted-foreground/70">{m.domain}</div>
+    <div className="text-[11px] font-extralight tracking-[0.2em] text-muted-foreground/70">{m.domain.toLowerCase()}</div>
     <p className="mt-2 text-xs font-extralight leading-relaxed text-muted-foreground">{m.blurb}</p>
     <div className="mt-3 h-[3px] w-full overflow-hidden rounded-full bg-border/20">
       <div className="h-full bg-foreground/70 transition-all" style={{ width: `${m.percent}%` }} />
@@ -58,7 +58,6 @@ const VedicGodsCompat = ({ defaultDate = "", hideHeader = false, ascendantSidDeg
   }, [hasChart, ascendantSidDeg, placements, date]);
 
   const top = matches[0];
-  const filterBy = (p: string) => matches.filter((m) => m.pantheon === p).slice(0, 6);
 
   return (
     <section className="relative z-10 px-2 sm:px-6 py-8">
@@ -67,13 +66,13 @@ const VedicGodsCompat = ({ defaultDate = "", hideHeader = false, ascendantSidDeg
           <div className="mb-10 flex flex-col items-start gap-4">
             <div className="rounded-full border border-border/20 bg-card/30 backdrop-blur-md px-3 py-1 inline-flex items-center gap-2">
               <Crown className="h-3 w-3 text-foreground/70" />
-              <span className="text-[10px] font-light tracking-[0.3em] text-muted-foreground uppercase">Mythological Archetype Match</span>
+              <span className="text-[10px] font-light tracking-[0.3em] text-muted-foreground">mythological archetype match</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extralight tracking-wide text-foreground">
-              Compare Your Chart to Greek &amp; Roman Gods — and Their Monsters
+              compare your chart to Greek and Roman gods — and their monsters
             </h2>
             <p className="text-sm font-extralight text-muted-foreground max-w-2xl">
-              Your Vedic signature is mapped against eight domain weights — authority, war, wisdom, love, chaos, sea, sky, wealth — and scored cosine-style against twenty-eight mythological figures. The closer the percentage, the closer the operating signature.
+              your vedic signature is mapped against eight domain weights — authority, war, wisdom, love, chaos, sea, sky, wealth — and scored cosine-style against twenty-eight mythological figures. the closer the percentage, the closer the operating signature.
             </p>
           </div>
         )}
@@ -81,19 +80,19 @@ const VedicGodsCompat = ({ defaultDate = "", hideHeader = false, ascendantSidDeg
         {!hasChart && (
           <div className="mb-6 flex flex-col sm:flex-row items-stretch sm:items-end gap-3 w-full max-w-md">
             <div className="flex-1">
-              <label className="text-[10px] font-extralight tracking-[0.25em] uppercase text-muted-foreground">Birth Date</label>
+              <label className="text-[10px] font-extralight tracking-[0.25em] text-muted-foreground">birth date</label>
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)}
                 className="mt-1 bg-card/30 border-border/30 backdrop-blur-md" />
             </div>
             <Button onClick={() => date && setDate(date)} disabled={!date}
               className="bg-foreground text-background hover:bg-foreground/90 font-light">
-              Reveal Archetypes
+              reveal archetypes
             </Button>
           </div>
         )}
         {hasChart && (
-          <div className="mb-6 text-[10px] font-extralight tracking-[0.25em] uppercase text-muted-foreground/70">
-            Derived from live placements · Lagna + 9 grahas across signs &amp; whole-sign houses
+          <div className="mb-6 text-[10px] font-extralight tracking-[0.25em] text-muted-foreground/70">
+            derived from the computed placements · lagna + 9 grahas across signs and whole-sign houses
           </div>
         )}
 
@@ -101,14 +100,14 @@ const VedicGodsCompat = ({ defaultDate = "", hideHeader = false, ascendantSidDeg
           <div className="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Headline archetype */}
             <div className="rounded-2xl border border-foreground/30 bg-foreground/[0.04] backdrop-blur-md p-5 lg:col-span-1">
-              <div className="text-[10px] font-extralight tracking-[0.3em] uppercase text-muted-foreground/80">Closest Archetype</div>
+              <div className="text-[10px] font-extralight tracking-[0.3em] text-muted-foreground/80">closest archetype</div>
               <div className="mt-2 flex items-baseline gap-3">
                 <span className="text-3xl font-extralight tracking-wide text-foreground">{top.name}</span>
                 <span className="font-mono text-lg text-foreground/80">{top.percent}%</span>
               </div>
-              <div className="mt-1 text-[11px] font-extralight uppercase tracking-[0.2em] text-muted-foreground/70">{top.pantheon} · {top.domain}</div>
+              <div className="mt-1 text-[11px] font-extralight tracking-[0.2em] text-muted-foreground/70">{top.pantheon} · {top.domain.toLowerCase()}</div>
               <p className="mt-3 text-xs font-extralight leading-relaxed text-muted-foreground">
-                You carry the chart of <span className="text-foreground">{top.name}</span> by <span className="text-foreground font-mono">{top.percent}%</span>. {top.blurb}
+                you carry the chart of <span className="text-foreground">{top.name}</span> by <span className="text-foreground font-mono">{top.percent}%</span>. {top.blurb}
               </p>
             </div>
 
@@ -117,7 +116,7 @@ const VedicGodsCompat = ({ defaultDate = "", hideHeader = false, ascendantSidDeg
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Coins className="h-3.5 w-3.5 text-amber-300/80" strokeWidth={1.5} />
-                  <span className="text-[10px] font-extralight tracking-[0.3em] uppercase text-muted-foreground/80">Material Power</span>
+                  <span className="text-[10px] font-extralight tracking-[0.3em] text-muted-foreground/80">material power</span>
                 </div>
                 <span className="font-mono text-2xl text-foreground">{powers.material}%</span>
               </div>
@@ -132,7 +131,7 @@ const VedicGodsCompat = ({ defaultDate = "", hideHeader = false, ascendantSidDeg
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <InfinityIcon className="h-3.5 w-3.5 text-foreground/70" strokeWidth={1.5} />
-                  <span className="text-[10px] font-extralight tracking-[0.3em] uppercase text-muted-foreground/80">Spiritual Power</span>
+                  <span className="text-[10px] font-extralight tracking-[0.3em] text-muted-foreground/80">spiritual power</span>
                 </div>
                 <span className="font-mono text-2xl text-foreground">{powers.spiritual}%</span>
               </div>
@@ -146,7 +145,7 @@ const VedicGodsCompat = ({ defaultDate = "", hideHeader = false, ascendantSidDeg
 
         {matches.length > 0 && (
           <div className="space-y-4">
-            <div className="text-[10px] font-extralight tracking-[0.3em] uppercase text-muted-foreground/70">Other Resonances</div>
+            <div className="text-[10px] font-extralight tracking-[0.3em] text-muted-foreground/70">other resonances</div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {matches.slice(1, 10).map((m) => <Row key={m.name} m={m} />)}
             </div>
@@ -155,7 +154,7 @@ const VedicGodsCompat = ({ defaultDate = "", hideHeader = false, ascendantSidDeg
         {!matches.length && (
           <div className="rounded-2xl border border-border/20 bg-card/20 backdrop-blur-md p-10 text-center">
             <p className="text-xs font-extralight tracking-wide text-muted-foreground">
-              Enter a birth date above to compute archetype resonance and material vs spiritual power across both pantheons.
+              enter a birth date above to compute archetype resonance and material vs spiritual power across both pantheons.
             </p>
           </div>
         )}

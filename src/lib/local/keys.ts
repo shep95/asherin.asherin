@@ -33,7 +33,7 @@ export const VAULT_EVENT = "asherin:keyvault-changed";
 export class VaultLockedError extends Error {
   code = "VAULT_LOCKED";
   constructor() {
-    super("your key vault is locked. unlock it in settings → ai keys to use a saved key.");
+    super("your key vault is locked. unlock it in settings → intelligence to use a saved key.");
     this.name = "VaultLockedError";
   }
 }
@@ -45,6 +45,7 @@ interface StoredKey {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  last_used_at?: string;
 }
 
 interface WrapDevice { mode: "device"; key: CryptoKey }
@@ -118,8 +119,8 @@ async function writeKeys(keys: StoredKey[]) {
 
 /* ── public api ─────────────────────────────────────────────────────────── */
 
-export async function listProviderKeys(): Promise<{ provider: string; is_active: boolean; created_at: string; updated_at: string }[]> {
-  return (await readKeys()).map(({ provider, is_active, created_at, updated_at }) => ({ provider, is_active, created_at, updated_at }));
+export async function listProviderKeys(): Promise<{ provider: string; is_active: boolean; created_at: string; updated_at: string; last_used_at?: string }[]> {
+  return (await readKeys()).map(({ provider, is_active, created_at, updated_at, last_used_at }) => ({ provider, is_active, created_at, updated_at, last_used_at }));
 }
 
 export async function hasProviderKey(provider: string): Promise<boolean> {
@@ -127,10 +128,14 @@ export async function hasProviderKey(provider: string): Promise<boolean> {
 }
 
 export async function getProviderKey(provider: string): Promise<string | null> {
-  const row = (await readKeys()).find((k) => k.provider === provider && k.is_active);
+  const keys = await readKeys();
+  const row = keys.find((k) => k.provider === provider && k.is_active);
   if (!row) return null;
   const key = await currentKey();
-  return decryptString(key, row.iv, row.ct);
+  const plain = await decryptString(key, row.iv, row.ct);
+  row.last_used_at = new Date().toISOString();
+  await kvSet(KV_KEYS, keys).catch(() => undefined); // no emit: a read must not look like a change
+  return plain;
 }
 
 export async function saveProviderKey(provider: string, apiKey: string): Promise<void> {
@@ -189,8 +194,9 @@ export async function getActiveModel(): Promise<{ provider: string; model: strin
   if (p.active_provider && p.active_provider !== "default" && p.active_provider !== "aureon") {
     return { provider: p.active_provider, model: p.active_model && p.active_model !== "default" ? p.active_model : "" };
   }
-  // No explicit choice: the single saved key wins.
-  const keys = (await readKeys()).filter((k) => k.is_active);
+  // No explicit choice: the single saved MODEL key wins. Search-engine keys
+  // share this vault under a `search:` prefix and are never a chat provider.
+  const keys = (await readKeys()).filter((k) => k.is_active && !k.provider.startsWith("search:"));
   if (keys.length === 1) return { provider: keys[0].provider, model: "" };
   return null;
 }

@@ -38,23 +38,23 @@ export default function ByokRequiredDialog() {
         <DialogHeader>
           <div className="flex items-center gap-2">
             <KeyRound className="h-5 w-5 text-zinc-300" />
-            <DialogTitle className="text-zinc-100">Bring Your Own API Key</DialogTitle>
+            <DialogTitle className="text-zinc-100">connect a model key</DialogTitle>
           </div>
           <DialogDescription className="text-zinc-400 pt-2 leading-relaxed">
-            The hosted model path is busy right now. To continue without interruption, connect your own
-            API key and select a model in
-            <span className="text-zinc-200"> Settings → AI Keys</span>.
+            shepherd writes from this device with a key you connect. add one under
+            <span className="text-zinc-200"> settings → intelligence</span>.
             {reason ? <span className="block mt-2 text-xs text-zinc-500">{reason}</span> : null}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2 sm:gap-2">
           <Button variant="ghost" onClick={() => setOpen(false)} className="text-zinc-400">
-            Dismiss
+            dismiss
           </Button>
           <Button
             onClick={() => {
               setOpen(false);
-              navigate("/dashboard?tab=settings&panel=ai-keys");
+              try { sessionStorage.setItem("asherin:settings-tab", "intelligence"); } catch { /* first tab then */ }
+              navigate("/dashboard/settings");
             }}
             className="bg-zinc-100 text-zinc-900 hover:bg-white"
           >

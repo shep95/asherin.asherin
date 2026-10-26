@@ -26,7 +26,6 @@ import {
   Users,
   FileText,
   Globe,
-  ScanEye,
   Ear,
   Puzzle,
   Activity,
@@ -48,7 +47,13 @@ import {
   Calculator,
   Gauge,
   HeartPulse,
-
+  Eye,
+  Network,
+  BookOpen,
+  NotebookPen,
+  FileStack,
+  PenTool,
+  Cable,
 } from "lucide-react";
 import type { Conversation, DashboardView, ChatMode, Message } from "./types";
 import SwipeableConversationItem from "./SwipeableConversationItem";
@@ -104,52 +109,33 @@ import { NAV_INTENTS as ALL_INTENTS, INTENT_GROUPS, INTENT_GROUP_BLURB, type Nav
 
 const VIEW_ICON: Record<string, React.ElementType> = {
   chat: MessagesSquare,
-  zali: Zap,
-  "pdf-generator": FileText,
-  whiteboard: Layers,
-  azplen: Database,
-  zeeion: Database,
-  "pattern-analysis": Activity,
-  timeseries: Activity,
-  geospatial: Globe,
-  "asherin-eye": ScanEye,
+  "asherin-adam": Globe,
+  "asherin-arvision": Eye,
   "asherin-sentinel": Ear,
-  "asherin-health": HeartPulse,
-  investigations: Search,
-  "video-intelligence": Crosshair,
-  search: Zap,
-  nomad: Crosshair,
+  "asherin-defender": ShieldCheck,
+  search: Search,
   zerlal: Shield,
-  bulwark: ShieldCheck,
-  "geo-audit": Gauge,
-  zacoon: Ghost,
-  google: Globe,
-
-  "reverse-engineer": Search,
+  google: Network,
   "file-scrapper": FileText,
-  cipher: Shield,
-  gematria: Calculator,
   briefing: Newspaper,
-  cross: Crosshair,
-  notebooks: FileText,
-  agents: Zap,
+  azplen: Database,
+  "knowledge-vault": BookOpen,
+  "asherin-health": HeartPulse,
+  "vedic-astrology": Moon,
+  notebooks: NotebookPen,
+  "pdf-generator": FileStack,
+  zali: Wand2,
   zahten: Workflow,
-  plugins: Puzzle,
+  whiteboard: PenTool,
   snippets: Code2,
-  media2code: Wand2,
   library: FolderOpen,
   projects: Layers,
   memory: Brain,
-  teams: Users,
-  community: MessagesSquare,
-  "vedic-astrology": Moon,
   "guardian-vault": LockIcon,
   settings: Settings,
+  "api-keys": Cable,
   stats: BarChart3,
-  audit: ClipboardList,
   "bug-reports": ClipboardList,
-  security: ShieldCheck,
-  "self-access": FileText,
 };
 
 interface IntentNavItem extends NavItem {
@@ -279,8 +265,8 @@ const DashboardSidebar = ({
   const dynamicGroups = publishedAgents.length
     ? [
         {
-          label: "Deployed Agents",
-          blurb: "Your Zahten-deployed agents",
+          label: "agents",
+          blurb: "tabs you published from asherin.agents",
           items: publishedAgents.map((a) => ({
             id: `agent:${a.id}` as DashboardView,
             icon: Workflow,
@@ -585,7 +571,7 @@ const DashboardSidebar = ({
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-full flex-col m-2 rounded-2xl border border-border/50 bg-background/95 backdrop-blur-xl overflow-hidden lg:m-3 lg:border-border/30 lg:bg-card/40">
+        <div className="flex h-[calc(100%-1rem)] flex-col m-2 rounded-2xl border border-border/50 bg-background/95 backdrop-blur-xl overflow-hidden lg:m-3 lg:h-[calc(100%-1.5rem)] lg:border-border/30 lg:bg-card/40">
           {!collapsed && (
             <div
               onMouseDown={handleMouseDown}
@@ -599,9 +585,9 @@ const DashboardSidebar = ({
             {!collapsed && (
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-sm font-extralight tracking-[0.16em] text-foreground whitespace-nowrap shrink-0">
-                  ASHERIN
+                  asherin
                 </span>
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500/70 shrink-0" />
+                <ShieldCheck className="h-3.5 w-3.5 text-foreground/40 shrink-0" aria-hidden />
               </div>
             )}
             <div className={`flex items-center gap-1 ${collapsed ? "mx-auto flex-col" : ""}`}>
@@ -623,7 +609,7 @@ const DashboardSidebar = ({
               <button
                 onClick={onNewConversation}
                 className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
-                title="New conversation"
+                title="new conversation"
               >
                 <Plus className="h-4 w-4" />
               </button>
@@ -639,14 +625,16 @@ const DashboardSidebar = ({
                     <input
                       value={softwareSearch}
                       onChange={(e) => setSoftwareSearch(e.target.value)}
-                      placeholder="Search software…"
+                      placeholder="search the rooms…"
+                      aria-label="search the rooms"
                       className="flex-1 bg-transparent text-xs font-light text-foreground placeholder:text-muted-foreground/40 outline-none"
                     />
                     {softwareSearch && (
                       <button
                         onClick={() => setSoftwareSearch("")}
                         className="text-muted-foreground/40 hover:text-foreground"
-                        title="Clear"
+                        title="clear"
+                        aria-label="clear the room search"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -659,6 +647,7 @@ const DashboardSidebar = ({
                 <div className="flex-shrink-0 px-2 pt-3">
                   <button
                     onClick={() => setShowConvos(!showConvos)}
+                    aria-expanded={showConvos}
                     className={`flex w-full items-center justify-between gap-2.5 rounded-xl px-3 py-2 text-xs font-light transition-colors ${
                       showConvos
                         ? "bg-foreground/10 text-foreground"
@@ -667,7 +656,7 @@ const DashboardSidebar = ({
                   >
                     <div className="flex items-center gap-2.5">
                       <MessageSquare className="h-4 w-4" />
-                      Past Convos
+                      past convos
                     </div>
                     <ChevronDown
                       className={`h-3.5 w-3.5 transition-transform duration-200 ${showConvos ? "rotate-180" : ""}`}
@@ -684,7 +673,7 @@ const DashboardSidebar = ({
                       <input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search conversations…"
+                        placeholder="search conversations…"
                         className="flex-1 bg-transparent text-xs font-light text-foreground placeholder:text-muted-foreground/40 outline-none"
                       />
                     </div>
@@ -693,7 +682,7 @@ const DashboardSidebar = ({
                   <div className="p-2 space-y-3">
                     {groups.map((group) => (
                       <div key={group.label}>
-                        <p className="px-3 py-1 text-[10px] font-light tracking-[0.15em] text-muted-foreground/50 uppercase">
+                        <p className="px-3 py-1 text-[11px] font-light tracking-[0.08em] text-muted-foreground/50 lowercase">
                           {group.label === "Pinned" ? "◆ Pinned" : group.label}
                         </p>
                         <div className="space-y-0.5">
@@ -777,14 +766,14 @@ const DashboardSidebar = ({
                                 <button
                                   onClick={() => unarchiveConversation(conv.id)}
                                   className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
-                                  title="Restore"
+                                  title="restore"
                                 >
                                   <ArchiveRestore className="h-3 w-3" />
                                 </button>
                                 <button
                                   onClick={() => permanentlyDeleteArchived(conv.id)}
                                   className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
-                                  title="Delete permanently"
+                                  title="delete permanently"
                                 >
                                   <Trash2Icon className="h-3 w-3" />
                                 </button>
@@ -839,14 +828,16 @@ const DashboardSidebar = ({
                     <div key={group.label}>
                       <button
                         onClick={() => toggleGroup(group.label)}
-                        className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-1.5 text-[10px] font-medium tracking-[0.14em] uppercase transition-colors ${
+                        className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-1.5 text-[11px] font-medium tracking-[0.08em] lowercase transition-colors ${
                           hasActive ? "text-foreground" : "text-muted-foreground/60 hover:text-muted-foreground"
                         }`}
                         title={group.blurb}
+                        aria-expanded={isOpen}
                       >
-                        <span className="flex items-center gap-2">
-                          {group.label}
-                          <span className="hidden xl:inline text-[8px] font-light tracking-normal normal-case text-muted-foreground/40">
+                        <span className="flex min-w-0 items-center gap-2">
+                          {/* the word never breaks; the blurb yields first */}
+                          <span className="shrink-0 whitespace-nowrap">{group.label}</span>
+                          <span className="hidden xl:inline min-w-0 truncate text-[10px] font-light tracking-normal normal-case text-muted-foreground/60">
                             — {group.blurb}
                           </span>
                         </span>
@@ -860,6 +851,7 @@ const DashboardSidebar = ({
                             <button
                               key={item.id}
                               onClick={() => navigate(item)}
+                              aria-current={activeView === item.id ? "page" : undefined}
                               className={`flex w-full items-start gap-2.5 rounded-xl px-3 py-2 text-left transition-colors ${
                                 activeView === item.id
                                   ? "bg-foreground/10 text-foreground"
@@ -870,7 +862,7 @@ const DashboardSidebar = ({
                               <span className="flex flex-col min-w-0">
                                 <span className="text-xs font-light leading-tight truncate">{item.label}</span>
                                 {item.codename && item.codename !== item.label && (
-                                  <span className="text-[9px] font-light tracking-wider uppercase text-muted-foreground/40 truncate">
+                                  <span className="text-[10px] font-light tracking-wide lowercase text-muted-foreground/50 truncate">
                                     {item.codename}
                                   </span>
                                 )}

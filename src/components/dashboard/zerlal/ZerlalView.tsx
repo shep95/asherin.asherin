@@ -1,9 +1,8 @@
 import { useState, lazy, Suspense } from "react";
-import { Shield, Bell, Plus } from "lucide-react";
+import { Bell, Plus } from "lucide-react";
 import ZerlalNav from "./ZerlalNav";
 import { useZerlalFindings } from "./useZerlalData";
 import type { ZerlalScreen } from "./types";
-import { ScanProvider } from "./scanContext";
 
 // Every screen is lazy-loaded so opening Zerlal only pulls the active screen's
 // bundle instead of dragging in ScanModal (746 LOC), ProjectView (543 LOC),
@@ -38,7 +37,7 @@ const intelligenceScreens: ZerlalScreen[] = [
 
 const ScreenFallback = () => (
   <div className="flex-1 flex items-center justify-center">
-    <div className="text-[10px] text-muted-foreground/30 tracking-[0.18em] uppercase">Loading…</div>
+    <div className="text-[10px] text-muted-foreground/30 tracking-[0.18em] lowercase">loading…</div>
   </div>
 );
 
@@ -152,50 +151,41 @@ const ZerlalView = () => {
   };
 
   return (
-    <ScanProvider>
-      <div className="h-full flex flex-col">
-        {/* Top Bar */}
-        <div className="shrink-0 border-b border-border/[0.06] px-5 py-2.5 flex items-center justify-between backdrop-blur-md bg-background/40">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-foreground/[0.04] border border-border/[0.08] flex items-center justify-center">
-              <Shield className="h-3.5 w-3.5 text-foreground/60" />
-            </div>
-            <div>
-              <h1 className="text-[11px] font-light text-foreground/90">asherin.cyber</h1>
-              <p className="text-[8px] text-muted-foreground/30 uppercase">infrastructure intelligence</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={openScan}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-foreground/[0.06] text-[10px] text-foreground/60 hover:bg-foreground/[0.1] transition-colors"
-            >
-              <Plus className="h-3 w-3" /> Scan Now
-            </button>
-            <button className="p-2 rounded-lg hover:bg-foreground/[0.03] transition-colors relative">
-              <Bell className="h-3.5 w-3.5 text-muted-foreground/30" />
-              {criticalCount > 0 && <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-400" />}
-            </button>
-          </div>
-        </div>
-
-        <div className="flex-1 flex min-h-0">
-          <ZerlalNav activeScreen={activeScreen} onNavigate={handleNavigate} criticalCount={criticalCount} />
-          <Suspense fallback={<ScreenFallback />}>{renderScreen()}</Suspense>
-        </div>
-
-        {scanModalMounted && (
-          <Suspense fallback={null}>
-            <ScanModal
-              open={scanModalOpen}
-              onClose={() => setScanModalOpen(false)}
-              onScanComplete={handleScanComplete}
-              onScanStarted={handleScanStarted}
-            />
-          </Suspense>
-        )}
+    <div className="h-full flex flex-col">
+      {/* Action bar — the room name lives in the shared shell header above, so
+          this row carries only the actions, not a second wordmark. */}
+      <div className="shrink-0 border-b border-border/[0.06] px-5 py-2.5 flex items-center justify-end gap-2 backdrop-blur-md bg-background/40">
+        <button
+          onClick={openScan}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-foreground/[0.06] text-[10px] text-foreground/60 hover:bg-foreground/[0.1] transition-colors lowercase"
+        >
+          <Plus className="h-3 w-3" /> scan
+        </button>
+        <button
+          title={criticalCount > 0 ? `${criticalCount} open critical finding${criticalCount === 1 ? "" : "s"}` : "no open critical findings"}
+          className="p-2 rounded-lg hover:bg-foreground/[0.03] transition-colors relative"
+        >
+          <Bell className="h-3.5 w-3.5 text-muted-foreground/30" />
+          {criticalCount > 0 && <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-400" />}
+        </button>
       </div>
-    </ScanProvider>
+
+      <div className="flex-1 flex flex-col md:flex-row min-h-0">
+        <ZerlalNav activeScreen={activeScreen} onNavigate={handleNavigate} criticalCount={criticalCount} />
+        <Suspense fallback={<ScreenFallback />}>{renderScreen()}</Suspense>
+      </div>
+
+      {scanModalMounted && (
+        <Suspense fallback={null}>
+          <ScanModal
+            open={scanModalOpen}
+            onClose={() => setScanModalOpen(false)}
+            onScanComplete={handleScanComplete}
+            onScanStarted={handleScanStarted}
+          />
+        </Suspense>
+      )}
+    </div>
   );
 };
 

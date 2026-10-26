@@ -1,7 +1,7 @@
 // real adapters — the only place the workspace touches a subsystem.
 //
 // Every adapter reads from something that already owned the data: the sensor
-// fabric, the operator's stored camera poses, the investigation store, the
+// fabric, the operator's stored camera poses, the
 // geocoder. None of them acquires anything new, and none of them invents a
 // row when the subsystem returned nothing.
 
@@ -10,8 +10,6 @@ import type { FabricObservation, FabricSensor } from "@/lib/fabric/types";
 import { loadPoses } from "@/lib/arvision/spatial3d/poses";
 import { geocodeAddress, detectAddresses } from "@/lib/propertyIntent";
 import { detectGeoIntent } from "@/lib/geoIntent";
-import { listInvestigations, loadSnapshot } from "@/lib/investigation/persistence";
-import type { InvestigationSnapshot } from "@/lib/investigation/types";
 import type { LaneRunner } from "./orchestrator";
 import type {
   EvidenceItem,
@@ -229,121 +227,6 @@ export const evidenceRunner: LaneRunner = {
     return items.length ? { kind: "evidence", items } : null;
   },
 };
-
-// ── research lane ──────────────────────────────────────────────────────────
-
-async function currentSnapshot(conversationId: string | null): Promise<InvestigationSnapshot | null> {
-  const list = await listInvestigations(20);
-  const match =
-    (conversationId && list.find((i) => i.conversationId === conversationId)) || list[0] || null;
-  if (!match) return null;
-  return loadSnapshot(match.id);
-}
-
-export function researchCardRunner(conversationId: string | null): LaneRunner {
-  return {
-    kind: "cards",
-    emptyReason: "no investigation has produced a corroborated entity yet",
-    run: async () => {
-      const snap = await currentSnapshot(conversationId);
-      if (!snap) return null;
-      const cards: WorkspaceCard[] = snap.entities.slice(0, 30).map((e) => {
-        const src = snap.sources.find((s) => s.id === (e as unknown as { sourceId?: string }).sourceId);
-        return {
-          id: e.id,
-          kind: ((e as unknown as { kind?: string }).kind === "organization" ? "company" : "entity") as WorkspaceCard["kind"],
-          title: (e as unknown as { name?: string }).name || "unnamed entity",
-          subtitle: (e as unknown as { kind?: string }).kind,
-          fields: [
-            { label: "type", value: String((e as unknown as { kind?: string }).kind ?? "unknown") },
-            {
-              label: "confidence",
-              value:
-                typeof (e as unknown as { confidence?: number }).confidence === "number"
-                  ? String((e as unknown as { confidence?: number }).confidence)
-                  : "unscored",
-            },
-          ],
-          provenance: {
-            origin: "investigation",
-            label: src ? (src as unknown as { domain?: string }).domain || "source" : "investigation record",
-            url: src ? (src as unknown as { url?: string }).url ?? null : null,
-            confidence: (e as unknown as { confidence?: number }).confidence ?? null,
-          },
-          anchor: { entityId: e.id },
-        };
-      });
-      return cards.length ? { kind: "cards", cards } : null;
-    },
-  };
-}
-
-export function researchGraphRunner(conversationId: string | null): LaneRunner {
-  return {
-    kind: "graph",
-    emptyReason: "no resolved relationship exists in this investigation yet",
-    run: async () => {
-      const snap = await currentSnapshot(conversationId);
-      if (!snap) return null;
-      const nodes = snap.entities.slice(0, 40).map((e) => ({
-        id: e.id,
-        label: (e as unknown as { name?: string }).name || "unnamed",
-        kind: "entity" as const,
-      }));
-      const ids = new Set(nodes.map((n) => n.id));
-      const edges = snap.relationships
-        .filter((r) => {
-          const rr = r as unknown as { fromEntityId?: string; toEntityId?: string };
-          return ids.has(rr.fromEntityId || "") && ids.has(rr.toEntityId || "");
-        })
-        .slice(0, 80)
-        .map((r) => {
-          const rr = r as unknown as {
-            id: string;
-            fromEntityId: string;
-            toEntityId: string;
-            kind?: string;
-            confidence?: number;
-          };
-          return {
-            id: rr.id,
-            from: rr.fromEntityId,
-            to: rr.toEntityId,
-            label: rr.kind || "related to",
-            confidence: rr.confidence ?? null,
-          };
-        });
-      return nodes.length ? { kind: "graph", graph: { nodes, edges } } : null;
-    },
-  };
-}
-
-export function researchTimelineRunner(conversationId: string | null): LaneRunner {
-  return {
-    kind: "timeline",
-    emptyReason: "the investigation holds no dated event yet",
-    run: async () => {
-      const snap = await currentSnapshot(conversationId);
-      if (!snap) return null;
-      const items: TimelineItem[] = snap.timeline
-        .map((t) => {
-          const tt = t as unknown as { id: string; occurredAt?: string; label?: string; summary?: string };
-          const ms = tt.occurredAt ? Date.parse(tt.occurredAt) : NaN;
-          if (!Number.isFinite(ms)) return null;
-          return {
-            id: tt.id,
-            atMs: ms,
-            label: tt.label || tt.summary || "event",
-            detail: tt.summary,
-            provenance: { origin: "investigation", label: "investigation timeline", observedAt: tt.occurredAt ?? null },
-          } as TimelineItem;
-        })
-        .filter((x): x is TimelineItem => !!x)
-        .sort((a, b) => a.atMs - b.atMs);
-      return items.length ? { kind: "timeline", items } : null;
-    },
-  };
-}
 
 /** geographic lane: geocodes places actually named in the message or entities. */
 export function geocodeMapRunner(message: string, extraPlaces: string[] = []): LaneRunner {

@@ -12,15 +12,16 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type PullStatus = "ok" | "fail" | "skip" | "stale";
 
-/** Organ ids used across the graph. Keep in sync with ORGANS in the view. */
+/**
+ * Organ ids a writer in src/ actually emits today (grep `emitPull({`). The
+ * graph maps each onto its room in src/lib/connect/graph.ts (ORGAN_ROOM); an
+ * id missing there is still shown, under its own name. Add an id here and in
+ * ORGAN_ROOM when a new room starts pulling.
+ */
 export type Organ =
-  | "chat" | "maps" | "zophiel" | "google" | "ide" | "vault" | "zerlal"
-  | "azplen" | "axrlen" | "zahten" | "briefings" | "notebooks"
-  | "knowledge-vault" | "library" | "memory" | "whiteboard" | "ghost"
-  | "file-scrapper" | "zeeion" | "zaxin" | "zacoon" | "zali" | "gematria"
-  | "vedic" | "document-studio" | "pattern" | "timeseries" | "teams"
-  | "snippets" | "rad" | "shield" | "connect"
-  | "defender" | "arvision";
+  | "chat" | "maps" | "google" | "vault" | "zahten" | "briefings" | "notebooks"
+  | "knowledge-vault" | "library" | "whiteboard" | "ghost" | "file-scrapper"
+  | "connect" | "defender" | "arvision";
 
 export interface PullInput {
   organ: Organ | string;
@@ -34,9 +35,9 @@ export interface PullInput {
 }
 
 const SECRET_PATTERNS: RegExp[] = [
-  /\b(sk|pk|rk|api|key|token|bearer|secret|pat|ghp|gho|ghu|ghs|xoxb|xoxp)[-_a-z]*[=:\s]*["']?[A-Za-z0-9_\-]{16,}/gi,
-  /\beyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}\b/g, // jwt
-  /\bAIza[0-9A-Za-z_\-]{20,}\b/g,
+  /\b(sk|pk|rk|api|key|token|bearer|secret|pat|ghp|gho|ghu|ghs|xoxb|xoxp)[-_a-z]*[=:\s]*["']?[A-Za-z0-9_-]{16,}/gi,
+  /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g, // jwt
+  /\bAIza[0-9A-Za-z_-]{20,}\b/g,
   /\b\d{6}\b(?=\s*(otp|totp|code|2fa))/gi,
   /\b(?:password|passphrase|totp|otp|seed|mnemonic)\s*[:=]\s*\S+/gi,
 ];
@@ -87,7 +88,7 @@ export async function emitPull(input: PullInput): Promise<void> {
   try {
     const { data: auth } = await supabase.auth.getUser();
     const uid = auth?.user?.id;
-    if (!uid) return; // signed-out surfaces do not trace
+    if (!uid) return; // no device identity yet: nothing to scope the row to
 
     const latency =
       typeof input.latencyMs === "number" && Number.isFinite(input.latencyMs)

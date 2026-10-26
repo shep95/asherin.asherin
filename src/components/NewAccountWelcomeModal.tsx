@@ -16,7 +16,7 @@ const STORAGE_PREFIX = "aureon_welcome_seen_";
 const CAPABILITIES = [
   { k: "01", t: "asherin chat", d: "Multi-model intelligence with consensus and BYOK." },
   { k: "02", t: "asherin.search", d: "Live public-engine search with credibility ranking and cited hits." },
-  { k: "03", t: "asherin.eye", d: "Live public spatial layers on a globe — flights, quakes, disasters, public cameras." },
+  { k: "03", t: "asherin.adam", d: "A live globe on this device — imagery, terrain, earthquakes, recent satellite passes." },
   { k: "04", t: "asherin.cyber", d: "Passive domain recon plus a public CVE index lookup. Not a credentialed scanner." },
   { k: "05", t: "asherin.defender", d: "Camera, wifi and spy-class status on your own device. Nothing about anyone else's." },
   { k: "06", t: "asherin.knowledge", d: "Your own documents embedded and cited, passage by passage." },

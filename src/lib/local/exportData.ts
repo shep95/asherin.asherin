@@ -24,6 +24,15 @@ export async function buildExportBundle(): Promise<Blob> {
 export async function wipeEverything(): Promise<void> {
   await wipeKeyVault().catch(() => undefined);
   await wipeLocalDb().catch(() => undefined);
+  // the legacy encryption db of older installs may still hold key material
+  await new Promise<void>((resolve) => {
+    try {
+      const req = indexedDB.deleteDatabase("aureon_e2e_db");
+      req.onsuccess = req.onerror = req.onblocked = () => resolve();
+    } catch {
+      resolve();
+    }
+  });
   try {
     localStorage.clear();
     sessionStorage.clear();

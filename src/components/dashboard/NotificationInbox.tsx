@@ -69,10 +69,11 @@ export async function requestPushPermission(): Promise<boolean> {
   return result === "granted";
 }
 
-// Public API to push notifications
-export function pushNotification(notif: Omit<AppNotification, "id" | "read" | "timestamp">) {
+// Public API to push notifications. returns false when do-not-disturb held it
+// back, so a caller that reports delivery can say so instead of claiming it.
+export function pushNotification(notif: Omit<AppNotification, "id" | "read" | "timestamp">): boolean {
   const isDnd = localStorage.getItem(DND_KEY) === "true";
-  if (isDnd) return;
+  if (isDnd) return false;
   
   const all = loadNotifications();
   // Batch: if same title exists in last 5, increment instead of adding
@@ -96,6 +97,7 @@ export function pushNotification(notif: Omit<AppNotification, "id" | "read" | "t
   sendBrowserNotification(notif.title, notif.message);
   
   window.dispatchEvent(new Event("aureon-notification-update"));
+  return true;
 }
 
 interface NotificationInboxProps {
@@ -106,7 +108,7 @@ const NotificationInbox = ({ onNavigate }: NotificationInboxProps) => {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>(loadNotifications);
   const [dnd, setDnd] = useState(() => localStorage.getItem(DND_KEY) === "true");
-  const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem(SOUND_KEY) !== "false");
+  const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem(SOUND_KEY) === "true");
   const [pushEnabled, setPushEnabled] = useState(() => localStorage.getItem(PUSH_KEY) !== "false");
 
   const reload = useCallback(() => setNotifications(loadNotifications()), []);

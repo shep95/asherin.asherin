@@ -17,6 +17,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import NetworkSentinelTab from "@/components/dashboard/google/modules/NetworkSentinelTab";
+import OrganOffline from "../OrganOffline";
+import { describeFailure } from "../offline";
 
 import {
   Radar, ShieldAlert, MapPin, Loader2, RefreshCw, EyeOff, UserCheck, FileText, Radio,
@@ -177,7 +179,7 @@ const BluetoothSentinel = () => {
   const [devices, setDevices] = useState<Device[]>([]);
   const [events, setEvents] = useState<GeoEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [sent, setSent] = useState<SentinelState>(getSentinelState());
   const [dossierFor, setDossierFor] = useState<string | null>(null);
   const [push, setPush] = useState<PushStatus>({ state: "prompt" });
@@ -221,7 +223,7 @@ const BluetoothSentinel = () => {
       setEvents((g.data?.events || []) as GeoEvent[]);
       if (s.data?.settings) setSettings((prev) => ({ ...prev, ...s.data.settings }));
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : "Sentinel could not be reached.");
+      setLoadError(e ?? new Error("the sentinel organ did not answer"));
     } finally {
       setLoading(false);
     }
@@ -256,7 +258,7 @@ const BluetoothSentinel = () => {
       await pickOne((a) => ingestAdvert(a));
       await flushSentinel(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No device selected");
+      toast.error(describeFailure(e, "sentinel organ"));
     }
   };
 
@@ -270,10 +272,10 @@ const BluetoothSentinel = () => {
     try {
       const byok = await resolveByok();
       await invokeWithByokRetry("sentinel-ble", { body: { action: "ble.dossier", deviceId: id, ...(byok ? { byok } : {}) }, tool: "asherin-sentinel" });
-      toast.success("Dossier built");
+      toast.success("dossier built");
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Dossier failed");
+      toast.error(describeFailure(e, "sentinel organ"));
     } finally {
       setDossierFor(null);
     }
@@ -320,9 +322,9 @@ const BluetoothSentinel = () => {
       });
       if (data?.analysis) setAnalysis(data.analysis as TcAnalysis);
       setCaseFile(data?.caseFile || null);
-      toast.success("Case file built");
+      toast.success("case file built");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Case file failed");
+      toast.error(describeFailure(e, "sentinel organ"));
     } finally {
       setBuildingCase(false);
     }
@@ -399,25 +401,32 @@ const BluetoothSentinel = () => {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold flex items-center gap-2"><Radar className="h-4 w-4" /> Bluetooth & Area Sentinel</h2>
+        <div className="min-w-0">
+          <h2 className="text-lg font-light flex items-center gap-2"><Radar className="h-4 w-4" aria-hidden /> bluetooth & area sentinel</h2>
           <p className="text-xs text-muted-foreground">
-            Logs every nearby radio, flags the ones that follow you across separate times and places, and warns you when you enter an area with reported risk.
+            logs every nearby radio, flags the ones that follow you across separate times and places, and warns you when you enter an area with reported risk.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant="outline" onClick={() => load()} disabled={loading}>
-            <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? "animate-spin" : ""}`} /> Refresh
+            <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden /> read again
           </Button>
           {watching ? (
-            <Button size="sm" variant="ghost" onClick={() => void disarmSentinel()}>Disarm</Button>
+            <Button size="sm" variant="ghost" onClick={() => void disarmSentinel()}>disarm</Button>
           ) : (
             <Button size="sm" onClick={() => void armSentinel()}>
-              <Radio className="h-3.5 w-3.5 mr-1" /> Arm sentinel
+              <Radio className="h-3.5 w-3.5 mr-1" aria-hidden /> arm sentinel
             </Button>
           )}
         </div>
       </div>
+
+      {/* the radio and area legs run on this device; the ledger they write to,
+          the recurrence maths and the tradecraft score ran on the sentinel
+          organ. with no device answer the panel says so once, above the fold. */}
+      {!loading && loadError !== null && (
+        <OrganOffline error={loadError} organ="sentinel organ" onRetry={() => void load()} />
+      )}
 
       {/*
         SILENT-DEAF BANNER.
@@ -434,19 +443,19 @@ const BluetoothSentinel = () => {
       {watching && !loading && devices.length === 0 && liveCount === 0 &&
         (mode === "picker" || mode === "unsupported") && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs space-y-1.5">
-          <p className="flex items-center gap-2 font-semibold text-foreground">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            No radio has ever been heard on this device — stalking alerts cannot fire here.
+          <p className="flex items-center gap-2 font-light text-foreground">
+            <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
+            no radio has ever been heard on this device — following alerts cannot fire here.
           </p>
           <p className="text-muted-foreground">
             {mode === "picker"
-              ? "This browser only exposes the one-shot Bluetooth picker. It cannot listen passively, so no advertisements are ever logged, so recurrence can never be computed. Area-risk and network legs are unaffected and still running."
-              : "Web Bluetooth is unavailable in this browser, so the radio leg never starts. Area-risk and network legs are unaffected and still running."}
+              ? "this browser only exposes the one-shot bluetooth picker. it cannot listen passively, so no advertisements are ever logged, so recurrence can never be computed."
+              : "web bluetooth is unavailable in this browser, so the radio leg never starts."}
           </p>
           <p className="text-muted-foreground">
-            Continuous sweeps need the Asherin companion app, or Chrome on Android with experimental
-            web platform features enabled. Use <strong className="text-foreground">Capture</strong> below
-            for a manual one-shot reading in the meantime.
+            continuous sweeps need the asherin companion app (the capacitor shell), or chrome on android with
+            experimental web platform features enabled. <strong className="text-foreground">capture once</strong> below
+            takes a manual one-shot reading in the meantime.
           </p>
         </div>
       )}
@@ -454,26 +463,26 @@ const BluetoothSentinel = () => {
       <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-[11px] text-muted-foreground space-y-1">
         <p>
           <strong className="text-foreground">
-            {watching ? "Armed — running by itself." : "Disarmed."}
+            {watching ? "armed — running by itself." : "disarmed."}
           </strong>{" "}
           {watching
-            ? "The sentinel starts on its own whenever Asherin is open. You never have to press start; disarming is the only thing that stops it."
-            : "You turned the watch off. Nothing is being logged and no area alerts will fire until you arm it again."}
+            ? "once armed, the sentinel starts on its own whenever asherin is open. disarming is the only thing that stops it."
+            : "the watch is off. nothing is being logged and no area alerts will fire until you arm it."}
         </p>
         <p>
-          <strong className="text-foreground">Radio reality:</strong>{" "}
+          <strong className="text-foreground">radio reality:</strong>{" "}
           {mode === "native"
-            ? "Companion app detected — the radio keeps listening while the app is in the background and while the screen is off."
+            ? "companion app detected — the radio keeps listening while the app is in the background and while the screen is off."
             : mode === "continuous"
-              ? "Continuous advertisement scanning is available on this device."
+              ? "continuous advertisement scanning is available on this device."
               : mode === "picker"
-                ? "This browser only exposes the one-shot Bluetooth picker — use Capture once, install the Asherin companion app, or use Chrome on Android with experimental web platform features."
-                : "Web Bluetooth is unavailable in this browser. Install the Asherin companion app, or use Chrome on Android."}
+                ? "this browser only exposes the one-shot bluetooth picker — capture once, the asherin companion app, or chrome on android with experimental web platform features."
+                : "web bluetooth is unavailable in this browser. the asherin companion app, or chrome on android, would hear it."}
         </p>
         <p>
           {mode === "native"
-            ? "Background and screen-off sweeps run natively. No phone can listen while it is fully powered down — the radio has no power then — so the log resumes the moment the handset boots."
-            : "A web page can only listen while Asherin is open somewhere. The watch is wake-locked, supervised every minute, and re-arms itself the moment you return; alerts it has already raised still reach you by push and email anywhere."}
+            ? "background and screen-off sweeps run natively. no phone can listen while it is fully powered down — the radio has no power then — so the log resumes the moment the handset boots."
+            : "a web page can only listen while asherin is open somewhere. the watch is wake-locked, supervised every minute, and re-arms itself the moment you return. sightings are buffered on this device; the ledger they would flush to is the sentinel organ."}
         </p>
         {watching && sent.blocked && (
           <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -511,19 +520,18 @@ const BluetoothSentinel = () => {
         <TabsContent value="devices" className="space-y-3">
 
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={captureOnce}>Capture once</Button>
-            <Button size="sm" variant="ghost" onClick={() => flushSentinel(false)} disabled={flushing}>Sync buffer</Button>
+            <Button size="sm" variant="outline" onClick={captureOnce}>capture once</Button>
+            <Button size="sm" variant="ghost" onClick={() => flushSentinel(false)} disabled={flushing || loadError !== null}>sync buffer</Button>
           </div>
           {loading ? (
             <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
-          ) : loadError ? (
-            <div className="rounded border border-border p-4 text-sm">
-              <p className="text-muted-foreground">{loadError}</p>
-              <Button size="sm" variant="outline" className="mt-2" onClick={() => load()}>Retry</Button>
+          ) : loadError !== null ? (
+            <div className="rounded border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              no radio ledger could be read.
             </div>
           ) : devices.length === 0 ? (
             <div className="rounded border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-              No radios logged yet. Start the watch and walk your normal route — recurrence only means something once you have moved.
+              no radios logged yet. start the watch and walk your normal route — recurrence only means something once you have moved.
             </div>
           ) : (
             <ScrollArea className="h-[520px] pr-3">
@@ -784,9 +792,11 @@ const BluetoothSentinel = () => {
               />
             </div>
           ))}
-          {push.state !== "enabled" && (
+          {push.state === "unsupported" ? (
+            <p className="text-[11px] text-muted-foreground">{push.reason}</p>
+          ) : push.state !== "enabled" && (
             <Button size="sm" variant="outline" onClick={async () => setPush(await enablePush())}>
-              Enable device push
+              enable device push
             </Button>
           )}
         </TabsContent>

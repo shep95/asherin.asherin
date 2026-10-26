@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
-import { TrendingDown, TrendingUp, AlertTriangle, ArrowRight, User, Loader2, FolderPlus, Trash2 } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
+import { AlertTriangle, ArrowRight, Loader2, FolderPlus, Trash2 } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useZerlalProjects, useZerlalFindings } from "./useZerlalData";
 import type { ZerlalScreen } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import IdeDeleteConfirm from "@/components/dashboard/ide/IdeDeleteConfirm";
+import IdeDeleteConfirm from "./IdeDeleteConfirm";
 
 interface DashboardScreenProps {
   onNavigate: (screen: ZerlalScreen) => void;
@@ -55,8 +55,8 @@ const DashboardScreen = ({ onNavigate, onSelectProject, onSelectFinding, onOpenS
       toast.success(`Deleted "${pendingDelete.name}"`);
       setPendingDelete(null);
       await refetchProjects();
-    } catch (e: any) {
-      toast.error("Delete failed: " + (e?.message ?? "unknown"));
+    } catch (e) {
+      toast.error("Delete failed: " + (e instanceof Error ? e.message : "unknown"));
     } finally {
       setDeleting(false);
     }
@@ -120,16 +120,17 @@ const DashboardScreen = ({ onNavigate, onSelectProject, onSelectFinding, onOpenS
             <FolderPlus className="h-6 w-6 text-muted-foreground/20" />
           </div>
           <div>
-            <h3 className="text-sm text-foreground/60 font-light">No Projects Yet</h3>
-            <p className="text-[10px] text-muted-foreground/30 mt-1 max-w-xs">
-              Upload a codebase, ZIP file, or connect a GitHub repository to start scanning for vulnerabilities.
+            <h3 className="text-sm text-foreground/60 font-light lowercase">no projects yet</h3>
+            <p className="text-[10px] text-muted-foreground/30 mt-1 max-w-xs lowercase">
+              the hosted repo audit ran on the kernel and is offline here. on this device, use the code scanner and
+              log correlator in the section list — what they find lands under findings.
             </p>
           </div>
           <button
             onClick={onOpenScan}
-            className="px-4 py-2 rounded-lg bg-foreground/[0.06] text-[10px] text-foreground/60 hover:bg-foreground/[0.1] transition-colors"
+            className="px-4 py-2 rounded-lg bg-foreground/[0.06] text-[10px] text-foreground/60 hover:bg-foreground/[0.1] transition-colors lowercase"
           >
-            + Start First Scan
+            what can i run here?
           </button>
         </div>
       </div>
@@ -141,8 +142,8 @@ const DashboardScreen = ({ onNavigate, onSelectProject, onSelectFinding, onOpenS
       <div className="p-5 space-y-5 max-w-[1400px] mx-auto">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-light tracking-[0.1em] text-foreground/80 uppercase">Security Posture</h2>
-            <p className="text-[10px] text-muted-foreground/35 mt-0.5">
+            <h2 className="text-sm font-light tracking-[0.1em] text-foreground/80 lowercase">security posture</h2>
+            <p className="text-[10px] text-muted-foreground/35 mt-0.5 lowercase">
               {totalOpen} open vulnerabilities across {projects.length} project{projects.length !== 1 ? "s" : ""}
             </p>
           </div>

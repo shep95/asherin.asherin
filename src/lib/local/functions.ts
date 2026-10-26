@@ -45,6 +45,11 @@ const HANDLERS: Record<string, Handler> = {
   "intel-notify": ok,
   "session-context": async () => ({ context: null }),
   "sentinel-beacon": ok,
+  // the shared google hook lists accounts on mount; a device has none, which is an answer, not a failure
+  "google-oauth": async (body) => {
+    if ((body as { action?: string } | undefined)?.action === "list_accounts") return { accounts: [] };
+    throw new Error(localOnlyMessage("google-oauth"));
+  },
   purge: async () => ({ purged: 0 }),
 };
 

@@ -4,7 +4,7 @@ import PhotoReadPanel from "../PhotoReadPanel";
 import { EMPTY_RECORD } from "@/lib/health/store";
 import { normaliseRead } from "@/lib/health/photoRead";
 
-vi.mock("@/lib/byokInvoke", () => ({ invokeWithByokRetry: vi.fn() }));
+vi.mock("@/lib/health/shepherd", () => ({ readPhotos: vi.fn() }));
 
 const read = normaliseRead(
   {
@@ -34,14 +34,7 @@ const recordWithRead = { ...EMPTY_RECORD, photoReads: [read] };
 
 describe("PhotoReadPanel", () => {
   it("shows the read-out in plain language with its provenance and limits", () => {
-    render(
-      <PhotoReadPanel
-        record={recordWithRead}
-        persist={() => {}}
-        resolveByok={async () => undefined}
-        onAsk={() => {}}
-      />,
-    );
+    render(<PhotoReadPanel record={recordWithRead} persist={() => {}} onAsk={() => {}} />);
     expect(screen.getByText("patch with an uneven edge")).toBeTruthy();
     expect(screen.getByText(/border is not even/)).toBeTruthy();
     expect(screen.getByText(/take this to a clinician/)).toBeTruthy();
@@ -49,32 +42,24 @@ describe("PhotoReadPanel", () => {
     expect(screen.getByText(/cannot show depth/)).toBeTruthy();
   });
 
-  it("quotes a finding into the assistant when asked about", () => {
+  it("quotes a finding into shepherd when asked about", () => {
     const asked: string[] = [];
-    render(
-      <PhotoReadPanel
-        record={recordWithRead}
-        persist={() => {}}
-        resolveByok={async () => undefined}
-        onAsk={(l) => asked.push(l)}
-      />,
-    );
+    render(<PhotoReadPanel record={recordWithRead} persist={() => {}} onAsk={(l) => asked.push(l)} />);
     fireEvent.click(screen.getByText("patch with an uneven edge"));
-    fireEvent.click(screen.getByText(/ask asherin about this/));
+    fireEvent.click(screen.getByText(/ask shepherd about this/));
     expect(asked).toHaveLength(1);
     expect(asked[0]).toContain("patch with an uneven edge");
     expect(asked[0]).toContain('"left arm"');
   });
 
   it("cannot be run with no photographs attached", () => {
-    render(
-      <PhotoReadPanel
-        record={EMPTY_RECORD}
-        persist={() => {}}
-        resolveByok={async () => undefined}
-        onAsk={() => {}}
-      />,
-    );
+    render(<PhotoReadPanel record={EMPTY_RECORD} persist={() => {}} onAsk={() => {}} />);
     expect((screen.getByText("read these").closest("button") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("names the model as shepherd and the key as device-held, never a server", () => {
+    render(<PhotoReadPanel record={EMPTY_RECORD} persist={() => {}} onAsk={() => {}} />);
+    expect(screen.getByText(/model key held on this device/)).toBeTruthy();
+    expect(screen.queryByText(/asherin-health-ai|kernel/i)).toBeNull();
   });
 });

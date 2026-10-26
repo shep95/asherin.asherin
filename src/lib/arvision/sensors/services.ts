@@ -5,7 +5,7 @@
 // answering" and "online", because a blank panel and a dead backend are not the
 // same failure and an operator has to know which one they have.
 
-import { supabase } from "@/integrations/supabase/client";
+import { getVpsStatus } from "../spatial/vps";
 import type { ServiceHealth, ServiceId } from "./types";
 import { bridgeEndpoint } from "./adapters/bridge";
 
@@ -55,14 +55,9 @@ async function probe(id: Exclude<ServiceId, "edge_bridge" | "positioning">): Pro
 }
 
 async function probePositioning(): Promise<ServiceHealth> {
-  try {
-    const { data, error } = await supabase.functions.invoke("asherin-arvision-vps", { body: { action: "status" } });
-    if (error) return base("positioning", true, false, "the positioning function is unreachable");
-    const body = data as { configured?: boolean; message?: string } | null;
-    return base("positioning", Boolean(body?.configured), Boolean(body?.configured), body?.message ?? "state unknown");
-  } catch {
-    return base("positioning", true, false, "the positioning function is unreachable");
-  }
+  // one source of truth for the positioning claim: the vps client itself
+  const status = await getVpsStatus();
+  return base("positioning", status.configured, status.configured, status.message);
 }
 
 export async function probeServices(): Promise<ServiceHealth[]> {

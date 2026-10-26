@@ -185,7 +185,7 @@ const SpatialView = () => {
         if (!cancelled) setVps(status);
       })
       .catch(() => {
-        if (!cancelled) setVps({ configured: false, message: "positioning service unreachable" });
+        if (!cancelled) setVps({ configured: false, message: "camera positioning is not available on this device" });
       });
     return () => {
       cancelled = true;
@@ -899,8 +899,9 @@ const SpatialView = () => {
             <div className={`${card} space-y-3 p-4`}>
               <p className="text-[11px] font-light uppercase tracking-[0.16em] text-white/40">shared session</p>
               <p className="text-[11px] font-light leading-relaxed text-white/50">
-                everyone joins the same room key and shares position at twenty updates a second. the original package used a
-                local wifi link between phones and glasses; the web room carries the same messages over your account instead.
+                everyone who joins the same room key shares position at twenty updates a second. the original package used a
+                local wifi link between phones and glasses; this device edition carries the same messages between open asherin
+                tabs on this one device — there is no relay between devices.
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 <input

@@ -38,12 +38,12 @@ const SIDEREAL_YEAR_MS = 365.25636 * 86400_000;
 export type DashaLevel = "maha" | "antar" | "pratyantar" | "sookshma" | "prana" | "deha";
 
 export const DASHA_LEVEL_LABEL: Record<DashaLevel, string> = {
-  maha: "Mahadasha",
-  antar: "Antardasha",
-  pratyantar: "Pratyantardasha",
-  sookshma: "Sookshma (Weekly)",
-  prana: "Prana (Daily)",
-  deha: "Deha (Hourly)",
+  maha: "mahadasha",
+  antar: "antardasha",
+  pratyantar: "pratyantardasha",
+  sookshma: "sookshma (weekly)",
+  prana: "prana (daily)",
+  deha: "deha (hourly)",
 };
 
 const NEXT_LEVEL: Record<DashaLevel, DashaLevel | null> = {

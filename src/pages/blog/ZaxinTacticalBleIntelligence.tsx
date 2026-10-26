@@ -60,7 +60,7 @@ const ZaxinTacticalBleIntelligence = () => (
 
     <h2>current asherin surfaces</h2>
     <p>
-      current visual and spatial work lives in asherin.eye and asherin.arvision. those rooms expose their available sensors and degraded states directly. neither inherits the retired product claims on this page.
+      current visual and spatial work lives in asherin.adam and asherin.arvision. those rooms expose their available sensors and degraded states directly. neither inherits the retired product claims on this page.
     </p>
   </ArticleShell>
 );

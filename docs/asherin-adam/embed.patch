@@ -1,0 +1,3583 @@
+diff --git a/index.html b/index.html
+index e1e0331..78d9a79 100644
+--- a/index.html
++++ b/index.html
+@@ -3,12 +3,11 @@
+ <head>
+   <meta charset="UTF-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+-  <title>ADAM</title>
+-  <meta name="description" content="ADAM — a 3D globe of public live data: aircraft, vessels, weather, fires, infrastructure and cameras, with an analyst that can drive it." />
++  <title>asherin.adam</title>
++  <meta name="description" content="asherin.adam — a live globe on this device: imagery, terrain, earthquakes, recent satellite passes." />
+   <meta name="robots" content="noindex, nofollow" />
+   <link rel="icon" type="image/svg+xml" href="/brand/mark.svg" />
+   <link rel="apple-touch-icon" href="/brand/mark.svg" />
+-  <script>window.__adamLaunchHash = location.hash;</script>
+   <link rel="stylesheet" href="/style.css" />
+   <!-- Fonts are vendored (scripts/vendor-fonts.mjs) so the first paint never
+        waits on a third party. The icon font is subset to the glyphs this app
+diff --git a/public/fonts/fonts.css b/public/fonts/fonts.css
+index c466fd2..309896a 100644
+--- a/public/fonts/fonts.css
++++ b/public/fonts/fonts.css
+@@ -6,7 +6,7 @@
+   font-style: normal;
+   font-weight: 300 700;
+   font-display: swap;
+-  src: url(/fonts/geist-latin-ext-0.woff2) format('woff2');
++  src: url(geist-latin-ext-0.woff2) format('woff2');
+   unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+ }
+ 
+@@ -15,7 +15,7 @@
+   font-style: normal;
+   font-weight: 300 700;
+   font-display: swap;
+-  src: url(/fonts/geist-latin-ext-0.woff2) format('woff2');
++  src: url(geist-latin-ext-0.woff2) format('woff2');
+   unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+ }
+ 
+@@ -24,7 +24,7 @@
+   font-style: normal;
+   font-weight: 300 700;
+   font-display: swap;
+-  src: url(/fonts/geist-latin-1.woff2) format('woff2');
++  src: url(geist-latin-1.woff2) format('woff2');
+   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+ }
+ 
+@@ -33,7 +33,7 @@
+   font-style: normal;
+   font-weight: 300 700;
+   font-display: swap;
+-  src: url(/fonts/geist-latin-1.woff2) format('woff2');
++  src: url(geist-latin-1.woff2) format('woff2');
+   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+ }
+ 
+@@ -42,7 +42,7 @@
+   font-style: normal;
+   font-weight: 300 700;
+   font-display: swap;
+-  src: url(/fonts/geist-all-2.woff2) format('woff2');
++  src: url(geist-all-2.woff2) format('woff2');
+   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+ }
+ 
+@@ -51,7 +51,7 @@
+   font-style: normal;
+   font-weight: 300 700;
+   font-display: swap;
+-  src: url(/fonts/geist-all-2.woff2) format('woff2');
++  src: url(geist-all-2.woff2) format('woff2');
+   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+ }
+ 
+@@ -60,7 +60,7 @@
+   font-style: normal;
+   font-weight: 300 700;
+   font-display: swap;
+-  src: url(/fonts/geist-mono-all-0.woff2) format('woff2');
++  src: url(geist-mono-all-0.woff2) format('woff2');
+   unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+ }
+ /* symbols2 */
+@@ -70,7 +70,7 @@
+   font-style: normal;
+   font-weight: 300 700;
+   font-display: swap;
+-  src: url(/fonts/geist-mono-all-0.woff2) format('woff2');
++  src: url(geist-mono-all-0.woff2) format('woff2');
+   unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+ }
+ /* symbols2 */
+@@ -80,7 +80,7 @@
+   font-style: normal;
+   font-weight: 300 700;
+   font-display: swap;
+-  src: url(/fonts/geist-mono-latin-ext-1.woff2) format('woff2');
++  src: url(geist-mono-latin-ext-1.woff2) format('woff2');
+   unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+ }
+ 
+@@ -89,7 +89,7 @@
+   font-style: normal;
+   font-weight: 300 700;
+   font-display: swap;
+-  src: url(/fonts/geist-mono-latin-ext-1.woff2) format('woff2');
++  src: url(geist-mono-latin-ext-1.woff2) format('woff2');
+   unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+ }
+ 
+@@ -98,7 +98,7 @@
+   font-style: normal;
+   font-weight: 300 700;
+   font-display: swap;
+-  src: url(/fonts/geist-mono-latin-2.woff2) format('woff2');
++  src: url(geist-mono-latin-2.woff2) format('woff2');
+   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+ }
+ 
+@@ -107,7 +107,7 @@
+   font-style: normal;
+   font-weight: 300 700;
+   font-display: swap;
+-  src: url(/fonts/geist-mono-latin-2.woff2) format('woff2');
++  src: url(geist-mono-latin-2.woff2) format('woff2');
+   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+ }
+ 
+@@ -116,7 +116,7 @@
+   font-style: normal;
+   font-weight: 300 700;
+   font-display: swap;
+-  src: url(/fonts/geist-mono-all-3.woff2) format('woff2');
++  src: url(geist-mono-all-3.woff2) format('woff2');
+   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+ }
+ 
+@@ -125,7 +125,7 @@
+   font-style: normal;
+   font-weight: 300 700;
+   font-display: swap;
+-  src: url(/fonts/geist-mono-all-3.woff2) format('woff2');
++  src: url(geist-mono-all-3.woff2) format('woff2');
+   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+ }
+ 
+@@ -134,7 +134,7 @@
+   font-style: normal;
+   font-weight: 400;
+   font-display: block;
+-  src: url(/fonts/material-symbols-all-0.woff2) format('woff2');
++  src: url(material-symbols-all-0.woff2) format('woff2');
+ }
+ 
+ .material-symbols-outlined {
+diff --git a/src/app/layerPresentation.js b/src/app/layerPresentation.js
+index eaa0e0b..f9bbfdc 100644
+--- a/src/app/layerPresentation.js
++++ b/src/app/layerPresentation.js
+@@ -1,6 +1,7 @@
+ import { LayerPanel } from '../ui/layers.js';
+ import { governorRequestRender } from '../renderGovernor.js';
+ import { markDetectionSourcesChanged } from '../data/detection.js';
++import { layerAllowed } from '../embed/profile.js';
+ 
+ /** Own the layer panel and application reactions to lifecycle activity. */
+ export class LayerPresentation {
+@@ -38,7 +39,8 @@ export class LayerPresentation {
+     if (!this._panel)
+       this._panel = new LayerPanel({
+         weatherClock: this.weatherClock,
+-        getLayers: () => this.manager.getAll(),
++        getLayers: () =>
++          this.manager.getAll().filter((layer) => layerAllowed(layer.id)),
+         isEnabled: (id) => this.manager.isEnabled(id),
+         setEnabled: (id, enabled, options) =>
+           this.manager.setEnabled(id, enabled, options),
+diff --git a/src/app/tools.js b/src/app/tools.js
+index 20d124a..dcf3ce2 100644
+--- a/src/app/tools.js
++++ b/src/app/tools.js
+@@ -27,6 +27,10 @@ import {
+ } from './consoleRegistry.js';
+ import { captureGuard } from '../security/captureGuard.js';
+ 
++// Server-backed panels leave the embedded build at the entry point, so the
++// bundler never emits them and no dead chip reaches the rail.
++const EMBED = import.meta.env.ADAM_EMBED === true;
++
+ /** Attach scene tools, rendering listeners and the application debug handle. */
+ export function createApplicationTools({
+   scene,
+@@ -236,7 +240,9 @@ export function createApplicationTools({
+     tamper?.destroy();
+     tamperNotice?.destroy();
+   });
+-  const voiceCommands = initGevVoiceCommands({
++  const voiceCommands = EMBED
++    ? { stop() {} }
++    : initGevVoiceCommands({
+     ...voice,
+     floorServices: operations.surface.groundFloor,
+     annotationResolver: operations.annotationResolver,
+@@ -311,7 +317,8 @@ export function createApplicationTools({
+     annotationResolver: operations.annotationResolver,
+     searchNavigation: operations.searchAndFlyTo,
+   });
+-  import('../shepherd/install.js')
++  if (!EMBED)
++    import('../shepherd/install.js')
+     .then(({ installShepherd }) => {
+       if (signal?.aborted) return;
+       shepherd = installShepherd({
+@@ -410,7 +417,8 @@ export function createApplicationTools({
+   // 24-hour archive this browser keeps in IndexedDB.
+   let rewind = null;
+   let trackArchive = null;
+-  Promise.all([
++  if (!EMBED)
++    Promise.all([
+     import('../ui/adam/rewind.js'),
+     import('../intel/trackArchive.js'),
+   ])
+@@ -481,7 +489,8 @@ export function createApplicationTools({
+ 
+   // CAMERAS: directory of every public camera, with one-click connect.
+   let cctvDirectory = null;
+-  import('../ui/adam/cctvDirectory.js')
++  if (!EMBED)
++    import('../ui/adam/cctvDirectory.js')
+     .then(({ installCctvDirectory }) => {
+       if (signal?.aborted) return;
+       cctvDirectory = installCctvDirectory({ viewer, dataManager });
+@@ -495,7 +504,8 @@ export function createApplicationTools({
+   // WHAT'S HERE: photos and pages about the streets, landmarks and buildings
+   // at a point (right-click menu, Shepherd place_dossier).
+   let placeDossier = null;
+-  import('../ui/adam/placeDossier.js')
++  if (!EMBED)
++    import('../ui/adam/placeDossier.js')
+     .then(({ installPlaceDossier }) => {
+       if (signal?.aborted) return;
+       placeDossier = installPlaceDossier({});
+@@ -563,7 +573,8 @@ export function createApplicationTools({
+   let volcanoes = null;
+   let space = null;
+   let spectrum = null;
+-  Promise.all([
++  if (!EMBED)
++    Promise.all([
+     import('../ui/adam/volcanoPanel.js'),
+     import('../ui/adam/spacePanel.js'),
+     import('../ui/adam/spectrumPanel.js'),
+@@ -594,7 +605,8 @@ export function createApplicationTools({
+ 
+   // SYMBOLS FROM THE SKY: sacred and esoteric sites, shapes from above.
+   let symbols = null;
+-  import('../ui/adam/symbolsPanel.js')
++  if (!EMBED)
++    import('../ui/adam/symbolsPanel.js')
+     .then(({ installSymbolsPanel }) => {
+       if (signal?.aborted) return;
+       symbols = installSymbolsPanel({ viewer });
+@@ -605,7 +617,8 @@ export function createApplicationTools({
+ 
+   // SESSION: several operators on one picture (invite link #live=<room>).
+   let liveSession = null;
+-  import('../ui/adam/liveSession.js')
++  if (!EMBED)
++    import('../ui/adam/liveSession.js')
+     .then(({ installLiveSession }) => {
+       if (signal?.aborted) return;
+       liveSession = installLiveSession({ viewer });
+@@ -627,7 +640,8 @@ export function createApplicationTools({
+ 
+   // CRIME: open incident heat maps, homicide rates, organized-crime activity.
+   let crime = null;
+-  import('../ui/adam/crimePanel.js')
++  if (!EMBED)
++    import('../ui/adam/crimePanel.js')
+     .then(({ installCrimePanel }) => {
+       if (signal?.aborted) return;
+       crime = installCrimePanel({ viewer });
+@@ -640,7 +654,8 @@ export function createApplicationTools({
+ 
+   // HISTORY: wars on a timeline, present to antiquity.
+   let historyTimeline = null;
+-  import('../ui/adam/historyTimeline.js')
++  if (!EMBED)
++    import('../ui/adam/historyTimeline.js')
+     .then(({ installHistoryTimeline }) => {
+       if (signal?.aborted) return;
+       historyTimeline = installHistoryTimeline({ viewer });
+@@ -651,7 +666,8 @@ export function createApplicationTools({
+ 
+   // RESOURCES: richest countries by resource, and the sites that produce it.
+   let resources = null;
+-  import('../ui/adam/resourcesPanel.js')
++  if (!EMBED)
++    import('../ui/adam/resourcesPanel.js')
+     .then(({ installResourcesPanel }) => {
+       if (signal?.aborted) return;
+       resources = installResourcesPanel({ viewer });
+@@ -664,7 +680,8 @@ export function createApplicationTools({
+ 
+   // LEADERS: public officeholders from nation down to municipality.
+   let leadership = null;
+-  import('../ui/adam/leadershipPanel.js')
++  if (!EMBED)
++    import('../ui/adam/leadershipPanel.js')
+     .then(({ installLeadershipPanel }) => {
+       if (signal?.aborted) return;
+       leadership = installLeadershipPanel({ viewer });
+@@ -677,7 +694,8 @@ export function createApplicationTools({
+ 
+   // INFRA: data centres, power, water, chips, materials and siting prediction.
+   let infra = null;
+-  import('../ui/adam/infraPanel.js')
++  if (!EMBED)
++    import('../ui/adam/infraPanel.js')
+     .then(({ installInfraPanel }) => {
+       if (signal?.aborted) return;
+       infra = installInfraPanel({ viewer });
+@@ -703,7 +721,8 @@ export function createApplicationTools({
+ 
+   // PLACES: factories by product, stores by type, palaces in view or worldwide.
+   let places = null;
+-  import('../ui/adam/placesPanel.js')
++  if (!EMBED)
++    import('../ui/adam/placesPanel.js')
+     .then(({ installPlacesPanel }) => {
+       if (signal?.aborted) return;
+       places = installPlacesPanel({ viewer });
+@@ -716,7 +735,8 @@ export function createApplicationTools({
+ 
+   // LEDGER: public transaction activity — mempool, blocks, lightning by country.
+   let ledger = null;
+-  import('../ui/adam/ledgerPanel.js')
++  if (!EMBED)
++    import('../ui/adam/ledgerPanel.js')
+     .then(({ installLedgerPanel }) => {
+       if (signal?.aborted) return;
+       ledger = installLedgerPanel({ viewer });
+@@ -729,7 +749,8 @@ export function createApplicationTools({
+ 
+   // TRACE: where a website is served from (server side only).
+   let trace = null;
+-  import('../ui/adam/tracePanel.js')
++  if (!EMBED)
++    import('../ui/adam/tracePanel.js')
+     .then(({ installTracePanel }) => {
+       if (signal?.aborted) return;
+       trace = installTracePanel({ viewer });
+@@ -742,7 +763,8 @@ export function createApplicationTools({
+ 
+   // LORA: LoRa satellites overhead, tinyGS stations listening, packets heard.
+   let lora = null;
+-  import('../ui/adam/loraPanel.js')
++  if (!EMBED)
++    import('../ui/adam/loraPanel.js')
+     .then(({ installLoraPanel }) => {
+       if (signal?.aborted) return;
+       lora = installLoraPanel({ viewer });
+@@ -765,7 +787,8 @@ export function createApplicationTools({
+   // IMAGERY: dated Sentinel-2 / Sentinel-1 / Umbra scenes over the view,
+   // the live preset that follows the camera, A/B compare, AIS gaps.
+   let imagery = null;
+-  import('../ui/adam/imageryPanel.js')
++  if (!EMBED)
++    import('../ui/adam/imageryPanel.js')
+     .then(({ installImageryPanel }) => {
+       if (signal?.aborted) return;
+       imagery = installImageryPanel({ viewer });
+@@ -778,7 +801,8 @@ export function createApplicationTools({
+ 
+   // OSINT: outside tools opened at the spot in view; argo floats.
+   let osint = null;
+-  import('../ui/adam/osintPanel.js')
++  if (!EMBED)
++    import('../ui/adam/osintPanel.js')
+     .then(({ installOsintPanel }) => {
+       if (signal?.aborted) return;
+       osint = installOsintPanel({ viewer });
+@@ -791,7 +815,8 @@ export function createApplicationTools({
+ 
+   // CAPTURES: 4D Gaussian-splat scenes with a clock, ADAM's own renderer.
+   let captures = null;
+-  import('../ui/adam/capturesPanel.js')
++  if (!EMBED)
++    import('../ui/adam/capturesPanel.js')
+     .then(({ installCapturesPanel }) => {
+       if (signal?.aborted) return;
+       captures = installCapturesPanel({
+@@ -805,7 +830,8 @@ export function createApplicationTools({
+ 
+   // STREAMS: live and recent video near the view (operator's YouTube key).
+   let streams = null;
+-  import('../ui/adam/streamsPanel.js')
++  if (!EMBED)
++    import('../ui/adam/streamsPanel.js')
+     .then(({ installStreamsPanel }) => {
+       if (signal?.aborted) return;
+       streams = installStreamsPanel({ viewer });
+@@ -818,7 +844,8 @@ export function createApplicationTools({
+ 
+   // 3D: terrain, bathymetry dive, national models, wonders, wrecks, models.
+   let world = null;
+-  import('../ui/adam/worldPanel.js')
++  if (!EMBED)
++    import('../ui/adam/worldPanel.js')
+     .then(({ installWorldPanel }) => {
+       if (signal?.aborted) return;
+       world = installWorldPanel({
+@@ -833,7 +860,8 @@ export function createApplicationTools({
+ 
+   // AUTO SCOPE: layers, 3D and streams chosen by altitude and ground.
+   let autoScope = null;
+-  import('../ui/adam/autoScope.js')
++  if (!EMBED)
++    import('../ui/adam/autoScope.js')
+     .then(({ installAutoScope }) => {
+       if (signal?.aborted) return;
+       autoScope = installAutoScope({
+@@ -853,7 +881,8 @@ export function createApplicationTools({
+ 
+   // NEWS: live television and headlines for the country in view.
+   let news = null;
+-  import('../ui/adam/newsPanel.js')
++  if (!EMBED)
++    import('../ui/adam/newsPanel.js')
+     .then(({ installNewsPanel }) => {
+       if (signal?.aborted) return;
+       news = installNewsPanel({ viewer });
+@@ -864,7 +893,8 @@ export function createApplicationTools({
+ 
+   // MARKETS: movers pinned where they belong, with the day's headlines.
+   let markets = null;
+-  import('../ui/adam/marketsPanel.js')
++  if (!EMBED)
++    import('../ui/adam/marketsPanel.js')
+     .then(({ installMarketsPanel }) => {
+       if (signal?.aborted) return;
+       markets = installMarketsPanel({ viewer });
+@@ -877,7 +907,8 @@ export function createApplicationTools({
+ 
+   // NOIR OUTLINES: structures traced by what they are when the noir look is on.
+   let outlines = null;
+-  import('../ui/adam/objectOutlines.js')
++  if (!EMBED)
++    import('../ui/adam/objectOutlines.js')
+     .then(({ installObjectOutlines }) => {
+       if (signal?.aborted) return;
+       outlines = installObjectOutlines({
+diff --git a/src/data/lifecycle.js b/src/data/lifecycle.js
+index 58f580b..8c7495d 100644
+--- a/src/data/lifecycle.js
++++ b/src/data/lifecycle.js
+@@ -1,3 +1,5 @@
++import { layerAllowed } from '../embed/profile.js';
++
+ function cloneLayerParams(value) {
+   if (Array.isArray(value)) return value.map(cloneLayerParams);
+   if (value && typeof value === 'object') {
+@@ -1103,6 +1105,9 @@ export class LayerLifecycle {
+     const entry = this.layers.get(layerId);
+     if (!entry) return { intentEpoch: null, promise: Promise.resolve() };
+     const desiredState = Boolean(shouldEnable);
++    // A pruned layer cannot be switched on by a share link or stored state.
++    if (desiredState && !layerAllowed(layerId))
++      return { intentEpoch: null, promise: Promise.resolve(false) };
+     if (entry.destroying) {
+       return {
+         intentEpoch: null,
+diff --git a/src/intel/polygonCapture.js b/src/intel/polygonCapture.js
+index 2fef42f..c40eeec 100644
+--- a/src/intel/polygonCapture.js
++++ b/src/intel/polygonCapture.js
+@@ -51,7 +51,7 @@ export function pickLonLat(viewer, position) {
+  */
+ export function capturePolygon(
+   viewer,
+-  { color = '#00d4ff', onHint, signal } = {},
++  { color = '#e6e6e6', onHint, signal } = {},
+ ) {
+   return new Promise((resolve) => {
+     const lease = claimPointer(ZONE_POINTER_OWNER);
+diff --git a/src/layers/contextOverlay/index.js b/src/layers/contextOverlay/index.js
+index f941f77..4c422ae 100644
+--- a/src/layers/contextOverlay/index.js
++++ b/src/layers/contextOverlay/index.js
+@@ -55,7 +55,7 @@ export function createContextOverlayLayer(config) {
+     name,
+     icon = '◇',
+     source = 'OpenStreetMap',
+-    color = '#00d4ff',
++    color = '#e6e6e6',
+     mode = 'viewport',
+     maxSpanDeg = 5,
+     viewportOptional = false,
+diff --git a/src/layers/submarineCables/interaction.js b/src/layers/submarineCables/interaction.js
+index e632b0a..a09bac9 100644
+--- a/src/layers/submarineCables/interaction.js
++++ b/src/layers/submarineCables/interaction.js
+@@ -48,7 +48,7 @@ export function createInteraction({ state, screenSpaceEventHandlerFactory }) {
+           }
+         : null,
+       position,
+-      accent: '#00d4ff',
++      accent: '#e6e6e6',
+       loadMore: record.landingId
+         ? async () => {
+             const detail = await loadLandingPointDetail(record.landingId);
+diff --git a/src/logoGaze.js b/src/logoGaze.js
+index 967a047..e43bc93 100644
+--- a/src/logoGaze.js
++++ b/src/logoGaze.js
+@@ -111,7 +111,7 @@ export function initLogoGaze(root = document) {
+ 
+   const loadInlineLogos = async () => {
+     try {
+-      const source = logos[0].dataset.logoSrc || '/brand/mark.svg';
++      const source = logos[0].dataset.logoSrc || `${import.meta.env.BASE_URL || '/'}brand/mark.svg`;
+       const response = await window.fetch(source);
+       if (!response.ok) return;
+       const markup = await response.text();
+diff --git a/src/main.js b/src/main.js
+index 047f7e0..b889d30 100644
+--- a/src/main.js
++++ b/src/main.js
+@@ -2,6 +2,10 @@ import { createStandaloneApplication } from './standalone/application.js';
+ import { describeError } from './standalone/errors.js';
+ import { applyLogLevel } from './app/logLevel.js';
+ 
++// Share links read the hash the page was opened with; it used to be an
++// inline script, which a CSP without a hash for it cannot allow.
++window.__adamLaunchHash = location.hash;
++
+ // Quiet the narration in production; warnings and errors always show.
+ applyLogLevel({ dev: import.meta.env.DEV });
+ 
+diff --git a/src/scenes/dataPacks/geometry.js b/src/scenes/dataPacks/geometry.js
+index f81b1e5..cf4e334 100644
+--- a/src/scenes/dataPacks/geometry.js
++++ b/src/scenes/dataPacks/geometry.js
+@@ -17,7 +17,7 @@ export function renderPackGeometry({ asset, pack }, handle) {
+         position: xyz(feature.coordinates),
+         point: {
+           pixelSize: 12,
+-          color: Cesium.Color.CYAN,
++          color: Cesium.Color.fromCssColorString('#e6e6e6'),
+           outlineColor: Cesium.Color.BLACK,
+           outlineWidth: 2,
+         },
+@@ -34,7 +34,7 @@ export function renderPackGeometry({ asset, pack }, handle) {
+         positions: feature.coordinates.map(xyz),
+         width: 4,
+         material: Cesium.Material.fromType('Color', {
+-          color: Cesium.Color.CYAN,
++          color: Cesium.Color.fromCssColorString('#e6e6e6'),
+         }),
+       });
+     } else {
+@@ -55,7 +55,7 @@ export function renderPackGeometry({ asset, pack }, handle) {
+           }),
+           attributes: {
+             color: Cesium.ColorGeometryInstanceAttribute.fromColor(
+-              Cesium.Color.CYAN.withAlpha(0.35),
++              Cesium.Color.fromCssColorString('#e6e6e6').withAlpha(0.35),
+             ),
+           },
+         }),
+diff --git a/src/standalone/catalog.js b/src/standalone/catalog.js
+index 7e4e668..aa4730d 100644
+--- a/src/standalone/catalog.js
++++ b/src/standalone/catalog.js
+@@ -2,6 +2,7 @@ import { createSurfaceServices } from '../app/surfaceServices.js';
+ import { createApplicationRequestServices } from '../services/requests.js';
+ import { createApplicationCatalog } from '../app/constructCatalog.js';
+ import { createStandaloneLayerSources } from './layerSources.js';
++import { EMBED, offlineFetch } from '../embed/profile.js';
+ export { createStandaloneReferenceSources } from './layerSources.js';
+ 
+ /** Create fresh layer instances using the existing standalone source choices. */
+@@ -9,7 +10,9 @@ export function createStandaloneCatalog({
+   nepalBoundaryResolver,
+   signal = new AbortController().signal,
+   surface = createSurfaceServices({
+-    terrainSource: createApplicationRequestServices().terrain,
++    terrainSource: createApplicationRequestServices(
++      EMBED ? { fetchImpl: offlineFetch } : {},
++    ).terrain,
+     signal,
+   }),
+ } = {}) {
+diff --git a/src/standalone/scene.js b/src/standalone/scene.js
+index b497065..723f2ee 100644
+--- a/src/standalone/scene.js
++++ b/src/standalone/scene.js
+@@ -1,9 +1,12 @@
+ import { createApplicationScene } from '../app/scene.js';
+ import { createApplicationRequestServices } from '../services/requests.js';
++import { EMBED, offlineFetch } from '../embed/profile.js';
+ /** Supply standalone request services when directly constructing a scene. */
+ export function createStandaloneScene(options) {
+   return createApplicationScene({
+-    requestServices: createApplicationRequestServices(),
++    requestServices: createApplicationRequestServices(
++      EMBED ? { fetchImpl: offlineFetch } : {},
++    ),
+     ...options,
+   });
+ }
+diff --git a/src/standalone/tools.js b/src/standalone/tools.js
+index 36c273c..bc79bb5 100644
+--- a/src/standalone/tools.js
++++ b/src/standalone/tools.js
+@@ -7,7 +7,7 @@ export function createStandaloneTools(options) {
+     sceneDataPacks: {
+       sources: {
+         assets: createAssetDirectorySource({
+-          baseUrl: new URL('/scene-assets/', window.location.href).href,
++          baseUrl: new URL(`${import.meta.env.BASE_URL || '/'}scene-assets/`, window.location.href).href,
+         }),
+       },
+     },
+diff --git a/src/ui/adam/actionRunner.js b/src/ui/adam/actionRunner.js
+index 9fdf627..1357201 100644
+--- a/src/ui/adam/actionRunner.js
++++ b/src/ui/adam/actionRunner.js
+@@ -109,7 +109,7 @@ export function createActionRunner({
+     predictions.entities.removeAll();
+     if (!result?.ok || !result.track?.length) return;
+     const t = result.track;
+-    const cyan = Cesium.Color.fromCssColorString('#00BCD4');
++    const cyan = Cesium.Color.fromCssColorString('#e6e6e6');
+     predictions.entities.add({
+       polyline: {
+         positions: Cesium.Cartesian3.fromDegreesArray(
+diff --git a/src/ui/adam/captureTools.js b/src/ui/adam/captureTools.js
+index 4ff88f6..a506e97 100644
+--- a/src/ui/adam/captureTools.js
++++ b/src/ui/adam/captureTools.js
+@@ -149,7 +149,7 @@ export function installCaptureTools({ viewer, doc = document }) {
+     const right = `${now.toISOString().replace(/\.\d+Z$/, 'Z')}${local ? ` · ${local.toUpperCase()}` : ''} · #HOUSEOFASHER`;
+     ctx.font = `500 ${Math.round(strip * 0.42)}px "ADAM Mono", ui-monospace, monospace`;
+     ctx.textBaseline = 'middle';
+-    ctx.fillStyle = '#00bcd4';
++    ctx.fillStyle = '#e6e6e6';
+     ctx.fillText(left, strip * 0.5, h + strip / 2);
+     ctx.textAlign = 'right';
+     ctx.fillStyle = 'rgba(216, 230, 238, 0.7)';
+diff --git a/src/ui/adam/capturesPanel.js b/src/ui/adam/capturesPanel.js
+index 13c500b..d9dc145 100644
+--- a/src/ui/adam/capturesPanel.js
++++ b/src/ui/adam/capturesPanel.js
+@@ -70,7 +70,7 @@ export function installCapturesPanel({
+ 
+   async function loadCatalog() {
+     try {
+-      const r = await fetchImpl('/captures/index.json');
++      const r = await fetchImpl(`${import.meta.env.BASE_URL || '/'}captures/index.json`);
+       if (!r.ok) throw new Error(`HTTP ${r.status}`);
+       state.catalog = (await r.json()).captures || [];
+       state.note = `${state.catalog.length} capture${state.catalog.length === 1 ? '' : 's'} published with this console`;
+diff --git a/src/ui/adam/cctvDirectory.css b/src/ui/adam/cctvDirectory.css
+index 43f6d72..087deaf 100644
+--- a/src/ui/adam/cctvDirectory.css
++++ b/src/ui/adam/cctvDirectory.css
+@@ -53,7 +53,7 @@
+ .adam-cctv-name {
+   overflow: hidden;
+   font: 500 12px var(--font-mono);
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+   white-space: nowrap;
+   text-overflow: ellipsis;
+ }
+@@ -100,7 +100,7 @@
+   width: 100%;
+   padding: 5px 8px;
+   font: 400 12px var(--font-mono);
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+   text-align: left;
+   background: transparent;
+   border: 1px solid var(--glass-border);
+diff --git a/src/ui/adam/connectLink.css b/src/ui/adam/connectLink.css
+index f8fdf17..ca81eb4 100644
+--- a/src/ui/adam/connectLink.css
++++ b/src/ui/adam/connectLink.css
+@@ -8,19 +8,19 @@
+   align-items: center;
+   gap: 10px;
+   padding: 8px 16px 8px 12px;
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+   background: rgba(8, 16, 20, 0.9);
+-  border: 1px solid rgba(0, 212, 255, 0.45);
++  border: 1px solid rgba(255, 255, 255, 0.45);
+   border-radius: 999px;
+   font-family: var(--font-mono);
+   font-size: 12px;
+   letter-spacing: 0.12em;
+   cursor: pointer;
+-  box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.35);
++  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.35);
+   animation: adam-connect-pulse 2.2s ease-out infinite;
+ }
+ .adam-connect-chip:hover {
+-  border-color: rgba(0, 212, 255, 0.9);
++  border-color: rgba(255, 255, 255, 0.9);
+ }
+ .adam-connect-chip[hidden] {
+   display: none;
+@@ -29,12 +29,12 @@
+   width: 10px;
+   height: 10px;
+   border-radius: 50%;
+-  border: 2px solid rgba(0, 212, 255, 0.9);
+-  box-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
++  border: 2px solid rgba(255, 255, 255, 0.9);
++  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+   animation: adam-connect-blink 1.4s ease-in-out infinite;
+ }
+ .adam-connect-word {
+-  color: #00d4ff;
++  color: #e6e6e6;
+ }
+ .adam-connect-who {
+   color: rgba(199, 225, 231, 0.7);
+@@ -43,13 +43,13 @@
+ }
+ @keyframes adam-connect-pulse {
+   0% {
+-    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.35);
++    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.35);
+   }
+   70% {
+-    box-shadow: 0 0 0 14px rgba(0, 212, 255, 0);
++    box-shadow: 0 0 0 14px rgba(255, 255, 255, 0);
+   }
+   100% {
+-    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0);
++    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+   }
+ }
+ @keyframes adam-connect-blink {
+@@ -83,14 +83,14 @@
+   position: relative;
+   min-width: min(520px, 90vw);
+   padding: 28px 32px 22px;
+-  border: 1px solid rgba(0, 212, 255, 0.5);
++  border: 1px solid rgba(255, 255, 255, 0.5);
+   border-radius: 6px;
+   background: rgba(6, 12, 15, 0.85);
+   overflow: hidden;
+   font-family: var(--font-mono);
+   box-shadow:
+-    0 0 40px rgba(0, 212, 255, 0.12),
+-    inset 0 0 60px rgba(0, 212, 255, 0.06);
++    0 0 40px rgba(255, 255, 255, 0.12),
++    inset 0 0 60px rgba(255, 255, 255, 0.06);
+ }
+ .adam-connect-frame::before,
+ .adam-connect-frame::after {
+@@ -98,7 +98,7 @@
+   position: absolute;
+   width: 18px;
+   height: 18px;
+-  border: 2px solid #00d4ff;
++  border: 2px solid #e6e6e6;
+ }
+ .adam-connect-frame::before {
+   top: -1px;
+@@ -116,7 +116,7 @@
+   position: absolute;
+   inset: 0 0 auto;
+   height: 2px;
+-  background: linear-gradient(90deg, transparent, #00d4ff, transparent);
++  background: linear-gradient(90deg, transparent, #e6e6e6, transparent);
+   opacity: 0.8;
+   animation: adam-connect-scan 1.1s linear infinite;
+ }
+@@ -137,7 +137,7 @@
+   font-size: 22px;
+   letter-spacing: 0.22em;
+   text-transform: uppercase;
+-  color: #00d4ff;
++  color: #e6e6e6;
+   animation: adam-connect-flicker 1.6s steps(2, end) infinite;
+ }
+ .adam-connect[data-phase='connected'] .adam-connect-big {
+@@ -169,7 +169,7 @@
+ }
+ .adam-connect-line::before {
+   content: '› ';
+-  color: #00d4ff;
++  color: #e6e6e6;
+ }
+ .adam-connect-line.is-error {
+   color: #ff9a9a;
+diff --git a/src/ui/adam/contextHints.css b/src/ui/adam/contextHints.css
+index 048fb7b..50a53f9 100644
+--- a/src/ui/adam/contextHints.css
++++ b/src/ui/adam/contextHints.css
+@@ -10,9 +10,9 @@
+   gap: 8px 12px;
+   max-width: min(560px, calc(100vw - 32px));
+   padding: 10px 36px 10px 14px;
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+   background: rgba(8, 16, 20, 0.92);
+-  border: 1px solid rgba(0, 212, 255, 0.35);
++  border: 1px solid rgba(255, 255, 255, 0.35);
+   border-radius: 10px;
+   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+   opacity: 0;
+@@ -47,16 +47,16 @@
+   padding: 5px 11px;
+   font: 500 12px var(--adam-font-sans);
+   color: #070705;
+-  background: var(--accent-primary, #00d4ff);
++  background: var(--accent-primary, #e6e6e6);
+   border: 0;
+   border-radius: 999px;
+   cursor: pointer;
+ }
+ 
+ .adam-hint-btn + .adam-hint-btn {
+-  color: var(--accent-primary, #00d4ff);
++  color: var(--accent-primary, #e6e6e6);
+   background: transparent;
+-  border: 1px solid rgba(0, 212, 255, 0.45);
++  border: 1px solid rgba(255, 255, 255, 0.45);
+ }
+ 
+ .adam-hint-close {
+diff --git a/src/ui/adam/hexReticle.js b/src/ui/adam/hexReticle.js
+index 9509bd3..e583c15 100644
+--- a/src/ui/adam/hexReticle.js
++++ b/src/ui/adam/hexReticle.js
+@@ -1,5 +1,5 @@
+ /**
+- * Hexagonal tracking reticle: a regular hexagon (cyan #00d4ff, 1.5px, no
++ * Hexagonal tracking reticle: a regular hexagon (cyan #e6e6e6, 1.5px, no
+  * fill) cut with five facet lines between non-adjacent vertices, like a
+  * gemstone seen flat. Outer frame at 100% opacity, facets at 40%.
+  *
+@@ -33,17 +33,17 @@ export const HEX_FACETS = [
+ export const RETICLE_CSS = `
+ .hxr { overflow: visible; }
+ .hxr * { vector-effect: non-scaling-stroke; }
+-.hxr-frame { fill: none; stroke: #00d4ff; stroke-width: 1.5; stroke-linejoin: miter; }
++.hxr-frame { fill: none; stroke: #e6e6e6; stroke-width: 1.5; stroke-linejoin: miter; }
+ .hxr-spin { transform-origin: 50px 50px; animation: hxr-spin 14s linear infinite; }
+-.hxr-facet { stroke: #00d4ff; stroke-width: 1.5; stroke-opacity: 0.4; fill: none;
++.hxr-facet { stroke: #e6e6e6; stroke-width: 1.5; stroke-opacity: 0.4; fill: none;
+   animation: hxr-shimmer 3.2s ease-in-out infinite; }
+ .hxr-facet:nth-child(2) { animation-delay: -0.64s; }
+ .hxr-facet:nth-child(3) { animation-delay: -1.28s; }
+ .hxr-facet:nth-child(4) { animation-delay: -1.92s; }
+ .hxr-facet:nth-child(5) { animation-delay: -2.56s; }
+-.hxr-trace { fill: none; stroke: #00d4ff; stroke-width: 1.5; stroke-linecap: square;
++.hxr-trace { fill: none; stroke: #e6e6e6; stroke-width: 1.5; stroke-linecap: square;
+   stroke-dasharray: 22 242; animation: hxr-trace 2.6s linear infinite; }
+-.hxr-pip { fill: #00d4ff; transform-origin: 50px 50px; animation: hxr-pip 1.6s ease-in-out infinite; }
++.hxr-pip { fill: #e6e6e6; transform-origin: 50px 50px; animation: hxr-pip 1.6s ease-in-out infinite; }
+ @keyframes hxr-spin { to { transform: rotate(360deg); } }
+ @keyframes hxr-shimmer { 0%, 100% { stroke-opacity: 0.4; } 50% { stroke-opacity: 0.12; } }
+ @keyframes hxr-trace { to { stroke-dashoffset: -264; } }
+diff --git a/src/ui/adam/historyTimeline.css b/src/ui/adam/historyTimeline.css
+index e985b04..ec58827 100644
+--- a/src/ui/adam/historyTimeline.css
++++ b/src/ui/adam/historyTimeline.css
+@@ -32,7 +32,7 @@
+   flex: 0 0 auto;
+   padding: 5px 11px;
+   font-size: 12px;
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+   background: rgba(255, 255, 255, 0.05);
+   border: 1px solid var(--glass-border);
+   cursor: pointer;
+@@ -90,7 +90,7 @@
+   margin: 4px 0;
+   font-size: 12px;
+   line-height: 1.45;
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+ }
+ 
+ @media (max-width: 760px) {
+diff --git a/src/ui/adam/hoverContext.css b/src/ui/adam/hoverContext.css
+index 6648496..aeff3c5 100644
+--- a/src/ui/adam/hoverContext.css
++++ b/src/ui/adam/hoverContext.css
+@@ -16,7 +16,7 @@
+ }
+ 
+ .adam-hover-lead {
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+ }
+ 
+ @media (hover: none) {
+diff --git a/src/ui/adam/imageryPanel.css b/src/ui/adam/imageryPanel.css
+index 5541a99..5dc2928 100644
+--- a/src/ui/adam/imageryPanel.css
++++ b/src/ui/adam/imageryPanel.css
+@@ -46,5 +46,5 @@
+   margin-top: 4px;
+ }
+ .adam-live-preset.active {
+-  outline: 1px solid var(--accent-primary, #00bcd4);
++  outline: 1px solid var(--accent-primary, #e6e6e6);
+ }
+diff --git a/src/ui/adam/locatorCard.css b/src/ui/adam/locatorCard.css
+index 0a8274b..df27187 100644
+--- a/src/ui/adam/locatorCard.css
++++ b/src/ui/adam/locatorCard.css
+@@ -7,7 +7,7 @@
+   padding: 0 0 8px;
+   border-radius: 16px;
+   overflow: hidden;
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+   background: rgba(7, 7, 5, 0.78);
+   border: 1px solid rgba(199, 225, 231, 0.22);
+   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+@@ -41,8 +41,8 @@
+   height: 0;
+   border-left: 5px solid transparent;
+   border-right: 5px solid transparent;
+-  border-bottom: 14px solid #00d4ff;
+-  filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.8));
++  border-bottom: 14px solid #e6e6e6;
++  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
+   transform-origin: 50% 70%;
+   translate: 0 -4px;
+ }
+@@ -69,7 +69,7 @@
+ }
+ .adam-locator-kind {
+   margin-top: 6px;
+-  color: #00d4ff;
++  color: #e6e6e6;
+ }
+ .adam-locator[data-kind='satellite'] .adam-locator-kind {
+   color: #ffd166;
+diff --git a/src/ui/adam/mapLayers.css b/src/ui/adam/mapLayers.css
+index e6c6b6c..7ed6ba2 100644
+--- a/src/ui/adam/mapLayers.css
++++ b/src/ui/adam/mapLayers.css
+@@ -46,7 +46,7 @@
+   min-width: 0;
+   overflow: hidden;
+   font: 500 12px var(--font-condensed, sans-serif);
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+   white-space: nowrap;
+   text-overflow: ellipsis;
+ }
+@@ -127,7 +127,7 @@ button.adam-maps-status {
+ 
+ .adam-maps-rise-value {
+   font: 500 18px var(--font-mono);
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+ }
+ 
+ .adam-maps-rise-slider {
+@@ -153,7 +153,7 @@ button.adam-maps-status {
+   gap: 6px;
+   padding: 5px 8px;
+   font: 400 12px var(--font-condensed, sans-serif);
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+   text-align: left;
+   background: transparent;
+   border: 1px solid var(--glass-border);
+@@ -214,7 +214,7 @@ button.adam-maps-status {
+   margin: 8px 0 0;
+   padding-left: 20px;
+   font-size: 12px;
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+ }
+ 
+ .adam-maps-heat-list li {
+diff --git a/src/ui/adam/mapLayers.js b/src/ui/adam/mapLayers.js
+index e5b5019..2258c91 100644
+--- a/src/ui/adam/mapLayers.js
++++ b/src/ui/adam/mapLayers.js
+@@ -11,6 +11,7 @@
+  * The stack is remembered per browser. Layers drape on the globe, or on the
+  * 3D tileset when a photoreal stack hides the globe.
+  */
++import { EMBED } from '../../embed/profile.js';
+ import * as Cesium from 'cesium';
+ import './mapLayers.css';
+ import { resolveImageryHost } from '../../maps/imageryHost.js';
+@@ -637,7 +638,7 @@ export function installMapLayers({
+       // The future-coast sources sit straight under the rise control.
+       if (group.id !== 'future')
+         body.append(el(doc, 'h3', 'adam-meta adam-ops-section', group.label));
+-      if (group.id === 'heat') body.append(heatBlock());
++      if (group.id === 'heat' && !EMBED) body.append(heatBlock());
+       const list = el(doc, 'div', 'adam-maps-catalog');
+       for (const s of sources) {
+         const on = entries.some((e) => e.source.id === s.id);
+diff --git a/src/ui/adam/measureTool.css b/src/ui/adam/measureTool.css
+index 5e2adc3..f9e6be4 100644
+--- a/src/ui/adam/measureTool.css
++++ b/src/ui/adam/measureTool.css
+@@ -41,7 +41,7 @@
+ .adam-measure-readout {
+   margin: 2px 0 8px;
+   font: 500 13px var(--font-mono);
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+ }
+ 
+ .adam-measure-name {
+diff --git a/src/ui/adam/measureTool.js b/src/ui/adam/measureTool.js
+index 8095d1a..7cae70d 100644
+--- a/src/ui/adam/measureTool.js
++++ b/src/ui/adam/measureTool.js
+@@ -39,7 +39,7 @@ const RING_STEPS = {
+   mi: [5, 10, 25, 50],
+ };
+ const UNIT_KM = { km: 1, nm: 1.852, mi: 1.609344 };
+-const CYAN = Cesium.Color.fromCssColorString('#00BCD4');
++const CYAN = Cesium.Color.fromCssColorString('#e6e6e6');
+ const AMBER = Cesium.Color.fromCssColorString('#f5a623');
+ const LABEL_SAVE = 'SAVE ZONE';
+ 
+diff --git a/src/ui/adam/motion.css b/src/ui/adam/motion.css
+index 0871ce7..1fd03b3 100644
+--- a/src/ui/adam/motion.css
++++ b/src/ui/adam/motion.css
+@@ -24,8 +24,8 @@
+     transparent
+   );
+   box-shadow:
+-    0 0 12px 2px rgba(0, 188, 212, 0.45),
+-    0 -40px 60px -20px rgba(0, 188, 212, 0.12);
++    0 0 12px 2px rgba(255, 255, 255, 0.45),
++    0 -40px 60px -20px rgba(255, 255, 255, 0.12);
+ }
+ 
+ .adam-scan-label {
+@@ -36,7 +36,7 @@
+   font: 500 var(--type-meta) / 1 var(--font-mono);
+   letter-spacing: 2.4px;
+   color: var(--accent-primary);
+-  text-shadow: 0 0 8px rgba(0, 188, 212, 0.6);
++  text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+   white-space: nowrap;
+ }
+ 
+@@ -88,7 +88,7 @@
+   position: absolute;
+   left: -32px;
+   top: -32px;
+-  filter: drop-shadow(0 0 6px rgba(0, 212, 255, 0.45));
++  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.45));
+ }
+ 
+ .adam-acquire.is-on {
+@@ -126,7 +126,7 @@
+   0% {
+     box-shadow:
+       0 0 0 1px var(--accent-primary),
+-      0 0 22px 4px rgba(0, 188, 212, 0.55);
++      0 0 22px 4px rgba(255, 255, 255, 0.55);
+     filter: brightness(1.6);
+   }
+   100% {
+diff --git a/src/ui/adam/opsDeck.js b/src/ui/adam/opsDeck.js
+index 3e03684..5330eae 100644
+--- a/src/ui/adam/opsDeck.js
++++ b/src/ui/adam/opsDeck.js
+@@ -11,6 +11,7 @@
+  * sits on the startup parse path. All dynamic text goes through textContent.
+  */
+ 
++import { EMBED } from '../../embed/profile.js';
+ import * as Cesium from 'cesium';
+ import './opsDeck.css';
+ import { setOdometer } from './odometer.js';
+@@ -172,7 +173,13 @@ export function installOpsDeck({
+   let activeView = null;
+   const railButtons = {};
+ 
+-  const HIDDEN_RAIL_VIEWS = new Set(['brief', 'health']);
++  // The embedded build has no live contacts or server: alerts, filters and
++  // scenarios would be empty rooms, so they leave with brief and health.
++  const HIDDEN_RAIL_VIEWS = new Set(
++    EMBED
++      ? ['brief', 'health', 'alerts', 'filters', 'scenario']
++      : ['brief', 'health'],
++  );
+   const VIEWS = {
+     brief: { label: 'BRIEF', key: 'B', render: renderBrief },
+     alerts: { label: 'ALERTS', key: 'A', render: renderAlerts },
+@@ -220,6 +227,7 @@ export function installOpsDeck({
+     // An unknown view must not half-open the flyout (state set, then a
+     // throw on the missing renderer) — callers include model-driven tools.
+     if (id != null && !VIEWS[id]) return false;
++    if (EMBED && id != null && HIDDEN_RAIL_VIEWS.has(id)) return false;
+     const open = force ?? activeView !== id;
+     activeView = open ? id : null;
+     for (const [key, { btn }] of Object.entries(railButtons))
+@@ -237,7 +245,12 @@ export function installOpsDeck({
+   function flyoutHeader(title, subtitle) {
+     const header = el(doc, 'header', 'adam-ops-header');
+     header.append(
+-      el(doc, 'span', 'adam-meta adam-ops-kicker', 'ADAM · #HOUSEOFASHER'),
++      el(
++        doc,
++        'span',
++        'adam-meta adam-ops-kicker',
++        EMBED ? 'asherin.adam' : 'ADAM · #HOUSEOFASHER',
++      ),
+     );
+     header.append(el(doc, 'h2', 'adam-ops-title', title));
+     if (subtitle)
+@@ -808,7 +821,7 @@ export function installOpsDeck({
+         'adam-chip adam-latch adam-primary-btn',
+         async () => {
+           const ring = await capturePolygon(viewer, {
+-            color: '#00bcd4',
++            color: '#e6e6e6',
+             onHint: (text) => {
+               if (regionHint) regionHint.textContent = text;
+             },
+@@ -900,7 +913,7 @@ export function installOpsDeck({
+           width: 2,
+           clampToGround: true,
+           material: new Cesium.PolylineDashMaterialProperty({
+-            color: Cesium.Color.fromCssColorString('#00bcd4'),
++            color: Cesium.Color.fromCssColorString('#e6e6e6'),
+           }),
+         },
+       });
+@@ -961,6 +974,7 @@ export function installOpsDeck({
+   }
+   let shepherdCheckedAt = 0;
+   async function refreshShepherdStatus() {
++    if (EMBED) return;
+     if (Date.now() - shepherdCheckedAt < 60_000) return;
+     shepherdCheckedAt = Date.now();
+     try {
+@@ -1512,7 +1526,7 @@ export function installOpsDeck({
+     if (key + stamp === aheadKey) return;
+     aheadKey = key + stamp;
+     ahead.entities.removeAll();
+-    const cyan = Cesium.Color.fromCssColorString('#00D4FF');
++    const cyan = Cesium.Color.fromCssColorString('#e6e6e6');
+     let points = null;
+     let label = '';
+     if (plan?.mode === 'route' && plan.path.length > 1) {
+diff --git a/src/ui/adam/placeDossier.css b/src/ui/adam/placeDossier.css
+index 34d766d..d9e4c32 100644
+--- a/src/ui/adam/placeDossier.css
++++ b/src/ui/adam/placeDossier.css
+@@ -45,7 +45,7 @@
+   margin: 0;
+   font-size: 16px;
+   font-weight: 500;
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+ }
+ 
+ .adam-place-close {
+@@ -128,7 +128,7 @@
+ }
+ 
+ .adam-place-osm-name {
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+ }
+ 
+ .adam-place-actions {
+diff --git a/src/ui/adam/railGroups.js b/src/ui/adam/railGroups.js
+index 6541364..e822e96 100644
+--- a/src/ui/adam/railGroups.js
++++ b/src/ui/adam/railGroups.js
+@@ -9,6 +9,7 @@
+  * panel opens exactly as before — the menu just closes behind the click.
+  */
+ import './railGroups.css';
++import { EMBED, EMBED_RAIL, EMBED_INTEL } from '../../embed/profile.js';
+ 
+ import {
+   INTEL_LABELS,
+@@ -85,6 +86,12 @@ export function installRailGroups({
+ 
+   function adopt(btn) {
+     if (btn === group || btn.parentElement === menu) return;
++    if (EMBED && btn.classList?.contains('adam-ops-rail-btn')) {
++      const label = chipLabel(btn);
++      const keep = EMBED_RAIL.has(label) || EMBED_INTEL.has(label);
++      btn.hidden = !keep;
++      if (!keep) return;
++    }
+     if (
+       !btn.classList?.contains('adam-ops-rail-btn') ||
+       !isIntelChip(btn, labels)
+diff --git a/src/ui/adam/rewind.js b/src/ui/adam/rewind.js
+index 791e0ae..eb43bd8 100644
+--- a/src/ui/adam/rewind.js
++++ b/src/ui/adam/rewind.js
+@@ -21,7 +21,7 @@ import {
+ const PLAY_RATE = 30;
+ const TAIL_MS = 5 * 60_000;
+ const COLORS = {
+-  flights: '#00BCD4',
++  flights: '#e6e6e6',
+   military: '#E53935',
+   'ais-live-vessels': '#4DD0E1',
+ };
+diff --git a/src/ui/adam/skyPanel.js b/src/ui/adam/skyPanel.js
+index 85d745f..4fe1cd3 100644
+--- a/src/ui/adam/skyPanel.js
++++ b/src/ui/adam/skyPanel.js
+@@ -7,6 +7,7 @@
+  *
+  * Opens from the ops rail (L). All dynamic text goes through textContent.
+  */
++import { EMBED } from '../../embed/profile.js';
+ import './skyPanel.css';
+ import {
+   skyReading,
+@@ -293,15 +294,28 @@ export function installSkyPanel({
+     wx = { loading: true };
+     render();
+     try {
+-      const r = await fetchImpl(
+-        `/api/weather-effects?latitude=${center.lat.toFixed(4)}&longitude=${center.lon.toFixed(4)}`,
+-      );
+-      const body = await r.json();
+-      if (!r.ok || !body?.weather)
+-        throw new Error(body?.error || `HTTP ${r.status}`);
+-      wxCache.set(key, { at: Date.now(), weather: body.weather });
++      let weather;
++      if (EMBED) {
++        const { fetchOpenMeteoWeather } = await import(
++          '../../embed/weather.js'
++        );
++        weather = await fetchOpenMeteoWeather(
++          { latitude: center.lat, longitude: center.lon },
++          { fetchImpl },
++        );
++        if (!weather) throw new Error('no current conditions');
++      } else {
++        const r = await fetchImpl(
++          `/api/weather-effects?latitude=${center.lat.toFixed(4)}&longitude=${center.lon.toFixed(4)}`,
++        );
++        const body = await r.json();
++        if (!r.ok || !body?.weather)
++          throw new Error(body?.error || `HTTP ${r.status}`);
++        weather = body.weather;
++      }
++      wxCache.set(key, { at: Date.now(), weather });
+       if (wxKey === key) {
+-        wx = body.weather;
++        wx = weather;
+         applyWeather(wx);
+       }
+     } catch (error) {
+@@ -456,7 +470,12 @@ export function installSkyPanel({
+       center = viewCenter(viewer);
+       computeReading();
+       render();
+-      if (!card.hidden || viewer.camera.positionCartographic.height < 300_000)
++      // Embedded, conditions are asked of Open-Meteo directly, so they are
++      // asked only while the operator has the sky panel open.
++      if (
++        !card.hidden ||
++        (!EMBED && viewer.camera.positionCartographic.height < 300_000)
++      )
+         void loadWeather();
+     }, 400);
+   });
+diff --git a/src/ui/adam/spacePanel.css b/src/ui/adam/spacePanel.css
+index b37d703..cc1db29 100644
+--- a/src/ui/adam/spacePanel.css
++++ b/src/ui/adam/spacePanel.css
+@@ -64,7 +64,7 @@
+ 
+ .adam-space-name {
+   font-size: 13px;
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+ }
+ 
+ .adam-space-sub {
+diff --git a/src/ui/adam/symbolsPanel.css b/src/ui/adam/symbolsPanel.css
+index bcb215a..ed6b6ef 100644
+--- a/src/ui/adam/symbolsPanel.css
++++ b/src/ui/adam/symbolsPanel.css
+@@ -6,7 +6,7 @@
+ .adam-symbols-go {
+   padding: 0;
+   font: 500 12.5px var(--adam-font-sans);
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+   text-align: left;
+   background: none;
+   border: 0;
+diff --git a/src/ui/adam/uiSettings.css b/src/ui/adam/uiSettings.css
+index 5a2497a..da11568 100644
+--- a/src/ui/adam/uiSettings.css
++++ b/src/ui/adam/uiSettings.css
+@@ -36,7 +36,7 @@
+ .adam-settings-label {
+   flex: 1 1 140px;
+   font-size: 12.5px;
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+ }
+ 
+ .adam-settings-select {
+@@ -69,7 +69,7 @@
+ 
+ .adam-settings-preview-sans {
+   font: 500 15px var(--adam-font-sans);
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+ }
+ 
+ .adam-settings-preview-mono {
+diff --git a/src/ui/adam/uiSettings.js b/src/ui/adam/uiSettings.js
+index 229ece2..c5f8ab2 100644
+--- a/src/ui/adam/uiSettings.js
++++ b/src/ui/adam/uiSettings.js
+@@ -30,6 +30,7 @@ import {
+ } from '../../shepherd/userKeys.js';
+ import { getConsole as registryConsole } from '../../app/consoleRegistry.js';
+ import { setSafeHref } from '../../security/safeUrl.js';
++import { EMBED } from '../../embed/profile.js';
+ 
+ export const SETTINGS_KEY = 'adam.settings.v1';
+ const SIZES_KEY = 'adam.panel-sizes.v1';
+@@ -180,6 +181,13 @@ export function aliasFontCss(css, family, alias) {
+   );
+ }
+ 
++/** Fonts the embedded build can honour: the vendored Geist pair and the system's. */
++function vendored(font) {
++  return (
++    !EMBED || !font.family || font.id === 'geist' || font.id === 'geist-mono'
++  );
++}
++
+ export function readSettings(storage = globalThis.localStorage) {
+   try {
+     const raw = JSON.parse(storage?.getItem(SETTINGS_KEY) || 'null');
+@@ -238,6 +246,8 @@ export function installUiSettings({
+     if (!font.family) return true;
+     // Geist ships with the app (public/fonts): the alias already resolves.
+     if (font.id === 'geist' || font.id === 'geist-mono') return true;
++    // The embedded build ships its fonts; nothing is fetched from Google.
++    if (EMBED) return false;
+     const url = googleFontUrl(font);
+     try {
+       const res = await fetchImpl(url);
+@@ -497,14 +507,14 @@ export function installUiSettings({
+     header.append(el(doc, 'h2', 'adam-ops-title', LABEL_TITLE), close);
+     const body = el(doc, 'div', 'adam-ops-body adam-settings-body');
+ 
+-    renderKeys(body);
++    if (!EMBED) renderKeys(body);
+ 
+     body.append(el(doc, 'h3', 'adam-meta adam-ops-section', 'type'));
+     body.append(
+       row(
+         'interface font',
+         select(
+-          SANS_FONTS.map((f) => [f.id, f.label]),
++          SANS_FONTS.filter(vendored).map((f) => [f.id, f.label]),
+           settings.sans,
+           (v) => update({ sans: v }),
+         ),
+@@ -512,7 +522,7 @@ export function installUiSettings({
+       row(
+         'data font',
+         select(
+-          MONO_FONTS.map((f) => [f.id, f.label]),
++          MONO_FONTS.filter(vendored).map((f) => [f.id, f.label]),
+           settings.mono,
+           (v) => update({ mono: v }),
+         ),
+diff --git a/src/ui/adam/volcanoPanel.css b/src/ui/adam/volcanoPanel.css
+index 1e0f52d..76e97f9 100644
+--- a/src/ui/adam/volcanoPanel.css
++++ b/src/ui/adam/volcanoPanel.css
+@@ -38,7 +38,7 @@
+   align-items: center;
+   gap: 8px;
+   font-size: 12.5px;
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+ }
+ 
+ .adam-volc-search {
+@@ -73,7 +73,7 @@
+   align-items: center;
+   padding: 6px 4px;
+   text-align: left;
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+   background: none;
+   border: 0;
+   border-bottom: 1px solid var(--glass-border);
+@@ -126,7 +126,7 @@
+ 
+ .adam-volc-selected {
+   font: 600 14px var(--adam-font-sans);
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+ }
+ 
+ .adam-volc-vei-label {
+@@ -146,7 +146,7 @@
+   padding: 0;
+   list-style: none;
+   font-size: 12px;
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+ }
+ 
+ .adam-volc-rings li {
+diff --git a/src/ui/adam/watchStrip.css b/src/ui/adam/watchStrip.css
+index cb7c86d..998eb34 100644
+--- a/src/ui/adam/watchStrip.css
++++ b/src/ui/adam/watchStrip.css
+@@ -53,7 +53,7 @@
+   padding: 4px 8px;
+   text-align: left;
+   font: 500 11px var(--font-mono);
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+   background: rgba(6, 10, 12, 0.72);
+   border: 1px solid var(--glass-border);
+   border-left-width: 3px;
+diff --git a/src/ui/adam/watchStrip.js b/src/ui/adam/watchStrip.js
+index e4ed5e2..5c0602d 100644
+--- a/src/ui/adam/watchStrip.js
++++ b/src/ui/adam/watchStrip.js
+@@ -110,7 +110,7 @@ export function installWatchStrip({
+     for (const item of items) {
+       if (item.score < MARK_AT || !Number.isFinite(item.lat)) continue;
+       const color = Cesium.Color.fromCssColorString(
+-        item.score >= 80 ? '#E53935' : item.score >= 60 ? '#f5a623' : '#00BCD4',
++        item.score >= 80 ? '#E53935' : item.score >= 60 ? '#f5a623' : '#e6e6e6',
+       );
+       const km = RING_KM[item.kind] || 15;
+       source.entities.add({
+diff --git a/src/ui/shepherd/chatRoom.css b/src/ui/shepherd/chatRoom.css
+index a2f44a9..2f84801 100644
+--- a/src/ui/shepherd/chatRoom.css
++++ b/src/ui/shepherd/chatRoom.css
+@@ -14,7 +14,7 @@
+   background: var(--glass-bg-dense, rgba(7, 7, 5, 0.88));
+   backdrop-filter: blur(18px) saturate(1.1);
+   -webkit-backdrop-filter: blur(18px) saturate(1.1);
+-  border-left: 1px solid rgba(0, 188, 212, 0.14);
++  border-left: 1px solid rgba(255, 255, 255, 0.14);
+   color: var(--ops-text, #b0bec5);
+   font-family: var(--font-mono, 'ADAM Mono', ui-monospace, monospace);
+   font-weight: 300;
+@@ -45,7 +45,7 @@
+ }
+ 
+ .shp-room.is-drop {
+-  box-shadow: inset 0 0 0 1px var(--accent-primary, #00bcd4);
++  box-shadow: inset 0 0 0 1px var(--accent-primary, #e6e6e6);
+ }
+ 
+ .shp-tab {
+@@ -57,10 +57,10 @@
+   align-items: center;
+   gap: 8px;
+   padding: 5px 8px 5px 11px;
+-  border: 1px solid rgba(0, 188, 212, 0.28);
++  border: 1px solid rgba(255, 255, 255, 0.28);
+   border-radius: var(--chip-radius, 999px);
+   background: var(--glass-bg, rgba(17, 17, 14, 0.72));
+-  color: var(--accent-primary, #00bcd4);
++  color: var(--accent-primary, #e6e6e6);
+   font: 400 var(--type-meta, 10px) / 1 var(--font-mono, monospace);
+   letter-spacing: 1.6px;
+   cursor: pointer;
+@@ -73,7 +73,7 @@
+ }
+ 
+ .shp-tab--docked .shp-tab-mark {
+-  color: var(--accent-primary, #00bcd4);
++  color: var(--accent-primary, #e6e6e6);
+ }
+ 
+ .shp-head {
+@@ -91,7 +91,7 @@
+ }
+ 
+ .shp-name {
+-  color: var(--accent-primary, #00bcd4);
++  color: var(--accent-primary, #e6e6e6);
+   font-weight: 500;
+   letter-spacing: 0.18em;
+ }
+@@ -126,13 +126,13 @@
+ .shp-icon-btn:hover,
+ .shp-chip-btn:hover,
+ .shp-icon-btn.is-on {
+-  color: var(--accent-primary, #00bcd4);
+-  border-color: rgba(0, 188, 212, 0.4);
++  color: var(--accent-primary, #e6e6e6);
++  border-color: rgba(255, 255, 255, 0.4);
+ }
+ 
+ .shp-send {
+   color: var(--ops-bg, #070705);
+-  background: var(--accent-primary, #00bcd4);
++  background: var(--accent-primary, #e6e6e6);
+   border-color: transparent;
+   font-weight: 600;
+   padding: 7px 14px;
+@@ -140,8 +140,8 @@
+ 
+ .shp-room.is-busy .shp-send {
+   background: transparent;
+-  color: var(--accent-primary, #00bcd4);
+-  border-color: rgba(0, 188, 212, 0.4);
++  color: var(--accent-primary, #e6e6e6);
++  border-color: rgba(255, 255, 255, 0.4);
+ }
+ 
+ .shp-settings {
+@@ -177,7 +177,7 @@
+ 
+ .shp-field:focus {
+   outline: none;
+-  border-color: rgba(0, 188, 212, 0.5);
++  border-color: rgba(255, 255, 255, 0.5);
+ }
+ 
+ .shp-meta {
+@@ -195,7 +195,7 @@
+   flex-direction: column;
+   gap: 18px;
+   scrollbar-width: thin;
+-  scrollbar-color: rgba(0, 188, 212, 0.2) transparent;
++  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+ }
+ 
+ .shp-msg {
+@@ -207,7 +207,7 @@
+   max-width: 86%;
+   padding: 9px 12px;
+   border-radius: var(--panel-radius, 4px);
+-  background: rgba(0, 188, 212, 0.07);
++  background: rgba(255, 255, 255, 0.07);
+   color: var(--ops-text, #b0bec5);
+   white-space: pre-wrap;
+   word-break: break-word;
+@@ -232,7 +232,7 @@
+   font-weight: 500;
+   letter-spacing: 0.2em;
+   text-transform: lowercase;
+-  color: var(--accent-primary, #00bcd4);
++  color: var(--accent-primary, #e6e6e6);
+ }
+ 
+ .shp-msg--ai ul,
+@@ -297,8 +297,8 @@
+ .shp-conf {
+   margin: 10px 0 2px;
+   padding: 8px 10px;
+-  border-left: 2px solid var(--accent-primary, #00bcd4);
+-  background: rgba(0, 188, 212, 0.04);
++  border-left: 2px solid var(--accent-primary, #e6e6e6);
++  background: rgba(255, 255, 255, 0.04);
+   font-size: var(--type-meta, 10px);
+   letter-spacing: 0.04em;
+ }
+@@ -325,7 +325,7 @@
+   display: block;
+   height: 100%;
+   background: currentColor;
+-  color: var(--accent-primary, #00bcd4);
++  color: var(--accent-primary, #e6e6e6);
+ }
+ 
+ .shp-conf--moderate .shp-conf-meter span {
+@@ -351,7 +351,7 @@
+   width: 4px;
+   height: 4px;
+   border-radius: 50%;
+-  background: var(--accent-primary, #00bcd4);
++  background: var(--accent-primary, #e6e6e6);
+   opacity: 0.25;
+   animation: shp-dot 1.2s ease-in-out infinite;
+ }
+@@ -425,7 +425,7 @@
+ 
+ .shp-input:focus {
+   outline: none;
+-  border-color: rgba(0, 188, 212, 0.45);
++  border-color: rgba(255, 255, 255, 0.45);
+ }
+ 
+ .shp-input::placeholder {
+@@ -489,7 +489,7 @@
+     height: min(78vh, 100dvh);
+     width: 100vw;
+     border-left: 0;
+-    border-top: 1px solid rgba(0, 188, 212, 0.14);
++    border-top: 1px solid rgba(255, 255, 255, 0.14);
+     border-radius: 10px 10px 0 0;
+     transform: translateY(8px);
+   }
+diff --git a/src/ui/styles/adam-ops.css b/src/ui/styles/adam-ops.css
+index 56e64f8..37c8211 100644
+--- a/src/ui/styles/adam-ops.css
++++ b/src/ui/styles/adam-ops.css
+@@ -2,8 +2,8 @@
+    ADAM operational terminal — palette, type, HUD discipline.
+ 
+    Palette (operator spec):
+-     accent        #00BCD4   authoritative, not luminous
+-     data dim      #1A6E7A   present but not primary signal
++     accent        #e6e6e6   authoritative, not luminous
++     data dim      #6f6f6f   present but not primary signal
+      alert         #E53935   alerts and armed state only
+      background    #060A0C   cold near-black
+      surface       #0D1517   panels, separated without borders
+@@ -15,8 +15,8 @@
+    ═══════════════════════════════════════════════ */
+ 
+ :root {
+-  --ops-accent: #00bcd4;
+-  --ops-data-dim: #1a6e7a;
++  --ops-accent: #e6e6e6;
++  --ops-data-dim: #6f6f6f;
+   --ops-alert: #e53935;
+   --ops-bg: #070705;
+   --ops-surface: #11110e;
+@@ -31,10 +31,10 @@
+   --glass-bg-dense: rgba(7, 7, 5, 0.94);
+   --glass-border: rgba(176, 190, 197, 0.07);
+   --accent: var(--ops-accent);
+-  --accent-dim: rgba(0, 188, 212, 0.12);
+-  --accent-glow: rgba(0, 188, 212, 0.22);
++  --accent-dim: rgba(255, 255, 255, 0.12);
++  --accent-glow: rgba(255, 255, 255, 0.22);
+   --accent-primary: var(--ops-accent);
+-  --accent-primary-dim: rgba(0, 188, 212, 0.12);
++  --accent-primary-dim: rgba(255, 255, 255, 0.12);
+   --accent-critical: var(--ops-alert);
+   --accent-critical-dim: rgba(229, 57, 53, 0.12);
+   --accent-critical-edge: rgba(229, 57, 53, 0.75);
+@@ -70,8 +70,8 @@ body {
+ /* ── HUD: position and colour carry hierarchy, not size ───────────────── */
+ :root:not([data-ui-theme='cyber']) #intel-hud {
+   --hud-color: var(--ops-accent);
+-  --hud-glow: rgba(0, 188, 212, 0.14);
+-  --hud-border: rgba(0, 188, 212, 0.12);
++  --hud-glow: rgba(255, 255, 255, 0.14);
++  --hud-border: rgba(255, 255, 255, 0.12);
+ }
+ 
+ :root:not([data-ui-theme='cyber']) #intel-hud * {
+@@ -372,7 +372,7 @@ body.cockpit-mode.adam-cockpit-compact
+ }
+ 
+ #intel-hud .hud-summary {
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+   font-size: 12px;
+ }
+ 
+diff --git a/src/ui/styles/adam.css b/src/ui/styles/adam.css
+index 4b5ac7c..afb4d42 100644
+--- a/src/ui/styles/adam.css
++++ b/src/ui/styles/adam.css
+@@ -19,8 +19,8 @@
+ 
+ :root {
+   /* ── 1. Accent tiers ─────────────────────────── */
+-  --accent-primary: #00bcd4;
+-  --accent-primary-dim: rgba(0, 188, 212, 0.15);
++  --accent-primary: #e6e6e6;
++  --accent-primary-dim: rgba(255, 255, 255, 0.15);
+   --accent-alert: #f5a623;
+   --accent-alert-dim: rgba(245, 166, 35, 0.12);
+   --accent-alert-edge: rgba(245, 166, 35, 0.7);
+diff --git a/src/ui/styles/bhote-koshi.css b/src/ui/styles/bhote-koshi.css
+index 4dbeff3..95c6138 100644
+--- a/src/ui/styles/bhote-koshi.css
++++ b/src/ui/styles/bhote-koshi.css
+@@ -240,7 +240,7 @@
+   grid-template-columns: minmax(0, 1fr) auto;
+   gap: 2px 8px;
+   padding: 7px 9px 8px;
+-  border-top: 3px solid #6be8ff;
++  border-top: 3px solid #e6e6e6;
+ }
+ 
+ .bhote-embedded-callout footer strong {
+@@ -262,7 +262,7 @@
+   grid-column: 2;
+   grid-row: 1 / span 2;
+   align-self: center;
+-  color: #6be8ff;
++  color: #e6e6e6;
+   font-size: 8px;
+   text-decoration: none;
+ }
+diff --git a/src/ui/styles/cctv.css b/src/ui/styles/cctv.css
+index a439970..62f4cca 100644
+--- a/src/ui/styles/cctv.css
++++ b/src/ui/styles/cctv.css
+@@ -16,7 +16,7 @@
+   inset: -18px;
+   background: radial-gradient(
+     ellipse at center,
+-    rgba(0, 212, 255, 0.16) 0%,
++    rgba(255, 255, 255, 0.16) 0%,
+     transparent 65%
+   );
+   filter: blur(16px);
+@@ -36,7 +36,7 @@
+   max-height: calc(100vh - 24px);
+   overflow-y: auto;
+   scrollbar-width: thin;
+-  scrollbar-color: rgba(0, 212, 255, 0.46) rgba(255, 255, 255, 0.06);
++  scrollbar-color: rgba(255, 255, 255, 0.46) rgba(255, 255, 255, 0.06);
+   backdrop-filter: blur(24px) saturate(1.4);
+   -webkit-backdrop-filter: blur(24px) saturate(1.4);
+   box-shadow:
+@@ -57,10 +57,10 @@
+ .cctv-panel-inner::-webkit-scrollbar-thumb {
+   background: linear-gradient(
+     180deg,
+-    rgba(0, 212, 255, 0.6),
+-    rgba(0, 212, 255, 0.28)
++    rgba(255, 255, 255, 0.6),
++    rgba(255, 255, 255, 0.28)
+   );
+-  border: 1px solid rgba(0, 212, 255, 0.4);
++  border: 1px solid rgba(255, 255, 255, 0.4);
+   border-radius: 999px;
+ }
+ 
+@@ -113,8 +113,8 @@
+ }
+ 
+ .cctv-cal-value:hover:not(:disabled) {
+-  border-color: rgba(0, 212, 255, 0.45);
+-  background: rgba(0, 212, 255, 0.08);
++  border-color: rgba(255, 255, 255, 0.45);
++  background: rgba(255, 255, 255, 0.08);
+ }
+ 
+ .cctv-cal-input {
+@@ -123,8 +123,8 @@
+   font-size: 9px;
+   letter-spacing: 0.7px;
+   color: var(--text-primary);
+-  background: rgba(0, 212, 255, 0.1);
+-  border: 1px solid rgba(0, 212, 255, 0.5);
++  background: rgba(255, 255, 255, 0.1);
++  border: 1px solid rgba(255, 255, 255, 0.5);
+   border-radius: 4px;
+   padding: 1px 3px;
+   outline: none;
+@@ -175,7 +175,7 @@
+ #cctv-projection-btn.active {
+   color: var(--accent);
+   border-color: var(--accent);
+-  background: rgba(0, 212, 255, 0.14);
++  background: rgba(255, 255, 255, 0.14);
+ }
+ 
+ #cctv-quality-chip {
+@@ -184,13 +184,13 @@
+   justify-content: center;
+   min-width: 90px;
+   padding: 6px 8px;
+-  border: 1px solid rgba(0, 212, 255, 0.2);
++  border: 1px solid rgba(255, 255, 255, 0.2);
+   border-radius: 8px;
+   font-family: var(--font-mono);
+   font-size: 9px;
+   letter-spacing: 1px;
+   color: #8fe7ff;
+-  background: rgba(0, 212, 255, 0.08);
++  background: rgba(255, 255, 255, 0.08);
+   text-transform: uppercase;
+ }
+ 
+@@ -244,9 +244,9 @@
+   background: linear-gradient(
+     100deg,
+     transparent 24%,
+-    rgba(0, 212, 255, 0.08) 44%,
++    rgba(255, 255, 255, 0.08) 44%,
+     rgba(170, 244, 255, 0.14) 50%,
+-    rgba(0, 212, 255, 0.08) 56%,
++    rgba(255, 255, 255, 0.08) 56%,
+     transparent 76%
+   );
+   transform: translateX(-100%);
+@@ -327,9 +327,9 @@
+ 
+ #cctv-source-badge {
+   align-self: flex-start;
+-  border: 1px solid rgba(0, 212, 255, 0.32);
++  border: 1px solid rgba(255, 255, 255, 0.32);
+   border-radius: 999px;
+-  background: rgba(0, 212, 255, 0.09);
++  background: rgba(255, 255, 255, 0.09);
+   color: #9defff;
+   font-family: var(--font-mono);
+   font-size: 8px;
+@@ -362,6 +362,6 @@
+   font-size: 10px;
+   letter-spacing: 0.8px;
+   line-height: 1.45;
+-  color: #a8f7ff;
+-  text-shadow: 0 0 10px rgba(0, 212, 255, 0.18);
++  color: #e6e6e6;
++  text-shadow: 0 0 10px rgba(255, 255, 255, 0.18);
+ }
+diff --git a/src/ui/styles/cockpit.css b/src/ui/styles/cockpit.css
+index 081e920..17eb258 100644
+--- a/src/ui/styles/cockpit.css
++++ b/src/ui/styles/cockpit.css
+@@ -25,12 +25,12 @@
+ }
+ #cockpit-entry:hover,
+ #cockpit-entry:focus-visible {
+-  border-color: #00dcff;
++  border-color: #e6e6e6;
+   color: #fff;
+   outline: none;
+ }
+ #cockpit-entry .material-symbols-outlined {
+-  color: #00dcff;
++  color: #e6e6e6;
+   font-size: 18px;
+ }
+ #cockpit-entry kbd {
+@@ -42,7 +42,7 @@
+ }
+ 
+ #cockpit-hud {
+-  --cockpit-accent: #00dcff;
++  --cockpit-accent: #e6e6e6;
+   --cockpit-side-panel-width: min(340px, 28vw);
+   /* HUD bottom offset + tallest scaled telemetry block + 20px clear border. */
+   --cockpit-bottom-rail-safe: calc(clamp(84px, 11vh, 118px) + 100px);
+@@ -1385,10 +1385,10 @@ body.cockpit-mode #view-switcher button {
+   background: linear-gradient(
+     90deg,
+     rgb(0 212 255 / 28%),
+-    rgba(0, 212, 255, 0.18) 58%,
++    rgba(255, 255, 255, 0.18) 58%,
+     transparent
+   );
+-  box-shadow: 0 0 7px rgba(0, 212, 255, 0.22);
++  box-shadow: 0 0 7px rgba(255, 255, 255, 0.22);
+ }
+ .cockpit-utility-glyph {
+   display: grid;
+diff --git a/src/ui/styles/command-dock-compact.css b/src/ui/styles/command-dock-compact.css
+index c5d2536..25fdf87 100644
+--- a/src/ui/styles/command-dock-compact.css
++++ b/src/ui/styles/command-dock-compact.css
+@@ -271,8 +271,8 @@
+   padding: 0;
+   border-radius: 50%;
+   box-shadow:
+-    0 0 0 0.2rem rgba(0, 212, 255, 0.06),
+-    0 0 1rem rgba(0, 212, 255, 0.12);
++    0 0 0 0.2rem rgba(255, 255, 255, 0.06),
++    0 0 1rem rgba(255, 255, 255, 0.12);
+ }
+ 
+ #command-dock .gev-mic-orbit {
+@@ -308,7 +308,7 @@
+ #command-dock .gev-voice-visualizer span {
+   width: 0.18rem;
+   height: 0.55rem;
+-  background: linear-gradient(to top, #28b9db, #71eaff);
++  background: linear-gradient(to top, #bdbdbd, #e6e6e6);
+   box-shadow: 0 0 0.35rem rgba(54, 220, 255, 0.28);
+   transform-origin: bottom;
+ }
+diff --git a/src/ui/styles/command-dock-sliding.css b/src/ui/styles/command-dock-sliding.css
+index 396a34c..d719bbc 100644
+--- a/src/ui/styles/command-dock-sliding.css
++++ b/src/ui/styles/command-dock-sliding.css
+@@ -38,7 +38,7 @@
+   border-radius: 0.42rem;
+   box-shadow:
+     0 0.9rem 2.4rem rgba(0, 0, 0, 0.58),
+-    0 0 1.5rem rgba(0, 212, 255, 0.08),
++    0 0 1.5rem rgba(255, 255, 255, 0.08),
+     0 0 0 1px rgba(255, 255, 255, 0.025) inset;
+   backdrop-filter: blur(28px) saturate(1.3);
+   -webkit-backdrop-filter: blur(28px) saturate(1.3);
+@@ -134,9 +134,9 @@
+ #command-dock .dock-pin-btn:hover,
+ #command-dock .dock-pin-btn[aria-pressed='true'] {
+   color: var(--accent);
+-  border-color: rgba(0, 212, 255, 0.62);
+-  background: rgba(0, 212, 255, 0.1);
+-  box-shadow: 0 0 0.55rem rgba(0, 212, 255, 0.12);
++  border-color: rgba(255, 255, 255, 0.62);
++  background: rgba(255, 255, 255, 0.1);
++  box-shadow: 0 0 0.55rem rgba(255, 255, 255, 0.12);
+ }
+ 
+ #command-dock .panel-divider {
+@@ -392,7 +392,7 @@
+ }
+ 
+ #command-dock #gev-voice-control[data-speaker='ai'] .gev-voice-visualizer span {
+-  background: linear-gradient(to top, #28b9db, #71eaff);
++  background: linear-gradient(to top, #bdbdbd, #e6e6e6);
+   box-shadow: 0 0 0.35rem rgba(54, 220, 255, 0.28);
+ }
+ 
+@@ -486,11 +486,11 @@
+     [data-status='executing']
+   )
+   .gev-mic-orbit {
+-  background: rgba(0, 212, 255, 0.06);
+-  border-color: rgba(0, 212, 255, 0.48);
++  background: rgba(255, 255, 255, 0.06);
++  border-color: rgba(255, 255, 255, 0.48);
+   box-shadow:
+-    0 0 0 0.18rem rgba(0, 212, 255, 0.06),
+-    0 0 0.9rem rgba(0, 212, 255, 0.12);
++    0 0 0 0.18rem rgba(255, 255, 255, 0.06),
++    0 0 0.9rem rgba(255, 255, 255, 0.12);
+ }
+ 
+ #command-dock #gev-voice-button:hover .gev-mic-orbit img,
+@@ -532,11 +532,11 @@
+ }
+ 
+ #command-dock > :is(#location-bar, #control-panel).dock-pinned {
+-  border-color: rgba(0, 212, 255, 0.55);
++  border-color: rgba(255, 255, 255, 0.55);
+   box-shadow:
+     0 8px 32px rgba(0, 0, 0, 0.5),
+-    0 0 0 1px rgba(0, 212, 255, 0.08) inset,
+-    0 0 1rem rgba(0, 212, 255, 0.12);
++    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
++    0 0 1rem rgba(255, 255, 255, 0.12);
+ }
+ 
+ #command-dock #location-bar .location-toolbar {
+@@ -620,7 +620,7 @@
+   border-radius: 0.38rem;
+   box-shadow:
+     0 0.85rem 2rem rgba(0, 0, 0, 0.58),
+-    0 0 1.2rem rgba(0, 212, 255, 0.08);
++    0 0 1.2rem rgba(255, 255, 255, 0.08);
+   backdrop-filter: blur(24px) saturate(1.3);
+   -webkit-backdrop-filter: blur(24px) saturate(1.3);
+   pointer-events: none;
+diff --git a/src/ui/styles/command-dock-trays.css b/src/ui/styles/command-dock-trays.css
+index e1f7595..c2b8646 100644
+--- a/src/ui/styles/command-dock-trays.css
++++ b/src/ui/styles/command-dock-trays.css
+@@ -53,7 +53,7 @@
+ #command-dock :is(#location-bar, #control-panel):hover .dock-label-icon,
+ #command-dock :is(#location-bar, #control-panel).dock-pinned .dock-label-icon {
+   background: var(--accent);
+-  filter: drop-shadow(0 0 0.35rem rgba(0, 212, 255, 0.28));
++  filter: drop-shadow(0 0 0.35rem rgba(255, 255, 255, 0.28));
+ }
+ 
+ #command-dock :is(#location-bar, #control-panel):hover .location-toolbar-label,
+@@ -271,12 +271,12 @@
+   height: 2.45rem;
+   aspect-ratio: 1;
+   box-sizing: border-box;
+-  background: rgba(0, 212, 255, 0.06);
+-  border: 1px solid rgba(0, 212, 255, 0.48);
++  background: rgba(255, 255, 255, 0.06);
++  border: 1px solid rgba(255, 255, 255, 0.48);
+   border-radius: 50%;
+   box-shadow:
+-    0 0 0 0.18rem rgba(0, 212, 255, 0.06),
+-    0 0 0.9rem rgba(0, 212, 255, 0.12);
++    0 0 0 0.18rem rgba(255, 255, 255, 0.06),
++    0 0 0.9rem rgba(255, 255, 255, 0.12);
+ }
+ 
+ #command-dock .gev-mic-label {
+diff --git a/src/ui/styles/command-dock.css b/src/ui/styles/command-dock.css
+index 3c6c8e5..3ea35da 100644
+--- a/src/ui/styles/command-dock.css
++++ b/src/ui/styles/command-dock.css
+@@ -21,7 +21,7 @@
+   box-shadow:
+     0 12px 36px rgba(0, 0, 0, 0.58),
+     0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+-    0 0 28px rgba(0, 212, 255, 0.06);
++    0 0 28px rgba(255, 255, 255, 0.06);
+   backdrop-filter: blur(28px) saturate(1.35);
+   -webkit-backdrop-filter: blur(28px) saturate(1.35);
+   transform: translateX(-50%);
+@@ -60,13 +60,13 @@
+   min-width: 0;
+   margin: -14px 0;
+   padding: 19px 14px 12px;
+-  border-color: rgba(0, 212, 255, 0.36);
++  border-color: rgba(255, 255, 255, 0.36);
+   border-radius: 12px;
+   background: rgba(8, 31, 42, 0.94);
+   box-shadow:
+     0 12px 30px rgba(0, 0, 0, 0.56),
+-    0 0 26px rgba(0, 212, 255, 0.12),
+-    0 0 0 1px rgba(0, 212, 255, 0.08) inset;
++    0 0 26px rgba(255, 255, 255, 0.12),
++    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+ }
+ 
+ #command-dock .gev-voice-kicker {
+diff --git a/src/ui/styles/controls.css b/src/ui/styles/controls.css
+index 605ffdd..f3b421f 100644
+--- a/src/ui/styles/controls.css
++++ b/src/ui/styles/controls.css
+@@ -69,7 +69,7 @@
+   letter-spacing: 1.8px;
+   color: var(--accent);
+   text-transform: uppercase;
+-  text-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
++  text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+ }
+ 
+ .panel-drag-handle {
+@@ -217,8 +217,8 @@
+   border-color: var(--accent);
+   background: var(--accent-dim);
+   box-shadow:
+-    0 0 20px rgba(0, 212, 255, 0.15),
+-    0 0 0 1px rgba(0, 212, 255, 0.1) inset;
++    0 0 20px rgba(255, 255, 255, 0.15),
++    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+ }
+ 
+ .style-btn.active .btn-icon {
+@@ -482,7 +482,7 @@
+ .pp-toggle-btn.active {
+   border-color: var(--accent);
+   background: var(--accent-dim);
+-  box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
++  box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+ }
+ 
+ .pp-icon {
+@@ -804,7 +804,7 @@
+   color: var(--accent);
+   border-color: var(--accent);
+   background: var(--accent-dim);
+-  box-shadow: 0 0 10px rgba(0, 212, 255, 0.15);
++  box-shadow: 0 0 10px rgba(255, 255, 255, 0.15);
+ }
+ 
+ .map-stack-chip.unavailable,
+@@ -948,7 +948,7 @@ body.gev-drawing #cesiumContainer canvas {
+ }
+ 
+ .pp-mode-btn:focus-visible {
+-  box-shadow: inset 0 0 0 4px #061014;
++  box-shadow: inset 0 0 0 4px #0a0a0a;
+ }
+ 
+ .pp-slider:focus-visible,
+@@ -970,7 +970,7 @@ body.gev-drawing #cesiumContainer canvas {
+   border-radius: 999px;
+   border: 1px solid rgba(255, 255, 255, 0.25);
+   background: rgba(8, 10, 14, 0.88);
+-  color: #d9f7ff;
++  color: #f2f2f2;
+   font-family: var(--font-mono);
+   font-size: 10px;
+   letter-spacing: 1.8px;
+@@ -1119,7 +1119,7 @@ body.ui-clean-view #scene-runtime.active {
+   background: linear-gradient(
+     90deg,
+     rgb(0 212 255 / 28%),
+-    rgba(0, 212, 255, 0.18) 58%,
++    rgba(255, 255, 255, 0.18) 58%,
+     transparent
+   );
+ }
+diff --git a/src/ui/styles/cyber.css b/src/ui/styles/cyber.css
+index 6bbdca7..0d67b17 100644
+--- a/src/ui/styles/cyber.css
++++ b/src/ui/styles/cyber.css
+@@ -1743,7 +1743,7 @@
+    concentric scanner is line-only so the optical center and target labels stay
+    readable; controls and source-backed telemetry remain at the perimeter. */
+ :root[data-ui-theme='cyber'] body.cockpit-mode #cockpit-hud {
+-  --cockpit-accent: #69cbd1;
++  --cockpit-accent: #bdbdbd;
+   --cockpit-caution: #c45454;
+   --cockpit-side-panel-width: min(294px, 23vw);
+   color: #e9f2f2;
+diff --git a/src/ui/styles/first-run.css b/src/ui/styles/first-run.css
+index b49238d..4780634 100644
+--- a/src/ui/styles/first-run.css
++++ b/src/ui/styles/first-run.css
+@@ -25,7 +25,7 @@
+   border-radius: 0.65rem;
+   box-shadow:
+     0 1.4rem 4.5rem rgba(0, 0, 0, 0.72),
+-    0 0 2.5rem rgba(0, 212, 255, 0.09),
++    0 0 2.5rem rgba(255, 255, 255, 0.09),
+     inset 0 0 0 1px rgba(255, 255, 255, 0.025);
+   backdrop-filter: blur(28px) saturate(1.25);
+   -webkit-backdrop-filter: blur(28px) saturate(1.25);
+@@ -162,7 +162,7 @@
+ }
+ 
+ .first-run-choices button > .material-symbols-outlined:first-child {
+-  color: #55dff5;
++  color: #e6e6e6;
+   font-size: 1.35rem;
+ }
+ 
+@@ -234,7 +234,7 @@
+   width: 0.82rem;
+   height: 0.82rem;
+   margin: 0;
+-  accent-color: #36dcff;
++  accent-color: #e6e6e6;
+   cursor: pointer;
+ }
+ 
+diff --git a/src/ui/styles/foundation.css b/src/ui/styles/foundation.css
+index 1581d6a..aa23d76 100644
+--- a/src/ui/styles/foundation.css
++++ b/src/ui/styles/foundation.css
+@@ -8,9 +8,9 @@
+   --glass-bg: rgba(17, 17, 14, 0.72);
+   --glass-border: rgba(255, 255, 255, 0.08);
+   --glass-border-hover: rgba(255, 255, 255, 0.15);
+-  --accent: #00d4ff;
+-  --accent-dim: rgba(0, 212, 255, 0.15);
+-  --accent-glow: rgba(0, 212, 255, 0.4);
++  --accent: #e6e6e6;
++  --accent-dim: rgba(255, 255, 255, 0.15);
++  --accent-glow: rgba(255, 255, 255, 0.4);
+   --text-primary: #e8eaed;
+   --text-secondary: rgba(232, 234, 237, 0.62);
+   /* 0.55 alpha reads at ~5.3:1 over the menu surface (WCAG AA); 0.3 was 2.4:1. */
+@@ -416,7 +416,7 @@ body:has(.data-toggle-row[data-layer-id='alpr-cameras'] .data-toggle-btn.active)
+     0 8px 32px rgba(0, 0, 0, 0.5),
+     0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+     0 1px 0 rgba(255, 255, 255, 0.06) inset,
+-    0 0 20px rgba(0, 212, 255, 0.08);
++    0 0 20px rgba(255, 255, 255, 0.08);
+   backdrop-filter: blur(24px) saturate(1.4);
+   -webkit-backdrop-filter: blur(24px) saturate(1.4);
+   font-family: var(--font-mono);
+@@ -428,8 +428,8 @@ body:has(.data-toggle-row[data-layer-id='alpr-cameras'] .data-toggle-btn.active)
+   height: 34px;
+   flex: 0 0 auto;
+   color: var(--accent);
+-  background: rgba(0, 212, 255, 0.06);
+-  border: 1px solid rgba(0, 212, 255, 0.28);
++  background: rgba(255, 255, 255, 0.06);
++  border: 1px solid rgba(255, 255, 255, 0.28);
+   border-radius: var(--btn-radius);
+   font-family: var(--font-mono);
+   font-size: 10px;
+@@ -440,7 +440,7 @@ body:has(.data-toggle-row[data-layer-id='alpr-cameras'] .data-toggle-btn.active)
+ #gev-voice-button:hover {
+   color: #ffffff;
+   border-color: var(--accent);
+-  box-shadow: 0 0 12px rgba(0, 212, 255, 0.22);
++  box-shadow: 0 0 12px rgba(255, 255, 255, 0.22);
+ }
+ 
+ .gev-voice-readout {
+diff --git a/src/ui/styles/layers.css b/src/ui/styles/layers.css
+index 3b4a014..92dda7f 100644
+--- a/src/ui/styles/layers.css
++++ b/src/ui/styles/layers.css
+@@ -85,7 +85,7 @@
+   overscroll-behavior: contain;
+   padding-right: 4px;
+   scrollbar-width: thin;
+-  scrollbar-color: rgba(0, 212, 255, 0.5) rgba(255, 255, 255, 0.04);
++  scrollbar-color: rgba(255, 255, 255, 0.5) rgba(255, 255, 255, 0.04);
+   scrollbar-gutter: stable;
+ }
+ 
+@@ -101,8 +101,8 @@
+ .data-toggle-list::-webkit-scrollbar-thumb {
+   background: linear-gradient(
+     180deg,
+-    rgba(0, 212, 255, 0.65),
+-    rgba(0, 212, 255, 0.2)
++    rgba(255, 255, 255, 0.65),
++    rgba(255, 255, 255, 0.2)
+   );
+   border-radius: 999px;
+ }
+@@ -274,7 +274,7 @@
+   overflow-y: auto;
+   overscroll-behavior: contain;
+   scrollbar-width: thin;
+-  scrollbar-color: rgba(0, 212, 255, 0.4) transparent;
++  scrollbar-color: rgba(255, 255, 255, 0.4) transparent;
+ }
+ #right-context-rail.layout-focus
+   > #weather-panel:not(.collapsed)
+@@ -390,7 +390,7 @@
+ }
+ #space-mission-panel-host .space-mission-roster-header output {
+   flex: 0 0 auto;
+-  color: #22e6e6;
++  color: #e6e6e6;
+   font-size: 9px;
+   letter-spacing: 0.08em;
+ }
+@@ -415,7 +415,7 @@
+   padding: 7px 7px;
+   border: 1px solid rgba(98, 181, 255, 0.13);
+   border-radius: 4px;
+-  color: #d8ffff;
++  color: #f2f2f2;
+   background: rgba(42, 113, 171, 0.045);
+   font-family: 'ADAM Mono', monospace;
+   text-align: left;
+@@ -432,14 +432,14 @@
+   z-index: 1;
+   opacity: 0;
+   background:
+-    linear-gradient(#22e6e6, #22e6e6) left top / 9px 1px no-repeat,
+-    linear-gradient(#22e6e6, #22e6e6) left top / 1px 9px no-repeat,
+-    linear-gradient(#22e6e6, #22e6e6) right top / 9px 1px no-repeat,
+-    linear-gradient(#22e6e6, #22e6e6) right top / 1px 9px no-repeat,
+-    linear-gradient(#22e6e6, #22e6e6) left bottom / 9px 1px no-repeat,
+-    linear-gradient(#22e6e6, #22e6e6) left bottom / 1px 9px no-repeat,
+-    linear-gradient(#22e6e6, #22e6e6) right bottom / 9px 1px no-repeat,
+-    linear-gradient(#22e6e6, #22e6e6) right bottom / 1px 9px no-repeat;
++    linear-gradient(#e6e6e6, #e6e6e6) left top / 9px 1px no-repeat,
++    linear-gradient(#e6e6e6, #e6e6e6) left top / 1px 9px no-repeat,
++    linear-gradient(#e6e6e6, #e6e6e6) right top / 9px 1px no-repeat,
++    linear-gradient(#e6e6e6, #e6e6e6) right top / 1px 9px no-repeat,
++    linear-gradient(#e6e6e6, #e6e6e6) left bottom / 9px 1px no-repeat,
++    linear-gradient(#e6e6e6, #e6e6e6) left bottom / 1px 9px no-repeat,
++    linear-gradient(#e6e6e6, #e6e6e6) right bottom / 9px 1px no-repeat,
++    linear-gradient(#e6e6e6, #e6e6e6) right bottom / 1px 9px no-repeat;
+   filter: drop-shadow(0 0 4px rgba(34, 230, 230, 0.45));
+   pointer-events: none;
+   transition: opacity 0.12s ease;
+@@ -464,9 +464,9 @@
+   height: 5px;
+   justify-self: center;
+   border-radius: 50%;
+-  background: var(--mission-roster-color, #22e6e6);
++  background: var(--mission-roster-color, #e6e6e6);
+   box-shadow: 0 0 7px
+-    color-mix(in srgb, var(--mission-roster-color, #22e6e6) 70%, transparent);
++    color-mix(in srgb, var(--mission-roster-color, #e6e6e6) 70%, transparent);
+ }
+ #space-mission-panel-host .space-mission-roster-copy {
+   display: grid;
+@@ -480,7 +480,7 @@
+   white-space: nowrap;
+ }
+ #space-mission-panel-host .space-mission-roster-copy strong {
+-  color: #d8ffff;
++  color: #f2f2f2;
+   font-size: 9px;
+   font-weight: 500;
+   letter-spacing: 0.07em;
+@@ -536,14 +536,14 @@
+   cursor: pointer;
+ }
+ #space-mission-panel .space-mission-view-header button:hover {
+-  border-color: #22e6e6;
++  border-color: #e6e6e6;
+   color: #fff;
+ }
+ #space-mission-panel .space-mission-detail {
+   display: grid;
+   gap: 8px;
+   padding: 12px 0;
+-  color: var(--hud-cyan, #22e6e6);
++  color: var(--hud-cyan, #e6e6e6);
+   font:
+     11px 'ADAM Mono',
+     monospace;
+@@ -556,7 +556,7 @@
+   color: rgba(190, 230, 230, 0.7);
+ }
+ #space-mission-panel .space-mission-detail b {
+-  color: #d8ffff;
++  color: #f2f2f2;
+   font-weight: 400;
+ }
+ #space-mission-panel .mission-data-section {
+@@ -566,7 +566,7 @@
+ }
+ #space-mission-panel .mission-data-section h4 {
+   margin: 0 0 6px;
+-  color: #22e6e6;
++  color: #e6e6e6;
+   font:
+     10px 'ADAM Mono',
+     monospace;
+@@ -579,7 +579,7 @@
+   width: 100%;
+   border-collapse: collapse;
+   table-layout: fixed;
+-  color: #d8ffff;
++  color: #f2f2f2;
+   font:
+     9px 'ADAM Mono',
+     monospace;
+@@ -687,7 +687,7 @@
+ }
+ #space-mission-panel .mission-focus-button {
+   border-color: rgba(34, 230, 230, 0.58);
+-  color: #22e6e6;
++  color: #e6e6e6;
+   background: rgba(34, 230, 230, 0.07);
+ }
+ #space-mission-panel .mission-replay-button:hover,
+@@ -701,12 +701,12 @@
+ }
+ #space-mission-panel .mission-focus-button:hover,
+ #space-mission-panel .mission-focus-button:focus-visible {
+-  border-color: #22e6e6;
++  border-color: #e6e6e6;
+   box-shadow: 0 0 14px rgba(34, 230, 230, 0.14);
+ }
+ #space-mission-panel .mission-replay-button.active {
+-  border-color: #22e6e6;
+-  color: #d8ffff;
++  border-color: #e6e6e6;
++  color: #f2f2f2;
+   background: rgba(34, 230, 230, 0.13);
+   box-shadow: inset 0 0 16px rgba(34, 230, 230, 0.08);
+ }
+@@ -726,7 +726,7 @@
+   padding: 0;
+   border: 1px solid rgba(34, 230, 230, 0.5);
+   border-radius: 4px;
+-  color: #22e6e6;
++  color: #e6e6e6;
+   background: rgba(34, 230, 230, 0.08);
+   font:
+     15px/1 'ADAM Mono',
+@@ -741,7 +741,7 @@
+ }
+ #space-mission-panel .mission-replay-transport button:hover:not(:disabled),
+ #space-mission-panel .mission-replay-transport button:focus-visible {
+-  border-color: #d8ffff;
++  border-color: #f2f2f2;
+   color: #fff;
+   outline: none;
+   background: rgba(34, 230, 230, 0.16);
+@@ -759,8 +759,8 @@
+ #space-mission-panel
+   .mission-replay-transport.is-paused
+   [data-mission-replay-play] {
+-  border-color: #22e6e6;
+-  color: #d8ffff;
++  border-color: #e6e6e6;
++  color: #f2f2f2;
+   background: rgba(34, 230, 230, 0.18);
+   box-shadow: inset 0 0 12px rgba(34, 230, 230, 0.1);
+ }
+@@ -776,7 +776,7 @@
+   padding: 7px 10px;
+   border: 1px solid rgba(34, 230, 230, 0.55);
+   background: rgba(8, 34, 42, 0.72);
+-  color: #22e6e6;
++  color: #e6e6e6;
+   font:
+     11px 'ADAM Mono',
+     monospace;
+@@ -789,7 +789,7 @@
+ }
+ #space-mission-panel .mission-nav-button:hover:not(:disabled) {
+   background: rgba(34, 230, 230, 0.18);
+-  border-color: #22e6e6;
++  border-color: #e6e6e6;
+ }
+ #space-mission-panel .mission-nav-button:disabled {
+   cursor: not-allowed;
+@@ -803,7 +803,7 @@
+ #space-mission-panel .mission-nav-index {
+   min-width: 58px;
+   text-align: center;
+-  color: #d8ffff;
++  color: #f2f2f2;
+   font:
+     11px 'ADAM Mono',
+     monospace;
+@@ -842,7 +842,7 @@
+   width: 8px;
+   height: 8px;
+   border-radius: 50%;
+-  background: #22e6e6;
++  background: #e6e6e6;
+   box-shadow: 0 0 7px rgba(34, 230, 230, 0.78);
+ }
+ 
+@@ -866,14 +866,14 @@
+ }
+ 
+ .mission-replay-rocket-body {
+-  fill: #22e6e6;
+-  stroke: #22e6e6;
++  fill: #e6e6e6;
++  stroke: #e6e6e6;
+   stroke-width: 2;
+   stroke-linejoin: round;
+ }
+ 
+ .mission-replay-rocket-port {
+-  fill: #22e6e6;
++  fill: #e6e6e6;
+   stroke: none;
+ }
+ 
+@@ -925,8 +925,8 @@
+     monospace;
+   letter-spacing: 0.075em;
+   text-shadow:
+-    0 1px 2px #001018,
+-    0 0 6px #001018;
++    0 1px 2px #0a0a0a,
++    0 0 6px #0a0a0a;
+   white-space: nowrap;
+ }
+ 
+@@ -936,7 +936,7 @@
+ }
+ 
+ .mission-replay-overlay-callout strong {
+-  color: #22e6e6;
++  color: #e6e6e6;
+   font-size: 10px;
+   font-weight: 500;
+ }
+@@ -1031,11 +1031,11 @@
+ }
+ .context-radio-toggle.active {
+   border-color: rgba(101, 247, 255, 0.82);
+-  color: #eaffff;
+-  background: rgba(0, 212, 255, 0.16);
++  color: #f2f2f2;
++  background: rgba(255, 255, 255, 0.16);
+   box-shadow:
+-    inset 0 0 12px rgba(0, 212, 255, 0.1),
+-    0 0 12px rgba(0, 212, 255, 0.2);
++    inset 0 0 12px rgba(255, 255, 255, 0.1),
++    0 0 12px rgba(255, 255, 255, 0.2);
+ }
+ .context-radio-toggle:disabled {
+   opacity: 0.5;
+@@ -1071,7 +1071,7 @@
+   grid-template-columns: auto minmax(0, 1fr) auto;
+   gap: 8px;
+   align-items: center;
+-  color: #65f7ff;
++  color: #e6e6e6;
+   font: 7px/1.2 var(--font-mono);
+   letter-spacing: 0.12em;
+ }
+@@ -1083,13 +1083,13 @@
+   padding: 0;
+   border: 1px solid rgba(65, 220, 231, 0.28);
+   border-radius: 5px;
+-  color: #8feaf2;
++  color: #bdbdbd;
+   background: rgba(14, 69, 78, 0.16);
+   cursor: pointer;
+ }
+ .context-radio-mini-heading button:hover,
+ .context-radio-mini-heading button:focus-visible {
+-  border-color: #65f7ff;
++  border-color: #e6e6e6;
+   color: #fff;
+   outline: none;
+ }
+@@ -1105,7 +1105,7 @@
+ }
+ .context-radio-mini-heading strong {
+   overflow: hidden;
+-  color: #e8feff;
++  color: #f2f2f2;
+   font-size: 8px;
+   font-weight: 500;
+   text-align: right;
+@@ -1122,7 +1122,7 @@
+   padding: 5px;
+   border: 1px solid rgba(65, 220, 231, 0.28);
+   border-radius: 5px;
+-  color: #8feaf2;
++  color: #bdbdbd;
+   background: rgba(14, 69, 78, 0.16);
+   font: 8px/1 var(--font-mono);
+   cursor: pointer;
+@@ -1130,7 +1130,7 @@
+ .context-radio-mini-transport button:hover:not(:disabled),
+ .context-radio-mini-transport button:focus-visible:not(:disabled),
+ .context-radio-mini-transport button.active {
+-  border-color: #65f7ff;
++  border-color: #e6e6e6;
+   color: #fff;
+   outline: none;
+ }
+@@ -1258,12 +1258,12 @@
+ }
+ 
+ .context-mode-button.active {
+-  border-color: rgba(0, 212, 255, 0.75);
+-  color: #eaffff;
+-  background: rgba(0, 212, 255, 0.14);
++  border-color: rgba(255, 255, 255, 0.75);
++  color: #f2f2f2;
++  background: rgba(255, 255, 255, 0.14);
+   box-shadow:
+-    inset 0 0 16px rgba(0, 212, 255, 0.08),
+-    0 0 12px rgba(0, 212, 255, 0.12);
++    inset 0 0 16px rgba(255, 255, 255, 0.08),
++    0 0 12px rgba(255, 255, 255, 0.12);
+ }
+ .context-mode-button:disabled {
+   opacity: 0.55;
+@@ -1319,10 +1319,10 @@
+   outline: none;
+ }
+ .panel-layer-toggle.active {
+-  border-color: rgba(0, 212, 255, 0.7);
++  border-color: rgba(255, 255, 255, 0.7);
+   color: #fff;
+-  background: rgba(0, 212, 255, 0.14);
+-  box-shadow: 0 0 12px rgba(0, 212, 255, 0.14);
++  background: rgba(255, 255, 255, 0.14);
++  box-shadow: 0 0 12px rgba(255, 255, 255, 0.14);
+ }
+ .panel-layer-toggle:disabled {
+   opacity: 0.45;
+diff --git a/src/ui/styles/location.css b/src/ui/styles/location.css
+index bdea4bb..9dceb46 100644
+--- a/src/ui/styles/location.css
++++ b/src/ui/styles/location.css
+@@ -65,7 +65,7 @@
+   font-family: var(--font-mono);
+   font-size: 9px;
+   letter-spacing: 0.8px;
+-  color: #bdefff;
++  color: #f2f2f2;
+ }
+ 
+ .location-mini-poi {
+@@ -131,7 +131,7 @@
+   background: var(--accent-dim);
+   border-color: var(--accent);
+   color: var(--accent);
+-  box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
++  box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+ }
+ 
+ /* ── Expandable POI Row ──────────────────────── */
+@@ -206,7 +206,7 @@
+ .poi-pill.active {
+   background: var(--accent-dim);
+   border-color: var(--accent);
+-  box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
++  box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+ }
+ 
+ .poi-pill-name {
+@@ -234,7 +234,7 @@
+ 
+ .poi-pill.active .poi-pill-key {
+   color: var(--accent);
+-  background: rgba(0, 212, 255, 0.12);
++  background: rgba(255, 255, 255, 0.12);
+ }
+ 
+ /* ── Location Search ─────────────────────────── */
+diff --git a/src/ui/styles/modern.css b/src/ui/styles/modern.css
+index 106cd08..d354e76 100644
+--- a/src/ui/styles/modern.css
++++ b/src/ui/styles/modern.css
+@@ -13,8 +13,8 @@
+   --font-label: var(--adam-font-sans);
+   --font-condensed: var(--adam-font-sans);
+   --font-mono: var(--adam-font-mono);
+-  --scroll-thumb: rgba(0, 212, 255, 0.28);
+-  --scroll-thumb-hover: rgba(0, 212, 255, 0.5);
++  --scroll-thumb: rgba(255, 255, 255, 0.28);
++  --scroll-thumb-hover: rgba(255, 255, 255, 0.5);
+   --control-radius: 5px;
+ }
+ 
+@@ -97,12 +97,12 @@ input[type='checkbox']:not(.native)::before {
+ }
+ 
+ input[type='checkbox']:not(.native):hover {
+-  border-color: var(--accent-primary, #00d4ff);
++  border-color: var(--accent-primary, #e6e6e6);
+ }
+ 
+ input[type='checkbox']:not(.native):checked {
+-  background: var(--accent-primary, #00d4ff);
+-  border-color: var(--accent-primary, #00d4ff);
++  background: var(--accent-primary, #e6e6e6);
++  border-color: var(--accent-primary, #e6e6e6);
+ }
+ 
+ input[type='checkbox']:not(.native):checked::before {
+@@ -112,7 +112,7 @@ input[type='checkbox']:not(.native):checked::before {
+ input[type='checkbox']:not(.native):focus-visible,
+ input[type='radio']:not(.native):focus-visible {
+   outline: none;
+-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.25);
++  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);
+ }
+ 
+ input[type='checkbox']:not(.native):disabled {
+@@ -139,13 +139,13 @@ input[type='radio']:not(.native)::before {
+   width: 8px;
+   height: 8px;
+   border-radius: 50%;
+-  background: var(--accent-primary, #00d4ff);
++  background: var(--accent-primary, #e6e6e6);
+   transform: scale(0);
+   transition: transform 140ms ease;
+ }
+ 
+ input[type='radio']:not(.native):checked {
+-  border-color: var(--accent-primary, #00d4ff);
++  border-color: var(--accent-primary, #e6e6e6);
+ }
+ 
+ input[type='radio']:not(.native):checked::before {
+@@ -175,7 +175,7 @@ input[type='range']:not(.native)::-moz-range-track {
+ 
+ input[type='range']:not(.native)::-moz-range-progress {
+   height: 4px;
+-  background: var(--accent-primary, #00d4ff);
++  background: var(--accent-primary, #e6e6e6);
+   border-radius: 999px;
+ }
+ 
+@@ -184,16 +184,16 @@ input[type='range']:not(.native)::-webkit-slider-thumb {
+   width: 14px;
+   height: 14px;
+   margin-top: -5px;
+-  background: var(--accent-primary, #00d4ff);
++  background: var(--accent-primary, #e6e6e6);
+   border: 2px solid #070705;
+   border-radius: 50%;
+-  box-shadow: 0 0 0 1px var(--accent-primary, #00d4ff);
++  box-shadow: 0 0 0 1px var(--accent-primary, #e6e6e6);
+ }
+ 
+ input[type='range']:not(.native)::-moz-range-thumb {
+   width: 12px;
+   height: 12px;
+-  background: var(--accent-primary, #00d4ff);
++  background: var(--accent-primary, #e6e6e6);
+   border: 2px solid #070705;
+   border-radius: 50%;
+ }
+@@ -203,9 +203,9 @@ select:not(.native) {
+   appearance: none;
+   -webkit-appearance: none;
+   padding: 5px 28px 5px 10px;
+-  color: var(--text-primary, #e6f4f6);
++  color: var(--text-primary, #ededed);
+   background:
+-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2300d4ff' stroke-width='1.5'/%3E%3C/svg%3E")
++    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23e6e6e6' stroke-width='1.5'/%3E%3C/svg%3E")
+       no-repeat right 10px center,
+     rgba(255, 255, 255, 0.04);
+   border: 1px solid rgba(176, 190, 197, 0.2);
+@@ -217,7 +217,7 @@ input[type='text']:focus-visible,
+ input[type='search']:focus-visible,
+ input[type='url']:focus-visible {
+   outline: none;
+-  border-color: var(--accent-primary, #00d4ff);
++  border-color: var(--accent-primary, #e6e6e6);
+ }
+ 
+ /* ── Lowercase everywhere ───────────────────────────────────────────────
+@@ -389,7 +389,7 @@ html:not([data-resize='off'])
+   --dur-slow: 260ms;
+   --field-bg: rgba(255, 255, 255, 0.045);
+   --field-border: rgba(176, 190, 197, 0.16);
+-  --field-border-focus: var(--accent-primary, #00bcd4);
++  --field-border-focus: var(--accent-primary, #e6e6e6);
+   --field-radius: 6px;
+ }
+ 
+@@ -598,7 +598,7 @@ body {
+ :is(input, select, textarea):not(.native):focus-visible {
+   outline: none !important;
+   border-color: var(--field-border-focus);
+-  box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.18);
++  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
+ }
+ 
+ input[type='date']:not(.native)::-webkit-calendar-picker-indicator,
+diff --git a/src/ui/styles/provider-settings.css b/src/ui/styles/provider-settings.css
+index 92a9931..7a7c3b4 100644
+--- a/src/ui/styles/provider-settings.css
++++ b/src/ui/styles/provider-settings.css
+@@ -26,7 +26,7 @@
+   border-radius: 0.42rem;
+   box-shadow:
+     0 0.4rem 1.6rem rgba(0, 0, 0, 0.5),
+-    0 0 1.2rem rgba(0, 212, 255, 0.07);
++    0 0 1.2rem rgba(255, 255, 255, 0.07);
+   backdrop-filter: blur(18px) saturate(1.2);
+   -webkit-backdrop-filter: blur(18px) saturate(1.2);
+   cursor: pointer;
+@@ -49,7 +49,7 @@
+ }
+ 
+ #key-setup-chip .material-symbols-outlined {
+-  color: #55dff5;
++  color: #e6e6e6;
+   font-size: 0.95rem;
+ }
+ 
+@@ -77,7 +77,7 @@
+   border-radius: 0.65rem;
+   box-shadow:
+     0 1.4rem 4.5rem rgba(0, 0, 0, 0.72),
+-    0 0 2.5rem rgba(0, 212, 255, 0.09),
++    0 0 2.5rem rgba(255, 255, 255, 0.09),
+     inset 0 0 0 1px rgba(255, 255, 255, 0.025);
+   backdrop-filter: blur(28px) saturate(1.25);
+   -webkit-backdrop-filter: blur(28px) saturate(1.25);
+@@ -322,7 +322,7 @@
+   font-size: 0.66rem;
+   font-weight: 700;
+   letter-spacing: 0.09rem;
+-  background: linear-gradient(180deg, #45e0ff, #1fb9dd);
++  background: linear-gradient(180deg, #e6e6e6, #1fb9dd);
+   border: none;
+   border-radius: 0.38rem;
+   cursor: pointer;
+@@ -391,7 +391,7 @@
+ }
+ 
+ .key-setup-result.is-ok .key-setup-result-verdict {
+-  color: #45e0ff;
++  color: #e6e6e6;
+ }
+ 
+ .key-setup-result.is-bad .key-setup-result-verdict {
+@@ -483,7 +483,7 @@ body.scene-playback-mode #key-setup {
+ }
+ 
+ .key-setup-priority.is-p1 {
+-  color: var(--accent-primary, #00d4ff);
++  color: var(--accent-primary, #e6e6e6);
+ }
+ 
+ .key-setup-priority.is-p2 {
+diff --git a/src/ui/styles/radio.css b/src/ui/styles/radio.css
+index 2b6772a..f108d5b 100644
+--- a/src/ui/styles/radio.css
++++ b/src/ui/styles/radio.css
+@@ -19,7 +19,7 @@
+   background: rgba(2, 15, 20, 0.42);
+   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+   scrollbar-width: thin;
+-  scrollbar-color: rgba(0, 212, 255, 0.46) rgba(255, 255, 255, 0.06);
++  scrollbar-color: rgba(255, 255, 255, 0.46) rgba(255, 255, 255, 0.06);
+ }
+ #radio-panel .panel-header {
+   margin-bottom: 0;
+@@ -30,7 +30,7 @@
+   letter-spacing: 0.12em;
+ }
+ .radio-layer-state.active {
+-  color: #65f7ff;
++  color: #e6e6e6;
+ }
+ .radio-directory-row {
+   display: grid;
+@@ -53,7 +53,7 @@
+   padding: 7px 24px 7px 8px;
+   border: 1px solid rgba(65, 220, 231, 0.28);
+   border-radius: 5px;
+-  color: #c5faff;
++  color: #f2f2f2;
+   background: rgba(5, 24, 31, 0.88);
+   font: 9px/1.2 var(--font-mono);
+ }
+@@ -67,7 +67,7 @@
+   overflow-wrap: anywhere;
+ }
+ .radio-station-card strong {
+-  color: #e8feff;
++  color: #f2f2f2;
+   font: 11px/1.25 var(--font-mono);
+   letter-spacing: 0.05em;
+ }
+@@ -76,7 +76,7 @@
+   font: 8px/1.35 var(--font-mono);
+ }
+ #radio-station-tags {
+-  color: #72dce6;
++  color: #bdbdbd;
+ }
+ .radio-tuner {
+   display: grid;
+@@ -93,7 +93,7 @@
+     rgba(1, 9, 13, 0.92),
+     rgba(4, 24, 30, 0.72)
+   );
+-  box-shadow: inset 0 0 18px rgba(0, 212, 255, 0.045);
++  box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.045);
+ }
+ .radio-tuner[hidden] {
+   display: none;
+@@ -109,7 +109,7 @@
+ }
+ #radio-tuner-value {
+   min-width: 0;
+-  color: #a8f7ff;
++  color: #e6e6e6;
+   overflow: hidden;
+   text-align: right;
+   text-overflow: ellipsis;
+@@ -144,7 +144,7 @@
+   position: absolute;
+   inset: 0;
+   overflow: hidden;
+-  color: #58cbd6;
++  color: #bdbdbd;
+   font: 9px/1 var(--font-mono);
+   text-shadow: 0 0 7px rgba(65, 220, 231, 0.5);
+   pointer-events: none;
+@@ -155,7 +155,7 @@
+   bottom: 0;
+   min-width: 1px;
+   border-left: 1px solid rgba(85, 224, 235, 0.38);
+-  color: #58cbd6;
++  color: #bdbdbd;
+   padding-left: 3px;
+   white-space: nowrap;
+   transform: translateX(-50%);
+@@ -163,7 +163,7 @@
+ }
+ .radio-tuner-tick.is-current {
+   border-left-color: rgba(168, 247, 255, 0.9);
+-  color: #a8f7ff;
++  color: #e6e6e6;
+ }
+ .radio-tuner-needle {
+   position: absolute;
+@@ -235,7 +235,7 @@
+ }
+ .radio-tuner-readout span:first-child {
+   min-width: 0;
+-  color: #7fe6ef;
++  color: #bdbdbd;
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+@@ -254,7 +254,7 @@
+   padding: 6px 3px;
+   border: 1px solid rgba(65, 220, 231, 0.28);
+   border-radius: 5px;
+-  color: #8feaf2;
++  color: #bdbdbd;
+   background: rgba(14, 69, 78, 0.14);
+   font: 8px/1 var(--font-mono);
+   letter-spacing: 0.06em;
+@@ -262,7 +262,7 @@
+ }
+ .radio-transport button:hover:not(:disabled),
+ .radio-transport button:focus-visible:not(:disabled) {
+-  border-color: #65f7ff;
++  border-color: #e6e6e6;
+   color: #fff;
+   outline: none;
+ }
+@@ -682,7 +682,7 @@
+   color: var(--accent);
+   border-color: var(--accent);
+   background: var(--accent-dim);
+-  box-shadow: 0 0 10px rgba(0, 212, 255, 0.15);
++  box-shadow: 0 0 10px rgba(255, 255, 255, 0.15);
+ }
+ 
+ .data-toggle-btn.active.feed-stale,
+diff --git a/src/ui/styles/recent-imagery.css b/src/ui/styles/recent-imagery.css
+index f1e2e20..78ec6af 100644
+--- a/src/ui/styles/recent-imagery.css
++++ b/src/ui/styles/recent-imagery.css
+@@ -25,7 +25,7 @@
+   inset: -18px;
+   background: radial-gradient(
+     ellipse at center,
+-    rgba(0, 212, 255, 0.16) 0%,
++    rgba(255, 255, 255, 0.16) 0%,
+     transparent 65%
+   );
+   filter: blur(16px);
+@@ -47,7 +47,7 @@
+   overflow-y: auto;
+   overscroll-behavior: contain;
+   scrollbar-width: thin;
+-  scrollbar-color: rgba(0, 212, 255, 0.46) transparent;
++  scrollbar-color: rgba(255, 255, 255, 0.46) transparent;
+ }
+ #recent-imagery-panel.collapsed #recent-imagery-panel-body,
+ #recent-imagery-panel.collapsed #recent-imagery-panel-count,
+diff --git a/src/ui/styles/scenes.css b/src/ui/styles/scenes.css
+index c9e92be..dcc2ac1 100644
+--- a/src/ui/styles/scenes.css
++++ b/src/ui/styles/scenes.css
+@@ -97,20 +97,20 @@
+   background: linear-gradient(
+     90deg,
+     rgb(0 212 255 / 28%),
+-    rgba(0, 212, 255, 0.18) 58%,
++    rgba(255, 255, 255, 0.18) 58%,
+     transparent
+   );
+-  box-shadow: 0 0 7px rgba(0, 212, 255, 0.22);
++  box-shadow: 0 0 7px rgba(255, 255, 255, 0.22);
+ }
+ 
+ #right-context-rail [data-panel-id]:not(.collapsed) .panel-divider {
+   background: linear-gradient(
+     90deg,
+     rgb(0 212 255 / 28%),
+-    rgba(0, 212, 255, 0.18) 58%,
++    rgba(255, 255, 255, 0.18) 58%,
+     transparent
+   );
+-  box-shadow: 0 0 7px rgba(0, 212, 255, 0.22);
++  box-shadow: 0 0 7px rgba(255, 255, 255, 0.22);
+ }
+ 
+ #scene-panel .panel-glow {
+@@ -118,7 +118,7 @@
+   inset: -18px;
+   background: radial-gradient(
+     ellipse at center,
+-    rgba(0, 212, 255, 0.16) 0%,
++    rgba(255, 255, 255, 0.16) 0%,
+     transparent 65%
+   );
+   filter: blur(16px);
+@@ -233,7 +233,7 @@
+ 
+ .scene-shot-row.active {
+   border-color: var(--accent);
+-  background: rgba(0, 212, 255, 0.08);
++  background: rgba(255, 255, 255, 0.08);
+ }
+ 
+ .scene-shot-top {
+@@ -259,7 +259,7 @@
+   font: inherit;
+   color: var(--text-primary);
+   background: var(--bg-panel, #101820);
+-  border: 1px solid var(--accent, #00d4ff);
++  border: 1px solid var(--accent, #e6e6e6);
+ }
+ 
+ .scene-shot-meta {
+@@ -304,7 +304,7 @@
+ .scene-btn:hover:not(:disabled) {
+   color: var(--accent);
+   border-color: var(--accent);
+-  background: rgba(0, 212, 255, 0.14);
++  background: rgba(255, 255, 255, 0.14);
+ }
+ 
+ .scene-btn:disabled {
+@@ -333,10 +333,10 @@
+   height: 100%;
+   background: linear-gradient(
+     90deg,
+-    rgba(0, 212, 255, 0.2),
+-    rgba(0, 212, 255, 0.75)
++    rgba(255, 255, 255, 0.2),
++    rgba(255, 255, 255, 0.75)
+   );
+-  color: #d5f7ff;
++  color: #f2f2f2;
+   font-family: var(--font-mono);
+   font-size: 8px;
+   letter-spacing: 1px;
+@@ -345,7 +345,7 @@
+   justify-content: flex-end;
+   padding-right: 6px;
+   transition: width 100ms linear;
+-  text-shadow: 0 0 6px rgba(0, 212, 255, 0.6);
++  text-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+ }
+ 
+ #scene-status {
+@@ -370,12 +370,12 @@
+   font-family: var(--font-mono);
+   font-size: 11px;
+   letter-spacing: 2px;
+-  color: #bff4ff;
++  color: #f2f2f2;
+   background: rgba(0, 0, 0, 0.45);
+-  border: 1px solid rgba(0, 212, 255, 0.36);
++  border: 1px solid rgba(255, 255, 255, 0.36);
+   border-radius: 999px;
+   padding: 6px 14px;
+-  text-shadow: 0 0 8px rgba(0, 212, 255, 0.55);
++  text-shadow: 0 0 8px rgba(255, 255, 255, 0.55);
+   pointer-events: none;
+ }
+ 
+diff --git a/src/ui/styles/status.css b/src/ui/styles/status.css
+index acdba7a..39a401b 100644
+--- a/src/ui/styles/status.css
++++ b/src/ui/styles/status.css
+@@ -56,7 +56,7 @@
+ #tilt-map-view[aria-pressed='true'] {
+   border-color: var(--accent);
+   color: var(--accent);
+-  box-shadow: 0 0 14px rgba(0, 212, 255, 0.18);
++  box-shadow: 0 0 14px rgba(255, 255, 255, 0.18);
+ }
+ 
+ #north-up-view {
+@@ -91,7 +91,7 @@
+   max-width: calc(100vw - 32px);
+   padding: 6px 10px;
+   border-radius: 7px;
+-  border: 1px solid rgba(0, 212, 255, 0.24);
++  border: 1px solid rgba(255, 255, 255, 0.24);
+   background: rgba(3, 10, 18, 0.78);
+   backdrop-filter: blur(14px);
+   -webkit-backdrop-filter: blur(14px);
+@@ -103,7 +103,7 @@
+   transform: translateX(-50%);
+   box-shadow:
+     0 8px 24px rgba(0, 0, 0, 0.34),
+-    0 0 14px rgba(0, 212, 255, 0.08);
++    0 0 14px rgba(255, 255, 255, 0.08);
+   pointer-events: none;
+ }
+ #global-loading-status[hidden] {
+@@ -116,7 +116,7 @@
+   min-width: 34px;
+   max-width: min(220px, 38vw);
+   overflow: hidden;
+-  color: #00e1ff;
++  color: #e6e6e6;
+   font-weight: 600;
+   letter-spacing: 1.6px;
+   text-align: right;
+@@ -168,10 +168,10 @@
+   color: #ffd488;
+ }
+ #global-loading-status[data-state='acquiring'] {
+-  border-color: rgba(0, 212, 255, 0.42);
++  border-color: rgba(255, 255, 255, 0.42);
+   box-shadow:
+     0 8px 24px rgba(0, 0, 0, 0.34),
+-    0 0 18px rgba(0, 212, 255, 0.12);
++    0 0 18px rgba(255, 255, 255, 0.12);
+ }
+ 
+ .share-icon {
+@@ -191,7 +191,7 @@
+   gap: 10px;
+   padding: 6px 10px;
+   border-radius: 7px;
+-  border: 1px solid rgba(0, 212, 255, 0.24);
++  border: 1px solid rgba(255, 255, 255, 0.24);
+   background: rgba(3, 10, 18, 0.78);
+   backdrop-filter: blur(14px);
+   -webkit-backdrop-filter: blur(14px);
+@@ -207,7 +207,7 @@
+     transform 0.22s ease;
+   box-shadow:
+     0 8px 24px rgba(0, 0, 0, 0.34),
+-    0 0 14px rgba(0, 212, 255, 0.08);
++    0 0 14px rgba(255, 255, 255, 0.08);
+ }
+ 
+ /* Stacked below the traffic chip so both can show at once */
+@@ -228,7 +228,7 @@
+ 
+ #traffic-sync-progress,
+ #cctv-sync-progress {
+-  color: #00e1ff;
++  color: #e6e6e6;
+   font-weight: 600;
+   letter-spacing: 1.6px;
+   min-width: 34px;
+@@ -413,7 +413,7 @@
+     opacity 0.3s ease,
+     visibility 0.3s ease,
+     transform 0.3s ease;
+-  box-shadow: 0 0 20px rgba(0, 212, 255, 0.15);
++  box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+ }
+ 
+ #toast.visible {
+diff --git a/src/ui/styles/voice-cost.css b/src/ui/styles/voice-cost.css
+index 5a2b1cc..6a9e78d 100644
+--- a/src/ui/styles/voice-cost.css
++++ b/src/ui/styles/voice-cost.css
+@@ -19,8 +19,8 @@
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+-  background: rgba(0, 212, 255, 0.06);
+-  border: 1px solid rgba(0, 212, 255, 0.34);
++  background: rgba(255, 255, 255, 0.06);
++  border: 1px solid rgba(255, 255, 255, 0.34);
+   border-radius: 0.18rem;
+   color: var(--text-secondary);
+   font-family: var(--font-mono);
+@@ -36,8 +36,8 @@
+ 
+ .gev-voice-tier-btn:hover {
+   color: var(--text-primary);
+-  border-color: rgba(0, 212, 255, 0.6);
+-  background: rgba(0, 212, 255, 0.12);
++  border-color: rgba(255, 255, 255, 0.6);
++  background: rgba(255, 255, 255, 0.12);
+ }
+ 
+ /* MINI engaged — amber, distinct from the cyan default so the cheaper tier
+diff --git a/src/ui/styles/weather.css b/src/ui/styles/weather.css
+index 3e83561..985f80d 100644
+--- a/src/ui/styles/weather.css
++++ b/src/ui/styles/weather.css
+@@ -23,7 +23,7 @@
+   inset: -18px;
+   background: radial-gradient(
+     ellipse at center,
+-    rgba(0, 212, 255, 0.16) 0%,
++    rgba(255, 255, 255, 0.16) 0%,
+     transparent 65%
+   );
+   filter: blur(16px);
+@@ -43,7 +43,7 @@
+   overflow-y: auto;
+   overscroll-behavior: contain;
+   scrollbar-width: thin;
+-  scrollbar-color: rgba(0, 212, 255, 0.46) transparent;
++  scrollbar-color: rgba(255, 255, 255, 0.46) transparent;
+ }
+ #weather-panel.collapsed #weather-panel-body,
+ #weather-panel[hidden],
+@@ -86,7 +86,7 @@
+   border-color: #79c2ff;
+ }
+ .rail-card.is-open {
+-  border-color: rgba(0, 212, 255, 0.55);
++  border-color: rgba(255, 255, 255, 0.55);
+   background: rgba(42, 113, 171, 0.09);
+ }
+ .rail-card-labels {
+@@ -120,7 +120,7 @@
+   letter-spacing: 0.3px;
+ }
+ .rail-card.is-open .rail-card-title {
+-  color: #e8feff;
++  color: #f2f2f2;
+ }
+ .rail-card-nowrap {
+   white-space: nowrap;
+@@ -355,7 +355,7 @@ body.recording-mode .gev-wind-inspection-marker {
+   margin-top: 0;
+ }
+ .rail-card-result [data-line-id='wind'] {
+-  color: #e8feff;
++  color: #f2f2f2;
+   font: 13px/1.25 var(--font-mono);
+ }
+ .rail-card-result [data-line-id='explanation'] {
+diff --git a/src/ui/templates/hud-loading.html b/src/ui/templates/hud-loading.html
+index 939260f..dfea0f9 100644
+--- a/src/ui/templates/hud-loading.html
++++ b/src/ui/templates/hud-loading.html
+@@ -4,7 +4,7 @@
+   <!-- Loading screen -->
+   <div id="loading-screen">
+     <div class="loader-content">
+-      <h2>ADAM <span class="title-accent">#houseofasher</span></h2>
+-      <p class="loader-status">Initializing photorealistic world...</p>
++      <h2>asherin.adam</h2>
++      <p class="loader-status">bringing the globe up…</p>
+     </div>
+   </div>
+diff --git a/src/ui/templates/scene-chrome.html b/src/ui/templates/scene-chrome.html
+index 8ec4fb6..1b2cbf4 100644
+--- a/src/ui/templates/scene-chrome.html
++++ b/src/ui/templates/scene-chrome.html
+@@ -10,8 +10,8 @@
+   <!-- Title -->
+   <div id="title-bar">
+     <div class="title-glow"></div>
+-    <h1><span>ADAM</span></h1>
+-    <p class="subtitle"><span class="title-accent">#houseofasher</span></p>
++    <h1><span>asherin.adam</span></h1>
++    <p class="subtitle"><span class="title-accent">live globe</span></p>
+   </div>
+ 
+   <!-- Style indicator -->
+diff --git a/src/ui/templates/welcome.html b/src/ui/templates/welcome.html
+index 3b0b768..7bbcee6 100644
+--- a/src/ui/templates/welcome.html
++++ b/src/ui/templates/welcome.html
+@@ -46,5 +46,5 @@
+     </div>
+     <!-- Kept out of the footer row: it swaps to mission progress and errors, and
+          a live region that also holds layout makes the row jump as it speaks. -->
+-    <p class="first-run-note" data-first-run-status role="status" aria-live="polite">Tip: the ADAM MIC button in the dock lets you talk to the map.</p>
++    <p class="first-run-note" data-first-run-status role="status" aria-live="polite">Tip: drag to orbit, scroll to zoom, right-click to tilt.</p>
+   </aside>
+diff --git a/src/voice/control.js b/src/voice/control.js
+index 637ab2b..d3d025e 100644
+--- a/src/voice/control.js
++++ b/src/voice/control.js
+@@ -21,7 +21,7 @@ export function createVoiceControl({ reset = false } = {}) {
+         </div>
+       </div>
+       <button id="gev-voice-button" type="button" aria-label="Voice control — activate to toggle voice; hold Space to speak" aria-describedby="gev-voice-help">
+-        <span class="gev-mic-orbit"><img src="/mic.svg" alt="" /></span>
++        <span class="gev-mic-orbit"><img src="${import.meta.env.BASE_URL || '/'}mic.svg" alt="" /></span>
+         <span class="gev-mic-label">ON/OFF</span>
+       </button>
+       <div class="gev-voice-visualizer" aria-hidden="true">
+diff --git a/embed/vite.config.js b/embed/vite.config.js
+new file mode 100644
+index 0000000..a015889
+--- /dev/null
++++ b/embed/vite.config.js
+@@ -0,0 +1,31 @@
++import { defineConfig } from 'vite';
++import { createBrowserViteConfig } from '../build/vite.js';
++
++/**
++ * The embedded build: the globe console as a static bundle that asherin
++ * serves under /adam/ inside a same-origin iframe. No gateway exists there,
++ * so `import.meta.env.ADAM_EMBED` prunes every server-backed layer, panel
++ * and control at build time (see src/embed/profile.js). No keys are
++ * compiled in: imagery, terrain, earthquakes and recent imagery are keyless.
++ */
++export default defineConfig(({ command }) => {
++  const base = createBrowserViteConfig({ command });
++  return {
++    ...base,
++    plugins: [
++      ...base.plugins,
++      {
++        // The override sheet is the last stylesheet the entry imports, so its
++        // tokens win; the standalone build never loads it.
++        name: 'adam-embed-override-sheet',
++        transform(code, id) {
++          if (!id.endsWith('/src/main.js')) return null;
++          return `${code}\nimport './embed/asherin.css';\n`;
++        },
++      },
++    ],
++    base: '/adam/',
++    define: { ...base.define, 'import.meta.env.ADAM_EMBED': 'true' },
++    build: { ...base.build, outDir: 'dist-embed', emptyOutDir: true },
++  };
++});
+diff --git a/src/embed/asherin.css b/src/embed/asherin.css
+new file mode 100644
+index 0000000..36bcf83
+--- /dev/null
++++ b/src/embed/asherin.css
+@@ -0,0 +1,197 @@
++/* ═══════════════════════════════════════════════
++   asherin.adam — the console inside asherin's interface.
++
++   Loaded last, after foundation.css, adam.css, adam-ops.css and modern.css,
++   so every token below wins. Dark monochrome glass, thin light type,
++   lowercase copy (modern.css keeps that rule). Colour is reserved for true
++   alert states: the alert and critical tiers keep their amber and red.
++   ═══════════════════════════════════════════════ */
++
++:root {
++  /* surfaces */
++  --bg-dark: #080808;
++  --ops-bg: #080808;
++  --ops-surface: #0f0f0f;
++  --menu-bg: #0f0f0f;
++  --glass-bg: rgba(255, 255, 255, 0.04);
++  --glass-bg-light: rgba(255, 255, 255, 0.04);
++  --glass-bg-dense: rgba(8, 8, 8, 0.84);
++  --glass-border: rgba(255, 255, 255, 0.1);
++  --glass-border-hover: rgba(255, 255, 255, 0.18);
++  --chrome-edge: rgba(255, 255, 255, 0.1);
++  --chrome-edge-glow: transparent;
++  --chrome-edge-highlight: transparent;
++
++  /* accent is the foreground at low alpha — tonal, never chromatic */
++  --accent: #ebebeb;
++  --accent-primary: #ebebeb;
++  --ops-accent: #ebebeb;
++  --accent-dim: rgba(255, 255, 255, 0.08);
++  --accent-primary-dim: rgba(255, 255, 255, 0.08);
++  --accent-glow: rgba(255, 255, 255, 0.14);
++  --ops-data-dim: rgba(235, 235, 235, 0.38);
++
++  /* type */
++  --text-primary: #ebebeb;
++  --ops-text: #ebebeb;
++  --text-secondary: rgba(235, 235, 235, 0.62);
++  --text-dim: rgba(235, 235, 235, 0.5);
++  --ops-text-dim: rgba(235, 235, 235, 0.5);
++  --weight-meta: 300;
++  --weight-value: 300;
++  --weight-readout: 300;
++
++  /* geometry */
++  --panel-radius: 14px;
++  --data-radius: 12px;
++  --btn-radius: 10px;
++  --chip-radius: 10px;
++}
++
++:root[data-gev-imagery='heavy'] {
++  --glass-bg: var(--glass-bg-dense);
++}
++
++html,
++body {
++  background: var(--bg-dark);
++  color: var(--text-primary);
++  font-weight: 300;
++}
++
++body,
++button,
++input,
++select,
++textarea,
++.adam-panel,
++.panel-collapsible {
++  font-weight: 300;
++}
++
++strong,
++b,
++h1,
++h2,
++h3,
++h4 {
++  font-weight: 300;
++}
++
++/* small caps labels: letter-spaced, quiet */
++.adam-meta,
++.adam-ops-rail-label,
++.adam-ops-kicker,
++.adam-ops-section,
++.panel-title,
++.pp-label,
++.pp-header-label,
++.indicator-label,
++.data-layer-group-heading,
++.location-toolbar-label,
++.map-source-heading,
++.cctv-summary-label,
++.panel-mini-label {
++  letter-spacing: 0.08em;
++  font-weight: 300;
++}
++
++/* glass panels: one surface, one hairline, no glow */
++.adam-panel,
++.panel-collapsible,
++#adam-ops-flyout,
++.adam-rail-menu,
++#style-indicator,
++#top-center-actions,
++#global-loading-status,
++#toast {
++  background: var(--glass-bg);
++  border: 1px solid var(--glass-border);
++  box-shadow: none;
++  backdrop-filter: blur(14px);
++  -webkit-backdrop-filter: blur(14px);
++}
++
++.panel-glow,
++.title-glow {
++  display: none !important;
++}
++
++/* loading cover */
++#loading-screen {
++  background: #080808;
++}
++#loading-screen h2 {
++  font-weight: 300;
++  letter-spacing: 0.02em;
++  color: var(--text-primary);
++  text-shadow: none;
++}
++#loading-screen .loader-status {
++  color: var(--text-dim);
++  font-weight: 300;
++}
++
++/* chips, buttons: tonal states */
++.adam-chip,
++.scene-btn,
++.pp-toggle-btn,
++.style-btn,
++.map-stack-chip {
++  font-weight: 300;
++  border-color: var(--glass-border);
++  box-shadow: none;
++}
++.adam-chip[aria-pressed='true'],
++.adam-chip.is-active,
++.adam-ops-rail-btn[aria-pressed='true'],
++.style-btn.active,
++.pp-toggle-btn.active,
++.map-stack-chip.active {
++  background: rgba(255, 255, 255, 0.12);
++  border-color: rgba(255, 255, 255, 0.26);
++  color: var(--text-primary);
++  box-shadow: none;
++}
++
++/* the surfaces this build has no server for stay out of the page */
++#cctv-panel,
++#scene-panel,
++#traffic-sync-chip,
++#cctv-sync-chip,
++#context-radio-dock,
++#gev-voice-control,
++.map-stack-chip.unavailable {
++  display: none !important;
++}
++
++/* focus rings stay visible, neutral */
++:focus-visible {
++  outline-color: var(--text-primary);
++}
++
++/* the cesium ion mark is attribution for ion-served data; nothing here is */
++body.adam-no-ion .cesium-credit-logoContainer {
++  display: none !important;
++}
++
++/* the room's header above the frame already names it: no second title */
++#title-bar {
++  display: none !important;
++}
++
++/* the viewfinder keeps its frame; the camcorder transport word goes */
++.adam-vf-text,
++.adam-vf-glyph {
++  display: none !important;
++}
++
++/* phone width: the action bar wraps instead of running off the frame */
++@media (max-width: 520px) {
++  #top-center-actions {
++    max-width: calc(100vw - 24px);
++    flex-wrap: wrap;
++    justify-content: center;
++    row-gap: 6px;
++  }
++}
+diff --git a/src/embed/profile.js b/src/embed/profile.js
+new file mode 100644
+index 0000000..b476f58
+--- /dev/null
++++ b/src/embed/profile.js
+@@ -0,0 +1,43 @@
++/**
++ * Embedded profile: what the console keeps when it runs inside asherin as
++ * the room asherin.adam — a static bundle under /adam/ with no gateway
++ * behind it. Everything that needs /api/* is pruned at the entry point so
++ * no dead button remains; what stays is client-only (keyless imagery,
++ * terrain, USGS earthquakes, NASA recent imagery, bundled infrastructure).
++ */
++export const EMBED = import.meta.env.ADAM_EMBED === true;
++
++/** Data layers that reach their source without a server. */
++export const EMBED_LAYERS = new Set([
++  'earthquakes',
++  'recent-imagery',
++  'local-datacenters',
++  'local-dams',
++  'telegeography-submarine-cables',
++  'airspace-firs',
++]);
++
++/** Ops-rail chips that keep a purpose without live contacts or a server. */
++export const EMBED_RAIL = new Set(['intel', 'sky', 'maps', 'keys', 'settings']);
++
++/** Intel chips that stay (client-only panels). */
++export const EMBED_INTEL = new Set(['astro']);
++
++/** Whether a data layer may be shown or switched on in this build. */
++export function layerAllowed(id) {
++  return !EMBED || EMBED_LAYERS.has(String(id || ''));
++}
++
++/**
++ * A fetch for the application request services that never leaves the page:
++ * every call answers 503 at once, so the HUD, resolver and terrain helpers
++ * take their documented fallbacks instead of hitting a route that is not
++ * there. Scoped to those services — the page's own `fetch` stays native, so
++ * the tamper watch keeps its meaning.
++ */
++export async function offlineFetch() {
++  return new Response(JSON.stringify({ error: 'offline', configured: false }), {
++    status: 503,
++    headers: { 'Content-Type': 'application/json' },
++  });
++}
+diff --git a/src/embed/weather.js b/src/embed/weather.js
+new file mode 100644
+index 0000000..a7a06ac
+--- /dev/null
++++ b/src/embed/weather.js
+@@ -0,0 +1,27 @@
++import { normalizeRegionalWeather } from '../data/regionalModel.js';
++
++/**
++ * Current conditions straight from Open-Meteo (keyless, CORS-open) — the
++ * same request the gateway's /api/weather-effects makes on the console's
++ * behalf, shaped by the same normalizer, for the build with no gateway.
++ * The point is rounded to 0.01° (about a kilometre): conditions do not need
++ * more, and the request should not carry where the camera is to the metre.
++ */
++export async function fetchOpenMeteoWeather(
++  { latitude, longitude },
++  { fetchImpl = (...a) => fetch(...a), signal } = {},
++) {
++  const params = new URLSearchParams({
++    latitude: Number(latitude).toFixed(2),
++    longitude: Number(longitude).toFixed(2),
++    current:
++      'temperature_2m,apparent_temperature,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,visibility',
++    timezone: 'UTC',
++  });
++  const res = await fetchImpl(
++    `https://api.open-meteo.com/v1/forecast?${params}`,
++    { signal },
++  );
++  if (!res.ok) throw new Error(`HTTP ${res.status}`);
++  return normalizeRegionalWeather(await res.json());
++}

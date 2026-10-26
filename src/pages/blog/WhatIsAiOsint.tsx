@@ -30,7 +30,7 @@ const WhatIsAiOsint = () => (
       id="what-is-ai-osint"
       items={[
         { name: "Asherin", url: "/" },
-        { name: "Blog", url: "/blog" },
+        { name: "blog", url: "/blog" },
         { name: "What Is AI OSINT?", url: "/blog/what-is-ai-osint" },
       ]}
     />
@@ -42,8 +42,9 @@ const WhatIsAiOsint = () => (
       pipeline: a single query triggers parallel ingestion across dozens of
       live sources, normalization into comparable records, cross-validation
       of contested claims, and synthesis into a single intelligence
-      product. What used to take an analyst three days takes a real AI
-      OSINT engine under thirty seconds.
+      product. the speed depends on the sources, the provider and the rate
+      limits; a real engine reports progress and partial results instead of
+      promising a number.
     </p>
 
     <h2>The four-stage pipeline</h2>
@@ -112,10 +113,11 @@ const WhatIsAiOsint = () => (
 
     <h2>asherin.search, public-source research in production</h2>
     <p>
-      <a href="/dashboard/asherin.search">asherin.search</a> runs available
-      public-source retrieval for an active query. Evidence retains source
-      links and contradiction states where possible; unavailable sources are
-      reported rather than treated as corroboration.
+      <a href="/dashboard/search">asherin.search</a> runs web, news,
+      academic, code, data, docs, deep and archive modes over open indexes
+      from this device, with no account and no server in between. every hit
+      keeps its source link and credibility tier; a source that did not
+      answer says so rather than being counted as corroboration.
     </p>
 
     <FaqJsonLd
@@ -143,19 +145,19 @@ const WhatIsAiOsint = () => (
     <RelatedLinks
       links={[
         {
-          to: "/dashboard/asherin.search",
+          to: "/dashboard/search",
           label: "asherin.search",
-          description: "the current public-source research room.",
+          description: "the current public-source research room, on this device.",
         },
         {
-          to: "/dashboard/asherin.investigations",
-          label: "asherin.investigations",
-          description: "saved investigations, evidence, and follow-up state.",
+          to: "/blog/sovereign-ai-platforms",
+          label: "the 2026 sovereign AI landscape",
+          description: "the four-layer test: key, model, refusal, data.",
         },
         {
-          to: "/glossary/sovereign-ai",
-          label: "Sovereign AI, definition",
-          description: "Why serious OSINT work runs on the sovereign stack, not consumer AI.",
+          to: "/blog/autonomous-intelligence-loop",
+          label: "the supervised research loop",
+          description: "how a research-shaped request is collected, verified and written.",
         },
       ]}
     />

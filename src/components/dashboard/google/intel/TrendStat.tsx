@@ -31,7 +31,9 @@ export const Sparkline = ({
   }, [series, height]);
 
   if (!path) {
-    return <div className={`h-[${height}px] ${className}`} aria-hidden />;
+    // a dynamic tailwind class is never generated; set the height inline so
+    // the empty sparkline still reserves its row.
+    return <div className={className} style={{ height }} aria-hidden />;
   }
 
   return (
@@ -79,7 +81,7 @@ export const TrendStat = ({
 
   return (
     <div className="rounded-2xl border border-border/20 bg-card/25 backdrop-blur-md p-4 space-y-2">
-      <p className="text-[9px] tracking-[0.18em] font-light text-muted-foreground/50">{label.toUpperCase()}</p>
+      <p className="text-[9px] tracking-[0.18em] font-light text-muted-foreground/50">{label.toLowerCase()}</p>
       <div className="flex items-end gap-1.5">
         <span className="text-xl font-extralight text-foreground leading-none">
           {loading ? "…" : value}
@@ -91,8 +93,8 @@ export const TrendStat = ({
         {series && series.length >= 3 && (
           <p className="text-[9px] font-extralight text-muted-foreground/60">
             {direction === "flat"
-              ? "Flat against your own recent rhythm"
-              : `${direction === "rising" ? "Rising" : "Falling"} ${Math.abs(round(k, 2))}${unit ? ` ${unit}` : ""}/interval`}
+              ? "flat against your own recent rhythm"
+              : `${direction} ${Math.abs(round(k, 2))}${unit ? ` ${unit}` : ""}/interval`}
           </p>
         )}
         {pct !== null && (

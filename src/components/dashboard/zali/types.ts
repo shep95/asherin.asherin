@@ -7,8 +7,6 @@ export interface ZaliProject {
   status: string;
   researchDomains: ResearchDomain[];
   specifications: Record<string, unknown>;
-  specs?: Record<string, unknown>;
-  materials?: string[];
   costAnalysis: Record<string, unknown>;
   manufacturing: Record<string, unknown>;
   simulationResults: Record<string, unknown>;
@@ -32,14 +30,5 @@ export interface ResearchDomain {
   status: "pending" | "active" | "complete";
 }
 
-export interface ZaliAgent {
-  id: string;
-  name: string;
-  icon: string;
-  domain: string;
-  description: string;
-  color: string;
-}
-
 export type ZaliPhase = "understanding" | "research" | "design" | "simulation" | "iteration" | "documentation";
-export type ZaliTab = "workspace" | "specs" | "simulations" | "cost" | "manufacturing" | "agents" | "research" | "community" | "materials-db" | "components" | "sim-engine" | "mfg-verify" | "optimization" | "god-mode";
+export type ZaliTab = "workspace" | "specs" | "materials" | "components" | "analysis" | "research";

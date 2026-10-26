@@ -1,5 +1,7 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { streamChat } from "@/lib/ai";
+import { useIsV2 } from "@/lib/dashboardUiContext";
+import { lowerFirst } from "@/lib/pages/text";
 
 type Paper = "cream" | "white" | "night";
 type Face = "cormorant" | "fraunces" | "newsreader" | "instrument" | "jost";
@@ -351,7 +353,7 @@ export default function PdfGeneratorView() {
   const [msgs, setMsgs] = useState<Bubble[]>([
     {
       role: "ai",
-      thought: "a page is type on a grid. pictures are plates. fonts live in the file. quiet file is default.",
+      thought: "a page is type on a grid. the pdf sets type in the reader's own serif or sans — nothing embedded, nothing fetched. quiet file is default.",
       rec: "say what the page is. then say how it looks if it feels wrong.",
       chips: [
         {
@@ -365,6 +367,10 @@ export default function PdfGeneratorView() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);
+  const isV2 = useIsV2();
+  // one pass at a time; leaving the room aborts the pass instead of letting it write into a dead tree.
+  const abortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => abortRef.current?.abort(), []);
   const docRef = useRef(doc);
   const msgsRef = useRef(msgs);
   docRef.current = doc;
@@ -391,11 +397,14 @@ export default function PdfGeneratorView() {
       }
       hist.push({ role: "user", content: packUserTurn(t, seeded) });
       let acc = "";
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
       try {
         await streamChat({
           messages: hist,
           mode: "chat",
           depth: "shallow",
+          signal: ctrl.signal,
           brainContext: { prompt: PAGES_BRAIN, fileContents: [] }, // pages-mouth: brain in the user turn; seed the letter locally so the figure is never blank.
           onDelta: (chunk) => {
             acc += chunk;
@@ -407,15 +416,17 @@ export default function PdfGeneratorView() {
         setDoc(parsed.doc);
         setMsgs((m) => [...m, { role: "ai", thought: parsed.thought, rec: parsed.rec, chips: parsed.chips }]);
       } catch (e) {
+        if (ctrl.signal.aborted) return; // the room was left mid-pass; nothing to report to nobody
         setMsgs((m) => [
           ...m,
           {
             role: "ai",
-            thought: "the mouth missed this pass. the letter on the right stayed.",
-            rec: e instanceof Error ? e.message : "say it again.",
+            thought: "shepherd missed this pass. the letter on the right stayed.",
+            rec: e instanceof Error ? lowerFirst(e.message) : "say it again.",
           },
         ]);
       }
+      if (abortRef.current === ctrl) abortRef.current = null;
       setBusy(false);
       box.current?.focus();
     },
@@ -440,7 +451,7 @@ export default function PdfGeneratorView() {
         {
           role: "ai",
           thought: "the compile failed before the file left the page.",
-          rec: e instanceof Error ? e.message : "say it again.",
+          rec: e instanceof Error ? lowerFirst(e.message) : "say it again.",
         },
       ]);
     }
@@ -448,18 +459,23 @@ export default function PdfGeneratorView() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border/15 px-4">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-sm font-light tracking-[0.04em] text-foreground">pages</h1>
-          <p className="truncate text-[11px] font-extralight text-muted-foreground/70">
-            prompt a page. quiet file. you keep the pdf.
-          </p>
-        </div>
-        <span className="hidden text-[10px] tracking-[0.14em] text-muted-foreground/75 sm:inline">quiet file</span>
+      <header className={`flex shrink-0 items-center gap-3 border-b border-border/15 px-4 ${isV2 ? "h-10 justify-end" : "h-12"}`}>
+        {!isV2 && (
+          <div className="min-w-0 flex-1">
+            <h1 className="text-sm font-light tracking-[0.04em] text-foreground">page</h1>
+            <p className="truncate text-[11px] font-extralight text-muted-foreground/70">
+              prompt a page. quiet file. you keep the pdf.
+            </p>
+          </div>
+        )}
+        <span className="hidden text-[10px] tracking-[0.14em] text-muted-foreground/75 sm:inline">
+          {busy ? "setting type…" : doc.title || doc.body ? "ready to compile" : "quiet file"}
+        </span>
         <button
           type="button"
           onClick={download}
           disabled={!doc.title && !doc.body}
+          title={!doc.title && !doc.body ? "say what the page is first" : "download the pdf"}
           className="rounded-[10px] bg-accent px-3 py-1.5 text-xs text-accent-foreground disabled:opacity-40"
         >
           compile pdf →
@@ -516,6 +532,7 @@ export default function PdfGeneratorView() {
           >
             <textarea
               ref={box}
+              aria-label="say what the page is"
               rows={2}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
@@ -528,7 +545,12 @@ export default function PdfGeneratorView() {
                 }
               }}
             />
-            <button type="submit" className="rounded-xl bg-foreground px-3 py-2 text-sm text-background">
+            <button
+              type="submit"
+              aria-label="send"
+              disabled={busy || !draft.trim()}
+              className="rounded-xl bg-foreground px-3 py-2 text-sm text-background disabled:opacity-40"
+            >
               →
             </button>
           </form>

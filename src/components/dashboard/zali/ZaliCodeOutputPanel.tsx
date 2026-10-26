@@ -11,7 +11,6 @@ interface CodeFile {
 
 interface Props {
   codeFiles: CodeFile[];
-  projectName: string;
   projectType: string;
 }
 
@@ -53,7 +52,7 @@ const CopyButton = ({ text }: { text: string }) => {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
-    });
+    }).catch(() => { /* clipboard refused */ });
   };
   return (
     <button
@@ -61,7 +60,7 @@ const CopyButton = ({ text }: { text: string }) => {
       className="flex items-center gap-1 px-2 py-1 rounded-md text-[9px] text-muted-foreground/50 hover:text-foreground hover:bg-foreground/5 transition-colors active:scale-95"
     >
       {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-      {copied ? "Copied" : "Copy"}
+      {copied ? "copied" : "copy"}
     </button>
   );
 };
@@ -102,7 +101,7 @@ function highlight(code: string, lang: string): string {
   return html;
 }
 
-const ZaliCodeOutputPanel = ({ codeFiles, projectName, projectType }: Props) => {
+const ZaliCodeOutputPanel = ({ codeFiles, projectType }: Props) => {
   const [activeFile, setActiveFile] = useState(0);
 
   if (!codeFiles || codeFiles.length === 0) {
@@ -110,13 +109,12 @@ const ZaliCodeOutputPanel = ({ codeFiles, projectName, projectType }: Props) => 
       <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
         <div className="relative">
           <div className="h-16 w-16 rounded-full border border-accent/20 flex items-center justify-center bg-accent/5">
-            <Terminal className="h-7 w-7 text-accent/40 animate-pulse" />
+            <Terminal className="h-7 w-7 text-accent/40" />
           </div>
-          <div className="absolute inset-0 h-16 w-16 rounded-full border border-accent/10 animate-ping" style={{ animationDuration: "3s" }} />
         </div>
         <div className="text-center">
-          <p className="text-xs font-light text-foreground">Code generation ready</p>
-          <p className="text-[10px] text-muted-foreground/40 mt-1">Answer ZANOEM's questions to generate your software architecture</p>
+          <p className="text-xs font-light text-foreground">no code yet</p>
+          <p className="text-[10px] text-muted-foreground/40 mt-1">answer shepherd's questions, then press generate code in the conversation. files land here.</p>
         </div>
       </div>
     );
@@ -124,6 +122,7 @@ const ZaliCodeOutputPanel = ({ codeFiles, projectName, projectType }: Props) => 
 
   const active = codeFiles[activeFile];
 
+  // one download per file: the browser may ask once to allow several.
   const downloadAll = () => {
     codeFiles.forEach((f) => {
       const blob = new Blob([f.content], { type: "text/plain" });
@@ -142,7 +141,7 @@ const ZaliCodeOutputPanel = ({ codeFiles, projectName, projectType }: Props) => 
       <div className="flex-shrink-0 px-3 sm:px-4 py-2 border-b border-border/20 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Code2 className="h-3.5 w-3.5 text-accent" />
-          <span className="text-[10px] font-light tracking-[0.15em] text-foreground uppercase">Code Output</span>
+          <span className="text-[10px] font-light tracking-[0.15em] text-foreground">code</span>
           <span className="text-[9px] text-muted-foreground/40">· {projectType}</span>
         </div>
         <div className="flex items-center gap-1">
@@ -152,7 +151,7 @@ const ZaliCodeOutputPanel = ({ codeFiles, projectName, projectType }: Props) => 
             className="flex items-center gap-1 px-2 py-1 rounded-md text-[9px] text-muted-foreground/50 hover:text-foreground hover:bg-foreground/5 transition-colors active:scale-95 ml-1"
           >
             <Download className="h-3 w-3" />
-            Download All
+            download all
           </button>
         </div>
       </div>

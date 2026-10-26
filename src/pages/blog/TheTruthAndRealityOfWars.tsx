@@ -45,7 +45,7 @@ const TheTruthAndRealityOfWars = () => (
       id="the-truth-and-reality-of-wars"
       items={[
         { name: "Asherin", url: "/" },
-        { name: "Blog", url: "/blog" },
+        { name: "blog", url: "/blog" },
         { name: "The Truth and Reality of Wars", url: "/blog/the-truth-and-reality-of-wars" },
       ]}
     />
@@ -249,12 +249,23 @@ const TheTruthAndRealityOfWars = () => (
     </p>
 
     <RelatedLinks
-      heading="Related intelligence"
+      heading="read next"
       links={[
-        { to: "/blog/predictions/russia-ukraine-war-2026-endgame", label: "Archived forecast, Russia-Ukraine", description: "A dated scenario preserved for verification, not a current product output." },
-        { to: "/blog/predictions/china-taiwan-2026-flashpoint", label: "Archived forecast, China-Taiwan", description: "A dated scenario preserved for verification, not a certainty." },
-        { to: "/blog/predictions/israel-iran-2026-shadow-war", label: "Archived forecast, Israel-Iran", description: "A dated scenario preserved for verification, not a certainty." },
-        { to: "/blog/the-crypto-dump-october-2026", label: "The Crypto Dump, Oct 2026 liquidity event", description: "The BlackRock/Vanguard trap-door mechanism and the 92:8 loser-to-winner ratio." },
+        {
+          to: "/blog/elite-corporations-algorithms-vs-axrlen",
+          label: "archived forecasting method, symbolism and probability",
+          description: "where the symbolic reading sits next to a probability and a window.",
+        },
+        {
+          to: "/blog/how-ai-predictive-forecasting-works",
+          label: "how AI predictive forecasting works",
+          description: "the four ingredients that separate a forecast from an essay like this one.",
+        },
+        {
+          to: "/founder",
+          label: "the founder",
+          description: "who wrote this, and the book behind it.",
+        },
       ]}
     />
   </ArticleShell>

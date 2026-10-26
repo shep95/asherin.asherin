@@ -1,4 +1,3 @@
-import { IDE_RETURN_TO_CHAT_EVENT } from "@/lib/ide/chatHandoff";
 import { applySeoHead } from "@/lib/seoHead";
 import { isAdminEmail } from "@/lib/adminEmail";
 import { getWallpaperSrc } from "@/lib/wallpapers";
@@ -20,7 +19,6 @@ import type { UserProfile } from "@/lib/ai";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardSidebarV2 from "@/components/dashboard/DashboardSidebarV2";
 import { DASHBOARD_UI_EVENT, hydrateDashboardUiFromDb, readDashboardUi, type DashboardUi } from "@/lib/dashboardUi";
-import IntelAlertCenter from "@/components/dashboard/IntelAlertCenter";
 import ChatView from "@/components/dashboard/ChatView";
 import PromptEnhancerPanel from "@/components/dashboard/PromptEnhancerPanel";
 import { useAccess } from "@/hooks/useAccess";
@@ -45,17 +43,13 @@ const AsherinSearchView = lazyWithRetry(() => import("@/components/dashboard/sea
 const AsherinxEngView = lazyWithRetry(() => import("@/components/dashboard/asherinx/AsherinxEngView"));
 const AsherinDataView = lazyWithRetry(() => import("@/components/dashboard/data/AsherinDataView"));
 const ZaliView = lazyWithRetry(() => import("@/components/dashboard/zali/ZaliView"));
-const CommunityView = lazyWithRetry(() => import("@/components/dashboard/zali/CommunityView"));
 const BriefingView = lazyWithRetry(() => import("@/components/dashboard/BriefingView"));
-const TeamsView = lazyWithRetry(() => import("@/components/dashboard/TeamsView"));
 const NotebooksView = lazyWithRetry(() => import("@/components/dashboard/NotebooksView"));
 
 
-const AureonIdeView = lazyWithRetry(() => import("@/components/dashboard/ide/AureonIdeView"));
 const WhiteboardView = lazyWithRetry(() => import("@/components/whiteboard/Whiteboard"));
 const DocumentStudioView = lazyWithRetry(() => import("@/components/dashboard/DocumentStudioView"));
 
-const PatternAnalysisView = lazyWithRetry(() => import("@/components/dashboard/PatternAnalysisView"));
 
 
 const BugReportsView = lazyWithRetry(() => import("@/components/dashboard/BugReportsView"));
@@ -65,14 +59,12 @@ const KnowledgeVaultView = lazyWithRetry(() => import("@/components/dashboard/Kn
 const ZerlalView = lazyWithRetry(() => import("@/components/dashboard/zerlal/ZerlalView"));
 const AsherinDefenderView = lazyWithRetry(() => import("@/components/dashboard/defender/AsherinDefenderView"));
 const AsherinArVisionView = lazyWithRetry(() => import("@/components/dashboard/arvision/AsherinArVisionView"));
-const AsherinEyeView = lazyWithRetry(() => import("@/components/dashboard/eye/AsherinEyeView"));
+const AsherinAdamView = lazyWithRetry(() => import("@/components/dashboard/adam/AsherinAdamView"));
 const AsherinHealthView = lazyWithRetry(() => import("@/components/dashboard/health/AsherinHealthView"));
-const InvestigationWorkspace = lazyWithRetry(() => import("@/components/dashboard/investigation/InvestigationWorkspace"));
 const SentinelView = lazyWithRetry(() => import("@/components/dashboard/sentinel/SentinelView"));
 
 const FileScrapperView = lazyWithRetry(() => import("@/components/dashboard/scrapper/FileScrapperView"));
 
-const GematriaView = lazyWithRetry(() => import("@/components/gematria/GematriaTab"));
 const AsherZahtenModule = lazyWithRetry(() => import("@/components/asher/AsherZahtenModule"));
 const AsherPublishedTabRenderer = lazyWithRetry(() => import("@/components/asher/AsherPublishedTabRenderer"));
 const CommandPalette = lazyWithRetry(() => import("@/components/dashboard/CommandPalette"));
@@ -81,7 +73,7 @@ const SplitPaneManager = lazyWithRetry(() => import("@/components/dashboard/Spli
 import type { SplitPane } from "@/components/dashboard/SplitPaneManager";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { streamChat, fetchSuggestions, fetchConsensus } from "@/lib/ai";
+import { streamChat, fetchConsensus } from "@/lib/ai";
 import { thinkingStore } from "@/hooks/useAureonThinking";
 import type { SelectedModel } from "@/components/dashboard/MultiModelSelector";
 import {
@@ -111,6 +103,15 @@ import {
   type QueuedMessage,
   type MessageStatus,
 } from "@/lib/messageQueue";
+
+interface QueuedSend {
+  id: string;
+  convId: string;
+  content: string;
+  attachments?: FileAttachment[];
+  mode?: ChatMode;
+  depth?: ResponseDepth;
+}
 
 const RetiredRoom = ({ title }: { title: string }) => (
   <div className="flex flex-1 items-center justify-center p-6">
@@ -174,16 +175,13 @@ const Dashboard = () => {
     "azplen",
     "briefing",
     "snippets",
-    "teams",
     "notebooks",
     "audit",
     "stats",
     "zali",
-    "community",
     "google",
     "ide",
     "pdf-generator",
-    "pattern-analysis",
     "slideshow",
     "bug-reports",
     "ebook",
@@ -192,16 +190,14 @@ const Dashboard = () => {
     "file-scrapper",
     "vedic-astrology",
     "zahten",
-    "gematria",
     "ghost-engine",
     "whiteboard",
     "knowledge-vault",
     "asherin-defender",
     "asherin-arvision",
-    "asherin-eye",
+    "asherin-adam",
     "asherin-sentinel",
     "asherin-health",
-    "investigations",
   ];
   // Deep-link aliases. A person types the product name they were told, not the
   // internal id, and a URL a human guessed correctly must never collapse to
@@ -210,16 +206,18 @@ const Dashboard = () => {
     defender: "asherin-defender",
     arvision: "asherin-arvision",
     "ar-vision": "asherin-arvision",
-    eye: "asherin-eye",
-    "asherin.eye": "asherin-eye",
+    adam: "asherin-adam",
+    "asherin.adam": "asherin-adam",
+    // the globe used to be asherin.eye; its links still open the room
+    eye: "asherin-adam",
+    "asherin.eye": "asherin-adam",
+    "asherin-eye": "asherin-adam",
     health: "asherin-health",
     "asherin.health": "asherin-health",
     sentinel: "asherin-sentinel",
     "asherin.sentinel": "asherin-sentinel",
     asherinx: "ghost-engine",
     "asherinx-eng": "ghost-engine",
-    investigation: "investigations",
-    osint: "investigations",
     activity: "stats",
     "asherin-activity": "stats",
     "asherin.activity": "stats",
@@ -235,19 +233,7 @@ const Dashboard = () => {
   };
   const initialView: DashboardView = resolveView(viewParam) ?? "chat";
   const [activeViewRaw, setActiveViewRaw] = useState<DashboardView>(initialView);
-  // The investigation bound to the current chat, if a research turn opened one.
-  const [activeInvestigationId, setActiveInvestigationId] = useState<string | null>(null);
   const activeView: DashboardView = asherEmbed ? "chat" : activeViewRaw;
-  // The code workspace can hand the operator back to the mouth. One chat only —
-  // the workspace never hosts a transcript of its own.
-  useEffect(() => {
-    const back = () => setActiveViewRaw("chat");
-    window.addEventListener(IDE_RETURN_TO_CHAT_EVENT, back);
-    return () => {
-      window.removeEventListener(IDE_RETURN_TO_CHAT_EVENT, back);
-    };
-  }, []);
-
   // Sync URL -> state (back/forward navigation, deep links)
   useEffect(() => {
     if (asherEmbed) return;
@@ -302,11 +288,17 @@ const Dashboard = () => {
   const conversationsRef = useRef<Conversation[]>([]);
   const activeConvIdRef = useRef<string | null>(null);
   const bootstrapConversationRef = useRef(false);
-  const attachmentMapRef = useRef<Map<string, FileAttachment[]>>(new Map());
   const [online, setOnline] = useState(navigator.onLine);
   const [messageStatuses, setMessageStatuses] = useState<Record<string, MessageStatus>>({});
   const processingQueue = useRef(false);
-  const pendingQueue = useRef<string[]>([]);
+  const pendingQueue = useRef<QueuedSend[]>([]);
+  // the send path reads the latest mode/depth through refs so a value set in
+  // the same tick (first-message auto-config) applies to this message, not the next
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  const depthRef = useRef(depth);
+  depthRef.current = depth;
+  const [chatError, setChatError] = useState<{ message: string; code?: string } | null>(null);
   const isStreamingRef = useRef(false);
   const [queueItems, setQueueItems] = useState<{ id: string; content: string }[]>([]);
   const [queuePaused, setQueuePaused] = useState(false);
@@ -444,7 +436,7 @@ const Dashboard = () => {
   useEffect(() => {
     const handleOnline = () => {
       setOnline(true);
-      toast({ title: "Back online", description: "Sending queued messages…" });
+      toast({ title: "back online", description: "sending the queued messages…" });
       processMessageQueue();
     };
     const handleOffline = () => {
@@ -496,7 +488,7 @@ const Dashboard = () => {
 
           // Actually persist the user message to DB
           const encryptedContent = await encryptText(msg.content, user.id);
-          const queuedAttachments = attachmentMapRef.current.get(msg.content);
+          const queuedAttachments: FileAttachment[] | undefined = undefined; // an offline replay carries text only
           const encryptedAttachments = queuedAttachments?.length
             ? await encryptText(JSON.stringify(serializeAttachments(queuedAttachments)), user.id)
             : null;
@@ -1086,7 +1078,7 @@ const Dashboard = () => {
     const load = async () => {
       const { data } = await supabase
         .from("asher_agents" as any)
-        .select("id, name, entry_html")
+        .select("id, name, entry_html, metadata")
         .eq("status", "published")
         .order("created_at", { ascending: false })
         .limit(100);
@@ -1148,7 +1140,7 @@ const Dashboard = () => {
           .from("user_settings")
           .upsert({ user_id: user.id, response_depth: next }, { onConflict: "user_id" });
       }
-      toast({ title: "Calibrated", description: "Asherin adjusted to your preference." });
+      toast({ title: "noted", description: "shepherd will lean that way." });
     },
     [user, toast, depth],
   );
@@ -1162,11 +1154,19 @@ const Dashboard = () => {
   }, []);
 
   // Core send logic (called sequentially by queue processor)
-  const sendMessageCore = async (content: string, convId: string, attachments?: FileAttachment[]) => {
+  const sendMessageCore = async (
+    content: string,
+    convId: string,
+    attachments?: FileAttachment[],
+    turn?: { mode?: ChatMode; depth?: ResponseDepth },
+  ) => {
     if (!user) return;
+    // the mode and depth of this turn: what the queue entry carried, else the latest set
+    const mode = turn?.mode ?? modeRef.current;
+    const depth = turn?.depth ?? depthRef.current;
     // Hard guard against rapid double-send / concurrent streams (STRESS-01).
     if (isStreamingRef.current) {
-      toast({ title: "Already responding", description: "Wait for the current reply or hit Stop." });
+      toast({ title: "still answering", description: "wait for the reply or press stop." });
       return;
     }
     // Claim the streaming lock and abort handle BEFORE any async work so a
@@ -1175,6 +1175,7 @@ const Dashboard = () => {
     const earlyController = new AbortController();
     abortRef.current = earlyController;
     setSuggestions([]);
+    setChatError(null);
 
     const tempMsgId = crypto.randomUUID();
     const conv = conversationsRef.current.find((c) => c.id === convId);
@@ -1199,7 +1200,10 @@ const Dashboard = () => {
     if (!navigator.onLine) {
       setMessageStatuses((prev) => ({ ...prev, [tempMsgId]: "queued" }));
       registerBackgroundSync().catch(() => {});
-      toast({ title: "Message queued", description: "Will send automatically when you're back online." });
+      // nothing is streaming: release the lock, or every later send would be refused
+      isStreamingRef.current = false;
+      abortRef.current = null;
+      toast({ title: "message queued", description: "it sends by itself when you are back online." });
       return;
     }
 
@@ -1222,6 +1226,10 @@ const Dashboard = () => {
 
       if (userMsgRow) {
         retargetMessageBranch(tempMsgId, userMsgRow.id);
+        setMessageStatuses((prev) => {
+          const { [tempMsgId]: status, ...rest } = prev;
+          return { ...rest, [userMsgRow.id]: status ?? "sending" };
+        });
         tagMessageBranch(userMsgRow.id, currentBranch); // ensure tag exists even if retarget missed
         setConversations((prev) =>
           prev.map((c) =>
@@ -1232,12 +1240,12 @@ const Dashboard = () => {
         );
       }
 
-      setMessageStatuses((prev) => ({ ...prev, [tempMsgId]: "sent" }));
+      setMessageStatuses((prev) => ({ ...prev, [userMsgRow?.id ?? tempMsgId]: "sent" }));
       await removeMessage(tempMsgId).catch(() => {});
     } catch (err) {
       setMessageStatuses((prev) => ({ ...prev, [tempMsgId]: "queued" }));
       registerBackgroundSync().catch(() => {});
-      toast({ title: "Message queued", description: "Network issue. Will retry automatically." });
+      toast({ title: "message queued", description: "the network dropped. it retries by itself." });
       // Release the early streaming lock if we bail here.
       isStreamingRef.current = false;
       abortRef.current = null;
@@ -1284,24 +1292,6 @@ const Dashboard = () => {
         attachments: m.attachments,
       }));
 
-    // ── INVESTIGATION GROUNDING ───────────────────────────────────────
-    // Only a research request or an investigation follow-up is touched here;
-    // every other turn passes through with its content unchanged.
-    try {
-      const { applyInvestigationTurn } = await import("@/lib/investigation/chatHook");
-      const turn = await applyInvestigationTurn(content, convId);
-      if (turn.applied && history.length) {
-        const last = history[history.length - 1];
-        if (last.role === "user") last.content = turn.content;
-        setActiveInvestigationId(turn.investigationId);
-      }
-      if (turn.notice) {
-        thinkingStore.step(assistantId, "investigation", turn.notice, "done");
-      }
-    } catch (e) {
-      console.error("investigation grounding skipped:", e);
-    }
-
     // ── INTELLIGENCE TURN ───────────────────────────────────────────
     // memory + procedure retrieval runs before the model sees anything; the
     // learning half runs in onDone / catch after the answer lands. a failure
@@ -1312,6 +1302,7 @@ const Dashboard = () => {
       const { prepareTurn } = await import("@/lib/intelligence/orchestrator");
       preparedTurn = await prepareTurn({
         conversationId: convId,
+        projectId: conv?.projectId,
         message: content,
         hasImageInput: !!attachments?.length,
       });
@@ -1329,6 +1320,43 @@ const Dashboard = () => {
     } catch (e) {
       console.error("intelligence prepare skipped:", e);
     }
+    // asherin.vault — a silent brief of what shepherd knows; never cited.
+    try {
+      const { composeVaultContext } = await import("@/lib/memory/vault");
+      const vaultBrief = await composeVaultContext(user.id, content);
+      if (vaultBrief) intelligenceContext = `${intelligenceContext ?? ""}\n\n${vaultBrief}`.trim();
+    } catch (e) {
+      console.warn("[vault] brief skipped:", e);
+    }
+    // asherin.knowledge — numbered passages from the operator's own documents; chat cites them as [k<n>].
+    try {
+      const { composeKnowledgeContext } = await import("@/lib/knowledgeVault/vault");
+      const kb = await composeKnowledgeContext(user.id, content, 4);
+      if (kb.brief) {
+        intelligenceContext = `${intelligenceContext ?? ""}\n\n${kb.brief}`.trim();
+        thinkingStore.step(assistantId, "memory", `${kb.passages.length} passage(s) from asherin.knowledge in context`, "done");
+      }
+    } catch (e) {
+      console.warn("[knowledge] brief skipped:", e);
+    }
+    // asherin.projects — mode rule, standing directions and readable files of
+    // the conversation's project. file text is labelled as material, never
+    // instructions, inside the brief itself.
+    try {
+      const { composeProjectContext } = await import("@/lib/projects/scope");
+      const projectBrief = await composeProjectContext(user.id, conv?.projectId);
+      if (projectBrief) {
+        intelligenceContext = `${projectBrief.brief}\n\n${intelligenceContext ?? ""}`.trim();
+        thinkingStore.step(
+          assistantId,
+          "project",
+          `${projectBrief.filesIncluded.length} file(s) in context${projectBrief.filesCut.length ? `, ${projectBrief.filesCut.length} cut for budget` : ""}`,
+          "done",
+        );
+      }
+    } catch (e) {
+      console.warn("[projects] brief skipped:", e);
+    }
 
     // ── BRAIN CONTEXT ─────────────────────────────────────────────────
     let brainContext: { prompt: string; fileContents: { name: string; content: string }[] } | null = null;
@@ -1341,27 +1369,39 @@ const Dashboard = () => {
           .single();
         if (brain) {
           const fileContents: { name: string; content: string }[] = [];
+          // the whole brain rides every turn, so it is bounded: the text the
+          // library already extracted on this device, 80k per file, 120k in all
+          const BRAIN_FILE_CAP = 80_000;
+          const BRAIN_TOTAL_CAP = 120_000;
+          const cut: string[] = [];
+          let used = 0;
           if (brain.file_ids?.length) {
             const { data: files } = await supabase
               .from("library_files")
-              .select("file_name, storage_path, file_type")
+              .select("file_name, storage_path, file_type, extracted_text")
               .in("id", brain.file_ids);
             if (files) {
               for (const f of files) {
-                // Only load text-readable files as context
-                const isText =
-                  !f.file_type.startsWith("image/") &&
-                  !f.file_type.startsWith("video/") &&
-                  !f.file_type.startsWith("audio/");
-                if (isText) {
-                  const { data: blob } = await supabase.storage.from("library").download(f.storage_path);
-                  if (blob) {
-                    const text = await blob.text();
-                    fileContents.push({ name: f.file_name, content: text.slice(0, 80000) });
-                  }
+                if (used >= BRAIN_TOTAL_CAP) {
+                  cut.push(f.file_name);
+                  continue;
                 }
+                let text = typeof f.extracted_text === "string" ? f.extracted_text : "";
+                if (!text && (f.file_type.startsWith("text/") || /json|xml|csv|markdown/.test(f.file_type))) {
+                  const { data: blob } = await supabase.storage.from("library").download(f.storage_path);
+                  if (blob) text = await blob.text();
+                }
+                if (!text) continue;
+                const room = Math.min(BRAIN_FILE_CAP, BRAIN_TOTAL_CAP - used);
+                if (text.length > room) cut.push(f.file_name);
+                const slice = text.slice(0, room);
+                used += slice.length;
+                fileContents.push({ name: f.file_name, content: slice });
               }
             }
+          }
+          if (cut.length) {
+            thinkingStore.step(assistantId, "brain", `context is full; cut or trimmed: ${cut.join(", ")}`, "done");
           }
           brainContext = { prompt: brain.system_prompt || "", fileContents };
         }
@@ -1417,8 +1457,6 @@ const Dashboard = () => {
           role: "assistant",
           content: encryptedAssistant,
         });
-        const sug = await fetchSuggestions(bestContent);
-        setSuggestions(sug);
 
         const confLevel = result.confidence?.level || "medium";
         const successCount = successfulResponses.length;
@@ -1436,7 +1474,7 @@ const Dashboard = () => {
         setConversations((prev) =>
           prev.map((c) => (c.id === convId ? { ...c, messages: c.messages.filter((m) => m.id !== assistantId) } : c)),
         );
-        toast({ title: "Consensus Error", description: e.message, variant: "destructive" });
+        toast({ title: "the models could not compare", description: e.message, variant: "destructive" });
       }
       return;
     }
@@ -1455,14 +1493,6 @@ const Dashboard = () => {
         signal: controller.signal,
         // Ghost Chain phase 1 — reasoning streams into the transparency panel.
         onTools: (rows) => rows.forEach((r) => thinkingStore.step(assistantId, r.label, r.detail, "done")),
-        // A workspace opens because its organ ran — never because a keyword
-        // matched. The split happens after the tool cards land, so the
-        // operator sees what fired and where it went in the same beat.
-        onHands: (hands) => {
-          void import("@/lib/chat/hands").then(({ openHands }) => {
-            openHands(hands, (view) => setActiveView(view as DashboardView));
-          });
-        },
         onThinkingStart: () => thinkingStore.begin(assistantId),
         onThinkingDelta: (chunk) => thinkingStore.append(assistantId, chunk),
         onThinkingDone: () => thinkingStore.answering(assistantId),
@@ -1553,28 +1583,6 @@ const Dashboard = () => {
               console.error("Retry save also failed:", retryErr);
             }
           }
-          // A code write is the only thing that opens the workspace hand: real
-          // files with real paths, extracted from what the model actually
-          // returned. Chat stays the mouth — the diff and the approval gate
-          // live in the workspace, so nothing is written from here.
-          try {
-            const { extractZanoemCodeFiles } = await import("@/components/dashboard/zali/zanoemOutput");
-            const written = extractZanoemCodeFiles(assistantContent).filter(
-              (f) => f.filename && !/^snippet-\d+\./i.test(f.filename) && f.content?.trim(),
-            );
-            if (written.length > 0) {
-              const { queueIdeHandoff } = await import("@/lib/ide/chatHandoff");
-              if (queueIdeHandoff(written, content)) setActiveView("ide" as DashboardView);
-            }
-          } catch (handoffErr) {
-            console.warn("[chat] ide handoff skipped", handoffErr);
-          }
-          try {
-            const sug = await fetchSuggestions(assistantContent);
-            setSuggestions(sug);
-          } catch {
-            /* suggestions are non-critical */
-          }
           // learning half of the turn — gated, audited, never blocks the UI.
           const completedTurn = preparedTurn;
           if (completedTurn) {
@@ -1582,9 +1590,15 @@ const Dashboard = () => {
               .then(({ completeTurn }) => completeTurn(completedTurn, { ok: true, text: assistantContent }))
               .catch((e) => console.error("intelligence complete skipped:", e));
           }
+          // asherin.vault — what this turn taught shepherd about the operator. gated on the memory switch; never blocks the ui.
+          void import("@/lib/memory/vault")
+            .then(({ distillTurn }) =>
+              distillTurn({ conversationId: convId, userId: user.id, userText: content, assistantText: assistantContent }),
+            )
+            .catch((e) => console.warn("[vault] distill skipped:", e));
           pushNotification({
-            title: "Asherin responded",
-            message: assistantContent.slice(0, 80) + (assistantContent.length > 80 ? "…" : ""),
+            title: "shepherd answered",
+            message: "a reply landed in chat.",
             type: "success",
             actionLabel: "View",
             actionView: "chat",
@@ -1623,7 +1637,7 @@ const Dashboard = () => {
             /* best-effort save */
           }
         }
-        toast({ title: "Stopped", description: "Generation stopped. Partial response saved." });
+        toast({ title: "stopped", description: "the partial answer is kept." });
       } else {
         // Save partial content if we got any before the error
         if (isHoldCostume(assistantContent)) assistantContent = "";
@@ -1659,11 +1673,15 @@ const Dashboard = () => {
             death ||
             /failed to fetch|networkerror|load failed/i.test(body) ||
             /failed to fetch|networkerror|load failed/i.test(errMsg);
-          const keep = fetchDeath
-            ? "the connection dropped before the answer finished."
-            : body ||
-              (errMsg && !/failed to fetch|networkerror|load failed/i.test(errMsg) ? errMsg : "") ||
-              "no words came back from the model.";
+          const providerMsg = errMsg && !/failed to fetch|networkerror|load failed/i.test(errMsg) ? errMsg : "";
+          const keep = fetchDeath ? "the connection dropped before the answer finished." : body || "the model did not answer.";
+          // the provider's own words are an error, shown as one, with a retry — not shepherd's words
+          if (!body && (fetchDeath || providerMsg)) {
+            setChatError({
+              message: fetchDeath ? "the connection dropped before the answer finished." : providerMsg.slice(0, 300),
+              code: typeof e?.code === "string" ? e.code : undefined,
+            });
+          }
           setConversations((prev) =>
             prev.map((c) =>
               c.id === convId
@@ -1679,6 +1697,10 @@ const Dashboard = () => {
     }
   };
 
+  // the processor calls the send of the latest render, never a stale closure
+  const latestSendRef = useRef(sendMessageCore);
+  latestSendRef.current = sendMessageCore;
+
   // Queue processor — drains pending messages sequentially
   const processQueue = useCallback(async () => {
     if (processingQueue.current) return;
@@ -1692,11 +1714,7 @@ const Dashboard = () => {
       const next = pendingQueue.current.shift()!;
       // Remove from visible queue
       setQueueItems((prev) => (prev.length > 0 ? prev.slice(1) : prev));
-      const [convId, ...contentParts] = next.split("||");
-      const content = contentParts.join("||");
-      const fileAttachments = attachmentMapRef.current.get(content);
-      if (fileAttachments) attachmentMapRef.current.delete(content);
-      await sendMessageCore(content, convId, fileAttachments);
+      await latestSendRef.current(next.content, next.convId, next.attachments, { mode: next.mode, depth: next.depth });
       // Wait for streaming to finish before processing next
       await new Promise<void>((resolve) => {
         const check = () => {
@@ -1707,7 +1725,8 @@ const Dashboard = () => {
       });
     }
     processingQueue.current = false;
-  }, [user, mode, depth, userProfile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleQueuePause = useCallback(() => {
     setQueuePaused((prev) => {
@@ -1735,37 +1754,41 @@ const Dashboard = () => {
 
     // F-01 Auto-config: on the FIRST user message of a conversation, infer the
     // best Mode / Depth from intent keywords so users don't have to think about
-    // controls. Manual changes after the first message always win.
+    // controls. Manual changes after the first message always win. The inferred
+    // values ride with this message so they apply now, not to the next one.
+    let turnMode: ChatMode | undefined;
+    let turnDepth: ResponseDepth | undefined;
     try {
       const conv = conversations.find((c) => c.id === convId);
       const hasPriorUser = conv?.messages.some((m) => m.role === "user");
       if (!hasPriorUser) {
         const { inferChatConfig } = await import("@/lib/navIntents");
         const hint = inferChatConfig(content);
-        if (hint.mode && hint.mode !== mode) setMode(hint.mode as ChatMode);
-        if (hint.depth && hint.depth !== depth) setDepth(hint.depth as ResponseDepth);
+        if (hint.mode && hint.mode !== mode) {
+          turnMode = hint.mode as ChatMode;
+          setMode(turnMode);
+        }
+        if (hint.depth && hint.depth !== depth) {
+          turnDepth = hint.depth as ResponseDepth;
+          setDepth(turnDepth);
+        }
       }
     } catch {
       /* non-fatal */
     }
 
-    // Store attachments for the first message in a ref-based map
-    if (attachments?.length) {
-      attachmentMapRef.current.set(content, attachments);
-    }
+    const entry: QueuedSend = { id: crypto.randomUUID(), convId, content, attachments, mode: turnMode, depth: turnDepth };
     // If currently streaming, show queued status and add to queue
     if (isStreamingRef.current) {
-      const tempId = crypto.randomUUID();
-      const userMsg: Message = { id: tempId, role: "user", content, timestamp: new Date(), attachments };
+      const userMsg: Message = { id: entry.id, role: "user", content, timestamp: new Date(), attachments };
       setConversations((prev) => prev.map((c) => (c.id === convId ? { ...c, messages: [...c.messages, userMsg] } : c)));
-      setMessageStatuses((prev) => ({ ...prev, [tempId]: "queued" }));
-      const queueEntry = `${convId}||${content}`;
-      pendingQueue.current.push(queueEntry);
-      setQueueItems((prev) => [...prev, { id: tempId, content }]);
-      toast({ title: "Message queued", description: "Will send after current response completes." });
+      setMessageStatuses((prev) => ({ ...prev, [entry.id]: "queued" }));
+      pendingQueue.current.push(entry);
+      setQueueItems((prev) => [...prev, { id: entry.id, content }]);
+      toast({ title: "message queued", description: "it sends after the current reply." });
       return;
     }
-    pendingQueue.current.push(`${convId}||${content}`);
+    pendingQueue.current.push(entry);
     processQueue();
   };
 
@@ -1821,7 +1844,7 @@ const Dashboard = () => {
       .select()
       .single();
     if (error || !newConv) {
-      toast({ title: "Failed to create conversation", description: error?.message, variant: "destructive" });
+      toast({ title: "could not start a conversation", description: error?.message, variant: "destructive" });
       return;
     }
     const conv: Conversation = {
@@ -1843,9 +1866,10 @@ const Dashboard = () => {
     setSuggestions([]);
   };
 
+  // delete leaves the list at once but touches the store only after an undo window
+  const pendingDeletes = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const deleteConversation = async (id: string) => {
-    await supabase.from("messages").delete().eq("conversation_id", id);
-    await supabase.from("conversations").delete().eq("id", id);
+    const removed = conversations.find((c) => c.id === id);
     const remaining = conversations.filter((c) => c.id !== id);
     if (remaining.length === 0) {
       await newConversation();
@@ -1853,7 +1877,31 @@ const Dashboard = () => {
       setConversations(remaining);
       if (activeConvId === id) setActiveConvId(remaining[0].id);
     }
-    toast({ title: "Conversation deleted permanently" });
+    const timer = setTimeout(async () => {
+      pendingDeletes.current.delete(id);
+      await supabase.from("messages").delete().eq("conversation_id", id);
+      await supabase.from("conversations").delete().eq("id", id);
+    }, 6000);
+    pendingDeletes.current.set(id, timer);
+    toast({
+      title: "conversation deleted",
+      description: removed?.title,
+      action: React.createElement(
+        ToastAction,
+        {
+          altText: "undo delete",
+          onClick: () => {
+            const t = pendingDeletes.current.get(id);
+            if (!t || !removed) return;
+            clearTimeout(t);
+            pendingDeletes.current.delete(id);
+            setConversations((prev) => (prev.some((c) => c.id === id) ? prev : [removed, ...prev]));
+            setActiveConvId(id);
+          },
+        } as any,
+        "undo",
+      ) as any,
+    });
   };
 
   const archiveConversation = async (id: string) => {
@@ -1904,7 +1952,7 @@ const Dashboard = () => {
 
   const renderView = () => {
     // Gate map: view -> { component, title, description }
-    const gatedView = (view: DashboardView, Component: React.ComponentType, title: string, description: string) => {
+    const gatedView = (view: DashboardView, Component: React.ComponentType, title: string) => {
       if (canAccess(view))
         return (
           <ErrorBoundary>
@@ -1926,7 +1974,7 @@ const Dashboard = () => {
         return (
           <ErrorBoundary>
             <Suspense fallback={<LazyFallback />}>
-              <AsherPublishedTabRenderer name={a.name} entryHtml={a.entry_html || ""} />
+              <AsherPublishedTabRenderer name={a.name} entryHtml={a.entry_html || ""} agentId={(a as { metadata?: { zahten_agent_id?: string } }).metadata?.zahten_agent_id} />
             </Suspense>
           </ErrorBoundary>
         );
@@ -1934,39 +1982,25 @@ const Dashboard = () => {
     }
 
     switch (activeView) {
-      case "investigations":
-        return (
-          <ErrorBoundary>
-            <Suspense fallback={<LazyFallback />}>
-              <InvestigationWorkspace
-                investigationId={activeInvestigationId}
-                onSelect={setActiveInvestigationId}
-              />
-            </Suspense>
-          </ErrorBoundary>
-        );
       case "asherin-defender":
         return gatedView(
           "asherin-defender",
           AsherinDefenderView,
           "asherin.defender",
-          "your device, read honestly — 186 named protections across disks, files, network, wireless, bluetooth, browsers, extensions, apps, processes, accounts, updates, peripherals and remote sessions. the browser measures what a page can. anything nothing looked at reads unmeasured, never green.",
         );
       case "asherin-sentinel":
         return gatedView(
           "asherin-sentinel",
           SentinelView,
           "asherin.sentinel",
-          "an ambient watch — voices separated and learned, sounds tagged, every turn in one searchable timeline held on this device. it listens while this page is open; a browser cannot hold a microphone after its tab is gone.",
         );
-      case "asherin-eye":
+      case "asherin-adam":
         return (
-          <div className="asherin-eye-pane relative h-full min-h-0 w-full flex-1 overflow-hidden">
+          <div className="asherin-adam-pane relative h-full min-h-0 w-full flex-1 overflow-hidden">
             {gatedView(
-              "asherin-eye",
-              AsherinEyeView,
-              "asherin.eye",
-              "photoreal 3d globe with live public flights, sats, quakes, radio and osm sites. maps stays its own room.",
+              "asherin-adam",
+              AsherinAdamView,
+              "asherin.adam",
             )}
           </div>
         );
@@ -1975,70 +2009,49 @@ const Dashboard = () => {
           "asherin-health",
           AsherinHealthView,
           "asherin.health",
-          "your own anatomy, read from your own record: bloodwork, medication, genetics, exposures, surgery, family history, pain and live sensors. it explains and orients — it does not diagnose, and the record stays on your device.",
         );
       case "asherin-arvision":
         return gatedView(
           "asherin-arvision",
           AsherinArVisionView,
           "asherin.arvision",
-          "live camera hud with native frame intel and freeze. saved packets, the rf lattice and plate or vin public-index lookups run on your own model key.",
         );
       case "ghost-engine":
         return gatedView(
           "ghost-engine",
           AsherinxEngView,
           "asherinx.eng",
-          "public-index search over eighteen open indexes, with origin, identifier and the buffer.",
         );
       case "search":
         return gatedView(
           "search",
           AsherinSearchView,
           "asherin.search",
-          "discovery-first search: cert transparency, dns probes, orphan paths, archived captures, code leaks and identity pivots. free public sources; anything needing a paid key stays unmeasured with the reason.",
         );
       case "zali":
         return gatedView(
           "zali",
           ZaliView,
-          "ZANOEM Design Lab",
-          "Universal Design Intelligence — first-principles design from atoms to universes with cross-domain AI agents.",
-        );
-      case "community":
-        return gatedView(
-          "community",
-          CommunityView,
-          "Community",
-          "Join the community — ask questions, make requests, and vote on future features.",
+          "asherin.design",
         );
       case "azplen":
         return gatedView(
           "azplen",
           AsherinDataView,
-          "Asherin Data",
-          "The data intelligence platform — bring your data, ask in plain english, get an answer with evidence, a visual and what to watch next. Available on paid plans.",
+          "asherin.data",
         );
       // case "elion" removed
       case "briefing":
         return gatedView(
           "briefing",
           BriefingView,
-          "Intelligence Briefings",
-          "Personalized daily intelligence briefings — competitor tracking, regulatory monitoring, and market signals.",
+          "asherin.briefing",
         );
-      // Team is ungated: any seat may start a Team
-      // space, and an invited member must reach the accept screen before
-      // they hold any team entitlement at all.
-      case "teams":
-        return <TeamsView />;
-
       case "notebooks":
         return gatedView(
           "notebooks",
           NotebooksView,
-          "Intelligence Notebooks",
-          "Shared analysis sessions with versioning, scheduling, and collaborative editing.",
+          "asherin.notebooks",
         );
       // The old stats page and audit page were each half a room. They are one
       // activity panel now, free for everyone: it is your own record.
@@ -2054,30 +2067,20 @@ const Dashboard = () => {
         return gatedView(
           "zahten" as DashboardView,
           AsherZahtenModule,
-          "Zahten Agent Forge",
-          "Autonomous agent builder — design, scaffold, and harden production-grade automated agents. Available on the Chat plan and above.",
+          "asherin.agents",
         );
 
-      case "pattern-analysis":
-        return gatedView(
-          "pattern-analysis",
-          PatternAnalysisView,
-          "Pattern Analysis Engine",
-          "Data pattern recognition with visual graph forecasting. Available on Asherin Pro.",
-        );
       case "zerlal":
         return gatedView(
           "zerlal",
           ZerlalView,
           "asherin.cyber",
-          "Passive domain reconnaissance and public advisory context. Available on Asherin Pro.",
         );
       case "google":
         return gatedView(
           "google",
           GoogleIntelligenceView,
-          "Cloud Intelligence Mesh",
-          "Asherin turns your own connected accounts into a collection array: correspondent fusion, place cartography, attention ledger, commitment extraction, exposure and threat chaining.",
+          "asherin.google",
         );
       // case "imagine-intelligence" removed
       case "file-scrapper":
@@ -2085,7 +2088,6 @@ const Dashboard = () => {
           "file-scrapper",
           FileScrapperView,
           "File Scrapper",
-          "Upload unstructured documents and extract all text into a single downloadable TXT file. Available on Asherin and above.",
         );
 
       case "bug-reports":
@@ -2100,23 +2102,13 @@ const Dashboard = () => {
         return gatedView(
           "guardian-vault",
           GuardianVaultView,
-          "Guardian Vault",
-          "Sessions, MFA, audit trail, encrypted item storage, and Watchtower exposure review. Included on every paid plan.",
+          "guardian vault",
         );
       case "knowledge-vault":
         return gatedView(
           "knowledge-vault",
           KnowledgeVaultView,
-          "Knowledge Vault (RAG)",
-          "Private retrieval-augmented memory — upload files or connect APIs and Asherin will cite them automatically in every chat.",
-        );
-      case "gematria":
-        return (
-          <ErrorBoundary>
-            <Suspense fallback={<LazyFallback />}>
-              <GematriaView />
-            </Suspense>
-          </ErrorBoundary>
+          "asherin.knowledge",
         );
       // Always-accessible views
       case "library":
@@ -2204,14 +2196,11 @@ const Dashboard = () => {
             </Suspense>
           </ErrorBoundary>
         );
+      // The in-app editor is retired: the free ide lives at noah.asherin.com.
+      // The deep link answers like every other retired room instead of booting
+      // the old editor behind the operator's back.
       case "ide":
-        return (
-          <ErrorBoundary>
-            <Suspense fallback={<LazyFallback />}>
-              <AureonIdeView />
-            </Suspense>
-          </ErrorBoundary>
-        );
+        return <RetiredRoom title="asherin.ide" />;
       // asherin.pages — one document studio. The old slides / ebook / pdf deep
       // links still work: they simply open the studio on their own output type.
       case "pdf-generator":
@@ -2238,6 +2227,8 @@ const Dashboard = () => {
                 onDepthChange={handleDepthChange}
                 isStreaming={isStreaming}
                 suggestions={suggestions}
+                error={chatError}
+                onErrorDismiss={() => setChatError(null)}
                 onCalibrationFeedback={handleCalibrationFeedback}
                 onStopStreaming={stopStreaming}
                 focusMode={focusMode}
@@ -2257,12 +2248,15 @@ const Dashboard = () => {
                 onBrainChange={setActiveBrainId}
               />
             </div>
-            <PromptEnhancerPanel conversation={activeConv} />
+            {/* The enhancer is a desktop side rail; on a phone it would cover the conversation. */}
+            <div className="hidden lg:contents">
+              <PromptEnhancerPanel conversation={activeConv} />
+            </div>
           </div>
         ) : (
           <div className="flex h-full w-full items-center justify-center px-6">
             <div className="max-w-md text-center space-y-4">
-              <p className="font-mono text-[10px] tracking-[0.3em] uppercase text-foreground/40">◈ ASHERIN</p>
+              <p className="font-mono text-[10px] tracking-[0.2em] lowercase text-foreground/40">◈ asherin</p>
               <h2 className="text-xl font-extralight tracking-wide text-foreground">
                 {dashboardUi === "v2" ? "start with a question." : "Welcome to your workspace."}
               </h2>
@@ -2306,7 +2300,7 @@ const Dashboard = () => {
   if (!loaded) {
     return (
       <div className="flex h-dvh w-full items-center justify-center bg-background">
-        <div className="text-sm font-extralight tracking-[0.2em] text-muted-foreground animate-pulse">ASHERIN</div>
+        <div className="text-sm font-extralight tracking-[0.2em] text-muted-foreground animate-pulse motion-reduce:animate-none">asherin</div>
       </div>
     );
   }
@@ -2383,7 +2377,6 @@ const Dashboard = () => {
         `}</style>
       )}
 
-      {!focusMode && <IntelAlertCenter />}
 
       <div className="relative z-10 flex h-dvh">
         {!focusMode &&
@@ -2428,7 +2421,9 @@ const Dashboard = () => {
           ))}
 
         <main
-          className="flex flex-1 flex-col min-w-0 overflow-hidden h-full relative"
+          // On a phone the navigation button floats over the top-left corner;
+          // every room header starts below it instead of underneath it.
+          className="flex flex-1 flex-col min-w-0 overflow-hidden h-full relative pt-[calc(env(safe-area-inset-top,0px)+3.5rem)] lg:pt-0"
           onDragOver={(e) => {
             if (
               e.dataTransfer.types.includes("text/aureon-conversation-id") &&
@@ -2507,7 +2502,7 @@ const Dashboard = () => {
                   <div
                     data-asherin-room={[
                       "zerlal", "file-scrapper", "briefing", "azplen",
-                      "snippets", "zali", "slideshow", "ebook",
+                      "snippets", "zali", "pdf-generator", "slideshow", "ebook",
                     ].includes(String(activeView)) ? String(activeView) : undefined}
                     className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-border/20 bg-background/55 shadow-[0_24px_70px_-40px_hsl(var(--foreground)/0.55)] backdrop-blur-xl"
                   >

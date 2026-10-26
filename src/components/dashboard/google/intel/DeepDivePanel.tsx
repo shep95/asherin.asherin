@@ -45,19 +45,19 @@ const DeepDivePanel = ({ spec, observations, extraFindings, recentDays = 14, tit
   const temporal = spec.timestampsAreEvents !== false;
   const stats = temporal
     ? [
-        { label: spec.unitPlural.toUpperCase(), value: census.total.toLocaleString() },
-        { label: spec.entityNounPlural.toUpperCase(), value: census.entities.toLocaleString() },
-        { label: "SPAN", value: census.spanDays ? `${census.spanDays}d` : "—" },
-        { label: "RATE", value: census.total ? `${census.perDay}/day` : "—" },
+        { label: spec.unitPlural.toLowerCase(), value: census.total.toLocaleString() },
+        { label: spec.entityNounPlural.toLowerCase(), value: census.entities.toLocaleString() },
+        { label: "span", value: census.spanDays ? `${census.spanDays}d` : "—" },
+        { label: "rate", value: census.total ? `${census.perDay}/day` : "—" },
       ]
     : [
-        { label: spec.unitPlural.toUpperCase(), value: census.total.toLocaleString() },
-        { label: spec.entityNounPlural.toUpperCase(), value: census.entities.toLocaleString() },
+        { label: spec.unitPlural.toLowerCase(), value: census.total.toLocaleString() },
+        { label: spec.entityNounPlural.toLowerCase(), value: census.entities.toLocaleString() },
         {
-          label: "SPREAD",
+          label: "spread",
           value: census.entities ? `${(census.total / census.entities).toFixed(1)}/${spec.entityNoun}` : "—",
         },
-        { label: "BASIS", value: "STRUCTURAL" },
+        { label: "basis", value: "structural" },
       ];
 
   return (
@@ -70,13 +70,13 @@ const DeepDivePanel = ({ spec, observations, extraFindings, recentDays = 14, tit
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-light tracking-wide text-foreground">
-              {title ?? `${spec.module} — Deep Dive`}
+              {title ?? `${spec.module.toLowerCase()} — deep dive`}
             </h3>
             <p className="text-[11px] font-extralight text-muted-foreground leading-relaxed mt-0.5">
               {temporal
-                ? "Ten structural detectors run over this surface."
-                : "Three distribution detectors run over this surface."}{" "}
-              Findings appear only where the effect beats coincidence on the sample available.
+                ? "ten structural detectors run over this surface."
+                : "three distribution detectors run over this surface."}{" "}
+              findings appear only where the effect beats coincidence on the sample available.
             </p>
           </div>
         </div>
@@ -92,13 +92,13 @@ const DeepDivePanel = ({ spec, observations, extraFindings, recentDays = 14, tit
 
         {census.total > 0 && temporal && (
           <p className="text-[10px] font-extralight text-muted-foreground/60">
-            Observed {fmtDate(census.firstSeen)} → {fmtDate(census.lastSeen)}.
+            observed {fmtDate(census.firstSeen)} → {fmtDate(census.lastSeen)}.
           </p>
         )}
         {census.total > 0 && !temporal && (
           <p className="text-[10px] font-extralight text-muted-foreground/60">
-            Records on this surface carry a sync timestamp rather than an event time, so timing is
-            not interpreted here. Findings below rest on distribution alone.
+            records on this surface carry a sync timestamp rather than an event time, so timing is
+            not interpreted here. findings below rest on distribution alone.
           </p>
         )}
 
@@ -110,7 +110,7 @@ const DeepDivePanel = ({ spec, observations, extraFindings, recentDays = 14, tit
                 <div className="flex items-center gap-1.5">
                   <Sparkles className="h-3 w-3 text-foreground/50" aria-hidden />
                   <p className="text-[9px] tracking-[0.18em] text-muted-foreground/50 font-light">
-                    NEW TO THIS SURFACE ({census.novelEntities.length})
+                    new to this surface ({census.novelEntities.length})
                   </p>
                 </div>
                 <p className="text-[11px] font-extralight text-muted-foreground leading-relaxed break-words">
@@ -124,7 +124,7 @@ const DeepDivePanel = ({ spec, observations, extraFindings, recentDays = 14, tit
                 <div className="flex items-center gap-1.5">
                   <MoonStar className="h-3 w-3 text-foreground/50" aria-hidden />
                   <p className="text-[9px] tracking-[0.18em] text-muted-foreground/50 font-light">
-                    GONE QUIET ({census.dormantEntities.length})
+                    gone quiet ({census.dormantEntities.length})
                   </p>
                 </div>
                 <p className="text-[11px] font-extralight text-muted-foreground leading-relaxed break-words">
@@ -141,7 +141,7 @@ const DeepDivePanel = ({ spec, observations, extraFindings, recentDays = 14, tit
             <div className="flex items-center gap-1.5">
               <Layers className="h-3 w-3 text-foreground/40" aria-hidden />
               <p className="text-[9px] tracking-[0.18em] text-muted-foreground/40 font-light">
-                CONCENTRATION
+                concentration
               </p>
             </div>
             {census.topEntities.slice(0, 5).map((e) => (

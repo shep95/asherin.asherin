@@ -95,7 +95,7 @@ interface HistoryState {
 }
 
 const WALLPAPERS = ALL_WALLPAPERS.map((w) =>
-  w.key === "default" ? { ...w, label: "Current" } : w,
+  w.key === "default" ? { ...w, label: "current" } : w,
 );
 
 const COLORS = [
@@ -119,12 +119,12 @@ const COLORS = [
 const NOTE_COLORS = ["#fde68a", "#bfdbfe", "#fbcfe8", "#bbf7d0", "#fecaca", "#ddd6fe"];
 
 const SHAPE_TOOLS: { tool: Tool; icon: typeof Square; label: string }[] = [
-  { tool: "rect", icon: Square, label: "Rectangle" },
-  { tool: "circle", icon: CircleIcon, label: "Circle" },
-  { tool: "triangle", icon: Triangle, label: "Triangle" },
-  { tool: "diamond", icon: Diamond, label: "Diamond" },
-  { tool: "star", icon: Star, label: "Star" },
-  { tool: "line", icon: Minus, label: "Line" },
+  { tool: "rect", icon: Square, label: "rectangle" },
+  { tool: "circle", icon: CircleIcon, label: "circle" },
+  { tool: "triangle", icon: Triangle, label: "triangle" },
+  { tool: "diamond", icon: Diamond, label: "diamond" },
+  { tool: "star", icon: Star, label: "star" },
+  { tool: "line", icon: Minus, label: "line" },
 ];
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -132,14 +132,14 @@ const deepClone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 
-const createLayer = (name = "Topic 1"): WhiteboardLayer => ({
+const createLayer = (name = "topic 1"): WhiteboardLayer => ({
   id: uid(),
   name,
   visible: true,
 });
 
-const createBoard = (name = "Board 1"): WhiteboardBoard => {
-  const layer = createLayer("Topic 1");
+const createBoard = (name = "board 1"): WhiteboardBoard => {
+  const layer = createLayer("topic 1");
   return {
     id: uid(),
     name,
@@ -291,10 +291,10 @@ const parseNumbersFromText = (text: string) => {
 
 const normalizeBoard = (raw: Partial<WhiteboardBoard>, index: number): WhiteboardBoard => {
   const board = raw as WhiteboardBoard;
-  const layers = Array.isArray(board.layers) && board.layers.length ? board.layers : [createLayer(`Topic ${index + 1}`)];
+  const layers = Array.isArray(board.layers) && board.layers.length ? board.layers : [createLayer(`topic ${index + 1}`)];
   return {
     id: board.id || uid(),
-    name: board.name || `Board ${index + 1}`,
+    name: board.name || `board ${index + 1}`,
     wallpaperMode: board.wallpaperMode || "current",
     wallpaperKey: board.wallpaperKey || "aureon",
     wallpaperBlur: typeof board.wallpaperBlur === "number" ? board.wallpaperBlur : 10,
@@ -308,6 +308,43 @@ const normalizeBoard = (raw: Partial<WhiteboardBoard>, index: number): Whiteboar
   };
 };
 
+/**
+ * Boards persist as one encrypted string in localStorage, which browsers cap at
+ * roughly 5 mb per origin. A raw photo as a data url is 3–8 mb on its own, so
+ * every imported image is decoded and re-encoded at a bounded edge before it
+ * touches the board. A decode failure is an error the operator is told about,
+ * never a promise that hangs the import loop.
+ */
+export const IMAGE_LIMITS = { fileBytes: 25 * 1024 * 1024, maxEdge: 1600, placeW: 420, placeH: 320 } as const;
+
+async function shrinkImage(file: File): Promise<{ src: string; width: number; height: number }> {
+  if (file.size > IMAGE_LIMITS.fileBytes) throw new Error(`${file.name} is over 25 mb`);
+  const url = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new window.Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error(`${file.name} could not be decoded as an image`));
+      img.src = url;
+    });
+    const scale = Math.min(1, IMAGE_LIMITS.maxEdge / Math.max(image.width, image.height, 1));
+    const w = Math.max(1, Math.round(image.width * scale));
+    const h = Math.max(1, Math.round(image.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("this browser gave no 2d canvas");
+    ctx.drawImage(image, 0, 0, w, h);
+    const keepAlpha = file.type === "image/png" || file.type === "image/gif" || file.type === "image/svg+xml" || file.type === "image/webp";
+    const src = keepAlpha ? canvas.toDataURL("image/png") : canvas.toDataURL("image/jpeg", 0.86);
+    const fit = Math.min(IMAGE_LIMITS.placeW / w, IMAGE_LIMITS.placeH / h, 1);
+    return { src, width: w * fit, height: h * fit };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 const Whiteboard = () => {
   const { user } = useAuth();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -317,7 +354,12 @@ const Whiteboard = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const backgroundCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
-  const loadedRef = useRef(false);
+  // which storage key the boards in state were loaded for; null while a key is still being read.
+  // saving and draining the inbox both wait for it, so a slow decrypt can never be overwritten
+  // by the placeholder board and a drop can never land on a board that is about to be replaced.
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  // bumped when an image or wallpaper finishes decoding, so the canvas repaints without waiting for a gesture.
+  const [assetTick, setAssetTick] = useState(0);
   const dragSnapshotRef = useRef<WhiteboardElement | null>(null);
   // Wheel zoom must anchor on the cursor, which needs the CURRENT view in a
   // listener registered once. State read through refs, never a stale closure.
@@ -370,21 +412,16 @@ const Whiteboard = () => {
   useEffect(() => {
     const storageKey = `${STORAGE_NAMESPACE}:${storageUserKey}`;
     let cancelled = false;
+    setLoadedKey(null);
 
     const loadBoards = async () => {
       try {
         const raw = window.localStorage.getItem(storageKey);
-        if (!raw) {
-          loadedRef.current = true;
-          return;
-        }
+        if (!raw) return;
 
         const decrypted = await decryptText(raw, storageUserKey);
         const parsed = JSON.parse(decrypted) as { boards?: Partial<WhiteboardBoard>[]; activeBoardId?: string; activeLayerId?: string | null };
-        if (cancelled || !parsed.boards?.length) {
-          loadedRef.current = true;
-          return;
-        }
+        if (cancelled || !parsed.boards?.length) return;
 
         const normalized = parsed.boards.map((board, index) => normalizeBoard(board, index));
         const fallbackBoard = normalized[0];
@@ -397,12 +434,26 @@ const Whiteboard = () => {
             : resolvedBoard.layers[0]?.id || null,
         );
       } catch {
+        if (cancelled) return;
+        // The stored boards could not be opened. They are moved aside, never
+        // overwritten: a fresh board starts, and the unreadable copy stays
+        // under a dated key so nothing is silently destroyed by a bad decrypt.
+        try {
+          const raw = window.localStorage.getItem(storageKey);
+          if (raw) {
+            window.localStorage.setItem(`${storageKey}:unreadable:${Date.now()}`, raw);
+            window.localStorage.removeItem(storageKey);
+          }
+        } catch {
+          /* storage refused the copy; the fresh board still starts */
+        }
         const resetBoard = createBoard();
         setBoards([resetBoard]);
         setActiveBoardId(resetBoard.id);
         setActiveLayerId(resetBoard.layers[0]?.id ?? null);
+        setExportNotice("the stored boards could not be opened on this device — a copy was kept and a fresh board started");
       } finally {
-        loadedRef.current = true;
+        if (!cancelled) setLoadedKey(storageUserKey);
       }
     };
 
@@ -413,7 +464,8 @@ const Whiteboard = () => {
   }, [storageUserKey]);
 
   useEffect(() => {
-    if (!loadedRef.current) return;
+    // never save boards that belong to another key, or before this key has been read
+    if (loadedKey !== storageUserKey) return;
     const storageKey = `${STORAGE_NAMESPACE}:${storageUserKey}`;
     // Debounce persistence so we don't encrypt + serialize on every pointermove
     // while drawing — that was the primary cause of stroke lag.
@@ -424,12 +476,20 @@ const Whiteboard = () => {
           storageUserKey,
         );
         window.localStorage.setItem(storageKey, encrypted);
-      } catch {
-        /* ignore — next change will retry */
+        setExportNotice((current) => (current && current.startsWith("board not saved") ? null : current));
+      } catch (error) {
+        // a silent failure here is the worst outcome on the board: the operator
+        // keeps drawing into a board that will be gone on reload.
+        const quota = error instanceof DOMException && (error.name === "QuotaExceededError" || error.code === 22);
+        setExportNotice(
+          quota
+            ? "board not saved — this browser's storage is full. remove an image or export the board as json"
+            : "board not saved — the next change will try again",
+        );
       }
     }, 600);
     return () => window.clearTimeout(handle);
-  }, [boards, activeBoardId, activeLayerId, storageUserKey]);
+  }, [boards, activeBoardId, activeLayerId, storageUserKey, loadedKey]);
 
   useEffect(() => {
     viewRef.current = { zoom, panX: panOffset.x, panY: panOffset.y };
@@ -614,7 +674,7 @@ const Whiteboard = () => {
       // A blank sketch series. The board never fabricates a data feed — the
       // operator types the numbers, or drops a real series onto the canvas.
       series: [],
-      text: "Sketch series",
+      text: "sketch series",
     };
     updateActiveBoardElements((elements) => [...elements, chart]);
     setSelectedElementId(chart.id);
@@ -737,7 +797,7 @@ const Whiteboard = () => {
         } else {
           const exported = boardToSvg(activeBoard);
           if (!exported) {
-            notify("Nothing on this board to export yet");
+            notify("nothing on this board to export yet");
             return;
           }
           if (format === "svg") {
@@ -746,7 +806,7 @@ const Whiteboard = () => {
             downloadBlob(await svgToPngBlob(exported.svg, exported.bounds.w, exported.bounds.h, 2), `${base}.png`);
           }
         }
-        notify(`Exported ${base}.${format}`);
+        notify(`exported ${base}.${format}`);
         void emitPull({
           organ: "whiteboard",
           capability: "export",
@@ -755,7 +815,7 @@ const Whiteboard = () => {
           quote: `${format} · ${activeBoard.elements.length} objects`,
         });
       } catch (error) {
-        notify("Export failed");
+        notify(error instanceof Error ? `export failed — ${error.message}` : "export failed");
         void emitPull({
           organ: "whiteboard",
           capability: "export",
@@ -773,16 +833,16 @@ const Whiteboard = () => {
       try {
         const parsed = parseBoardJson(await file.text());
         if (!parsed) {
-          notify("That file is not an Asherin board");
+          notify("that file is not an asherin board export");
           return;
         }
         pushHistory();
         setBoards((previous) => [...previous, parsed]);
         setActiveBoardId(parsed.id);
         setActiveLayerId(parsed.layers[0]?.id || null);
-        notify(`Imported ${parsed.name}`);
+        notify(`imported ${parsed.name}`);
       } catch {
-        notify("Could not read that board file");
+        notify("that board file could not be read");
       }
     },
     [notify, pushHistory],
@@ -825,14 +885,16 @@ const Whiteboard = () => {
     [activeBoardId, activeLayerId, boards, notify, pushHistory, updateActiveBoardElements],
   );
 
-  // Drops queued before the board finished decrypting are flushed once, here.
+  // Drops queued before the board finished decrypting are flushed once, here —
+  // and only once the boards for THIS key are in state, or the drop would land
+  // on the placeholder board and vanish when the stored boards replace it.
   useEffect(() => {
-    if (!loadedRef.current) return;
+    if (loadedKey !== storageUserKey) return;
     applyDrops(consumeBoardDrops());
     const onDrop = () => applyDrops(consumeBoardDrops());
     window.addEventListener(BOARD_DROP_EVENT, onDrop);
     return () => window.removeEventListener(BOARD_DROP_EVENT, onDrop);
-  }, [applyDrops]);
+  }, [applyDrops, loadedKey, storageUserKey]);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const rawPoint = getCanvasPoint(event.clientX, event.clientY, false);
@@ -939,7 +1001,7 @@ const Whiteboard = () => {
           h: 0,
           color: "rgba(255,255,255,0.3)",
           width: 1.5,
-          title: `Frame ${activeBoard.elements.filter((element) => element.type === "frame").length + 1}`,
+          title: `frame ${activeBoard.elements.filter((element) => element.type === "frame").length + 1}`,
         },
       ]);
       setIsDrawing(true);
@@ -1136,42 +1198,33 @@ const Whiteboard = () => {
 
     for (const file of files) {
       if (file.type.startsWith("image/")) {
-        const imageUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result || ""));
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-
-        const dimensions = await new Promise<{ width: number; height: number }>((resolve) => {
-          const image = new window.Image();
-          image.onload = () => {
-            const scale = Math.min(420 / image.width, 320 / image.height, 1);
-            resolve({ width: image.width * scale, height: image.height * scale });
-          };
-          image.src = imageUrl;
-        });
-
-        const point = getViewCenter(true);
-        updateActiveBoardElements((elements) => [
-          ...elements,
-          {
-            id: uid(),
-            layerId: activeLayerId,
-            type: "image",
-            src: imageUrl,
-            x: point.x,
-            y: point.y,
-            imgWidth: dimensions.width,
-            imgHeight: dimensions.height,
-            borderRadius: 16,
-          },
-        ]);
+        try {
+          const shrunk = await shrinkImage(file);
+          const point = getViewCenter(true);
+          updateActiveBoardElements((elements) => [
+            ...elements,
+            {
+              id: uid(),
+              layerId: activeLayerId,
+              type: "image",
+              src: shrunk.src,
+              x: point.x,
+              y: point.y,
+              imgWidth: shrunk.width,
+              imgHeight: shrunk.height,
+              borderRadius: 16,
+            },
+          ]);
+          traceCreate("image");
+        } catch (error) {
+          notify(error instanceof Error ? error.message : `${file.name} could not be placed`);
+        }
         continue;
       }
 
       if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
-        createDocumentElement(file.name, "PDF", "Imported onto canvas");
+        // the pages are not read here; the card is a placeholder that says so
+        createDocumentElement(file.name, "pdf", "placed as a card — the pages are not read on the board");
         continue;
       }
 
@@ -1198,12 +1251,11 @@ const Whiteboard = () => {
             fillColor,
             chartType: "line",
             series: numbers.slice(0, 10),
-            live: true,
             text: file.name,
           },
         ]);
       } else {
-        createDocumentElement(file.name, file.type || "File", text.slice(0, 180));
+        createDocumentElement(file.name, file.type || "file", text.slice(0, 180));
       }
     }
 
@@ -1260,8 +1312,9 @@ const Whiteboard = () => {
   useEffect(() => {
     const handleKeyDown = async (event: KeyboardEvent) => {
       const activeTag = (document.activeElement as HTMLElement | null)?.tagName;
-      const isTyping = activeTag === "TEXTAREA" || activeTag === "INPUT";
-      if (draftEditor && isTyping) return;
+      const isTyping = activeTag === "TEXTAREA" || activeTag === "INPUT" || activeTag === "SELECT";
+      // typing anywhere (layer name, series values, the draft editor) is never a board shortcut
+      if (isTyping) return;
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
         event.preventDefault();
@@ -1277,13 +1330,9 @@ const Whiteboard = () => {
         return;
       }
 
-      if (event.key === "Backspace") {
-        event.preventDefault();
-        undo();
-        return;
-      }
-
-      if (event.key === "Delete" && selectedElementId) {
+      // backspace deletes the selection like every editor the operator knows;
+      // undo stays on ⌘/ctrl+z and the toolbar.
+      if ((event.key === "Backspace" || event.key === "Delete") && selectedElementId) {
         event.preventDefault();
         deleteSelected();
         return;
@@ -1296,7 +1345,7 @@ const Whiteboard = () => {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [clearSelection, deleteSelected, draftEditor, redo, selectedElement, selectedElementId, undo]);
+  }, [clearSelection, deleteSelected, redo, selectedElement, selectedElementId, undo]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -1380,7 +1429,10 @@ const Whiteboard = () => {
       } else {
         const image = new window.Image();
         image.src = wallpaperSource;
-        image.onload = () => backgroundCacheRef.current.set(wallpaperSource, image);
+        image.onload = () => {
+          backgroundCacheRef.current.set(wallpaperSource, image);
+          setAssetTick((tick) => tick + 1);
+        };
       }
     }
 
@@ -1447,7 +1499,7 @@ const Whiteboard = () => {
         context.stroke();
         context.fillStyle = "rgba(255,255,255,0.62)";
         context.font = `400 12px ${FONT_FAMILIES.Mono}`;
-        context.fillText(element.title || "Frame", rectData.x + 4, rectData.y - 10);
+        context.fillText(element.title || "frame", rectData.x + 4, rectData.y - 10);
         context.restore();
       }
 
@@ -1547,7 +1599,10 @@ const Whiteboard = () => {
         if (!image) {
           image = new window.Image();
           image.src = element.src;
-          image.onload = () => imageCacheRef.current.set(element.id, image as HTMLImageElement);
+          image.onload = () => {
+            imageCacheRef.current.set(element.id, image as HTMLImageElement);
+            setAssetTick((tick) => tick + 1);
+          };
           imageCacheRef.current.set(element.id, image);
         }
         if (image.complete) {
@@ -1575,12 +1630,12 @@ const Whiteboard = () => {
         context.stroke();
         context.fillStyle = "rgba(255,255,255,0.92)";
         context.font = `600 14px ${FONT_FAMILIES.Sans}`;
-        context.fillText(element.fileName || "Imported file", x + 18, y + 30);
+        context.fillText(element.fileName || "imported file", x + 18, y + 30);
         context.fillStyle = "rgba(255,255,255,0.45)";
         context.font = `400 12px ${FONT_FAMILIES.Mono}`;
-        context.fillText(element.fileType || "Document", x + 18, y + 52);
+        context.fillText(element.fileType || "document", x + 18, y + 52);
         context.font = `400 12px ${FONT_FAMILIES.Sans}`;
-        const preview = (element.preview || "Dropped onto the canvas").slice(0, 120);
+        const preview = (element.preview || "dropped onto the board").slice(0, 120);
         context.fillText(preview, x + 18, y + 84, width - 36);
         context.restore();
       }
@@ -1601,7 +1656,7 @@ const Whiteboard = () => {
         context.stroke();
         context.fillStyle = "rgba(255,255,255,0.9)";
         context.font = `600 14px ${FONT_FAMILIES.Sans}`;
-        context.fillText(element.text || "Sketch series", x + 18, y + 30);
+        context.fillText(element.text || "sketch series", x + 18, y + 30);
         context.fillStyle = "rgba(255,255,255,0.45)";
         context.font = `400 11px ${FONT_FAMILIES.Mono}`;
         context.fillText(
@@ -1754,7 +1809,7 @@ const Whiteboard = () => {
     }
 
     context.restore();
-  }, [activeBoard, fillColor, laserTrail, panOffset.x, panOffset.y, paneSize.h, paneSize.w, selectedElementId, zoom]);
+  }, [activeBoard, assetTick, fillColor, laserTrail, panOffset.x, panOffset.y, paneSize.h, paneSize.w, selectedElementId, zoom]);
 
   const boardScreenPoint = draftEditor ? toScreenPoint({ x: draftEditor.x, y: draftEditor.y }) : null;
   const activeLayer = activeBoard?.layers.find((layer) => layer.id === activeLayerId) || null;
@@ -1776,7 +1831,7 @@ const Whiteboard = () => {
       >
         <div className="pointer-events-auto flex items-center gap-4">
           <div className="flex items-center gap-2 rounded-xl border border-border/30 bg-card/55 px-3 py-2 backdrop-blur-xl">
-            <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/60">Board</span>
+            <span className="text-[10px] tracking-[0.25em] text-muted-foreground/60">board</span>
             <select
               value={activeBoard?.id || ""}
               onChange={(event) => {
@@ -1787,6 +1842,7 @@ const Whiteboard = () => {
                 clearSelection();
               }}
               className="bg-transparent text-sm text-foreground outline-none"
+              aria-label="active board"
             >
               {boards.map((board) => (
                 <option key={board.id} value={board.id} className="bg-background text-foreground">
@@ -1796,7 +1852,7 @@ const Whiteboard = () => {
             </select>
             <button
               onClick={() => {
-                const nextBoard = createBoard(`Board ${boards.length + 1}`);
+                const nextBoard = createBoard(`board ${boards.length + 1}`);
                 pushHistory();
                 setBoards((previous) => [...previous, nextBoard]);
                 setActiveBoardId(nextBoard.id);
@@ -1805,13 +1861,13 @@ const Whiteboard = () => {
               }}
               className="rounded-lg border border-border/30 px-2 py-1 text-[11px] text-foreground hover:bg-foreground/5"
             >
-              New
+              new board
             </button>
           </div>
         </div>
         <div className="hidden md:flex items-center gap-2 rounded-xl border border-border/25 bg-card/45 px-3 py-2 backdrop-blur-xl pointer-events-auto">
           <Lock className="h-3.5 w-3.5 text-emerald-400/80" />
-          <span className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground/70">Encrypted boards</span>
+          <span className="text-[10px] tracking-[0.22em] text-muted-foreground/70">encrypted on this device</span>
         </div>
       </div>
 
@@ -1824,14 +1880,14 @@ const Whiteboard = () => {
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 4rem)" }}
       >
         <div className="flex flex-wrap items-center justify-center gap-1.5 rounded-[1.6rem] border border-border/30 bg-card/75 px-3 py-2 shadow-2xl backdrop-blur-2xl">
-        <button onClick={() => setTool("select")} className={toolButton(tool === "select")} title="Select"><MousePointer className="h-4 w-4" /></button>
-        <button onClick={() => setTool("pen")} className={toolButton(tool === "pen")} title="Pen"><Pencil className="h-4 w-4" /></button>
-        <button onClick={() => setTool("text")} className={toolButton(tool === "text")} title="Text"><Type className="h-4 w-4" /></button>
-        <button onClick={() => setTool("sticky")} className={toolButton(tool === "sticky")} title="Sticky"><span className="text-xs">Note</span></button>
-        <button onClick={() => setTool("eraser")} className={toolButton(tool === "eraser")} title="Eraser"><Eraser className="h-4 w-4" /></button>
-        <button onClick={() => setTool("pan")} className={toolButton(tool === "pan")} title="Pan"><Move className="h-4 w-4" /></button>
+        <button onClick={() => setTool("select")} className={toolButton(tool === "select")} title="select"><MousePointer className="h-4 w-4" /></button>
+        <button onClick={() => setTool("pen")} className={toolButton(tool === "pen")} title="pen"><Pencil className="h-4 w-4" /></button>
+        <button onClick={() => setTool("text")} className={toolButton(tool === "text")} title="text"><Type className="h-4 w-4" /></button>
+        <button onClick={() => setTool("sticky")} className={toolButton(tool === "sticky")} title="sticky note" aria-pressed={tool === "sticky"}><span className="text-xs">note</span></button>
+        <button onClick={() => setTool("eraser")} className={toolButton(tool === "eraser")} title="eraser"><Eraser className="h-4 w-4" /></button>
+        <button onClick={() => setTool("pan")} className={toolButton(tool === "pan")} title="pan"><Move className="h-4 w-4" /></button>
         <div className="relative">
-          <button onClick={() => setSelectedShapeMenu((previous) => !previous)} className={toolButton(isShapeTool)} title="Shapes">
+          <button onClick={() => setSelectedShapeMenu((previous) => !previous)} className={toolButton(isShapeTool)} title="shapes">
             <Square className="h-4 w-4" />
             <ChevronDown className="ml-1 inline h-3 w-3" />
           </button>
@@ -1853,15 +1909,15 @@ const Whiteboard = () => {
             </div>
           )}
         </div>
-        <button onClick={() => setTool("frame")} className={toolButton(tool === "frame")} title="Frame"><FrameIcon className="h-4 w-4" /></button>
-        <button onClick={() => setTool("arrow")} className={toolButton(tool === "arrow")} title="Arrow (binds to objects)"><ArrowRight className="h-4 w-4" /></button>
-        <button onClick={undo} className={toolButton(false)} title="Undo"><Undo2 className="h-4 w-4" /></button>
-        <button onClick={redo} className={toolButton(false)} title="Redo"><Redo2 className="h-4 w-4" /></button>
+        <button onClick={() => setTool("frame")} className={toolButton(tool === "frame")} title="frame"><FrameIcon className="h-4 w-4" /></button>
+        <button onClick={() => setTool("arrow")} className={toolButton(tool === "arrow")} title="arrow — its ends bind to the objects they touch"><ArrowRight className="h-4 w-4" /></button>
+        <button onClick={undo} className={toolButton(false)} title="undo"><Undo2 className="h-4 w-4" /></button>
+        <button onClick={redo} className={toolButton(false)} title="redo"><Redo2 className="h-4 w-4" /></button>
           <button
             onClick={() => setMoreToolsOpen((previous) => !previous)}
             className={`${toolButton(moreToolsOpen)} lg:hidden`}
             aria-expanded={moreToolsOpen}
-            title="More tools"
+            title="more tools"
           >
             <MoreHorizontal className="h-4 w-4" />
           </button>
@@ -1869,12 +1925,12 @@ const Whiteboard = () => {
         <div
           className={`${moreToolsOpen ? "flex" : "hidden"} lg:flex flex-wrap items-center justify-center gap-1.5 rounded-[1.6rem] border border-border/30 bg-card/75 px-3 py-2 shadow-2xl backdrop-blur-2xl`}
         >
-        <button onClick={() => setTool("marker")} className={toolButton(tool === "marker")} title="Marker"><span className="text-xs">Marker</span></button>
-        <button onClick={() => setTool("highlighter")} className={toolButton(tool === "highlighter")} title="Highlighter"><span className="text-xs">Highlight</span></button>
-        <button onClick={() => setTool("laser")} className={toolButton(tool === "laser")} title="Laser"><span className="text-xs">Laser</span></button>
-        <button onClick={() => createChartElement()} className={toolButton(false)} title="Insert sketch series"><span className="text-xs">Chart</span></button>
+        <button onClick={() => setTool("marker")} className={toolButton(tool === "marker")} title="marker" aria-pressed={tool === "marker"}><span className="text-xs">marker</span></button>
+        <button onClick={() => setTool("highlighter")} className={toolButton(tool === "highlighter")} title="highlighter" aria-pressed={tool === "highlighter"}><span className="text-xs">highlight</span></button>
+        <button onClick={() => setTool("laser")} className={toolButton(tool === "laser")} title="laser pointer — leaves no mark" aria-pressed={tool === "laser"}><span className="text-xs">laser</span></button>
+        <button onClick={() => createChartElement()} className={toolButton(false)} title="insert a hand-entered series"><span className="text-xs">chart</span></button>
         <div className="relative">
-          <button onClick={() => setExportMenuOpen((previous) => !previous)} className={toolButton(exportMenuOpen)} title="Export board">
+          <button onClick={() => setExportMenuOpen((previous) => !previous)} className={toolButton(exportMenuOpen)} title="export board">
             <Download className="h-4 w-4" />
           </button>
           {exportMenuOpen && (
@@ -1885,14 +1941,14 @@ const Whiteboard = () => {
                   onClick={() => void handleExport(format)}
                   className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs text-foreground/80 hover:bg-foreground/5"
                 >
-                  <span>Export {format.toUpperCase()}</span>
+                  <span>export {format}</span>
                 </button>
               ))}
               <button
                 onClick={() => { setExportMenuOpen(false); importInputRef.current?.click(); }}
                 className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-foreground/80 hover:bg-foreground/5"
               >
-                <Upload className="h-3.5 w-3.5" /> Import JSON
+                <Upload className="h-3.5 w-3.5" /> import a board (json)
               </button>
             </div>
           )}
@@ -1908,7 +1964,7 @@ const Whiteboard = () => {
             if (file) void handleImportBoard(file);
           }}
         />
-        <button onClick={() => fileInputRef.current?.click()} className={toolButton(false)} title="Import PDF, image, spreadsheet"><ImageIcon className="h-4 w-4" /></button>
+        <button onClick={() => fileInputRef.current?.click()} className={toolButton(false)} title="place an image, pdf, csv or text file"><ImageIcon className="h-4 w-4" /></button>
         <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,.csv,.json,.txt,.xls,.xlsx" className="hidden" onChange={handleImportFiles} />
         <div className="mx-1 h-6 w-px bg-border/25" />
 
@@ -1927,8 +1983,8 @@ const Whiteboard = () => {
 
         {isShapeTool && (
           <div className="flex items-center gap-1 rounded-xl border border-border/20 bg-background/40 px-2 py-1">
-            <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/70">Fill</span>
-            <button onClick={() => setFillColor("transparent")} className={`rounded-lg px-2 py-1 text-[10px] ${fillColor === "transparent" ? "bg-foreground/10 text-foreground" : "text-muted-foreground"}`}>None</button>
+            <span className="text-[10px] tracking-[0.2em] text-muted-foreground/70">fill</span>
+            <button onClick={() => setFillColor("transparent")} className={`rounded-lg px-2 py-1 text-[10px] ${fillColor === "transparent" ? "bg-foreground/10 text-foreground" : "text-muted-foreground"}`}>none</button>
             <input value={fillColor === "transparent" ? "#3b82f6" : fillColor} onChange={(event) => setFillColor(event.target.value)} type="color" className="h-6 w-6 rounded bg-transparent" />
           </div>
         )}
@@ -1944,9 +2000,9 @@ const Whiteboard = () => {
           onChange={(event) => updateActiveBoard((board) => ({ ...board, gridMode: event.target.value as GridMode }))}
           className="rounded-xl border border-border/20 bg-background/40 px-3 py-2 text-xs text-foreground outline-none"
         >
-          <option value="freeform">Freeform grid</option>
-          <option value="dots">Dot grid</option>
-          <option value="square">Square grid</option>
+          <option value="freeform">no grid</option>
+          <option value="dots">dot grid</option>
+          <option value="square">square grid</option>
         </select>
 
         <select
@@ -1954,19 +2010,21 @@ const Whiteboard = () => {
           onChange={(event) => updateActiveBoard((board) => ({ ...board, snapMode: event.target.value as GridMode }))}
           className="rounded-xl border border-border/20 bg-background/40 px-3 py-2 text-xs text-foreground outline-none"
         >
-          <option value="freeform">Free snap</option>
-          <option value="dots">Snap dots</option>
-          <option value="square">Snap square</option>
+          <option value="freeform">no snap</option>
+          <option value="dots">snap to dots</option>
+          <option value="square">snap to squares</option>
         </select>
 
         <button
           onClick={() => updateActiveBoard((board) => ({ ...board, smartShapes: !board.smartShapes }))}
           className={`rounded-xl border px-3 py-2 text-xs ${activeBoard?.smartShapes ? "border-foreground/25 bg-foreground/10 text-foreground" : "border-border/25 text-muted-foreground"}`}
+          aria-pressed={!!activeBoard?.smartShapes}
+          title="a drawn loop becomes a circle or box; a straight stroke becomes a line"
         >
-          Smart shape
+          smart shape
         </button>
 
-        <button onClick={() => setBackgroundPanelOpen((previous) => !previous)} className={toolButton(backgroundPanelOpen)} title="Wallpapers">
+        <button onClick={() => setBackgroundPanelOpen((previous) => !previous)} className={toolButton(backgroundPanelOpen)} title="wallpapers">
           <Wallpaper className="h-4 w-4" />
         </button>
 
@@ -1977,7 +2035,7 @@ const Whiteboard = () => {
             clearSelection();
           }}
           className="rounded-xl border border-transparent px-2.5 py-2 text-muted-foreground transition-colors hover:border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
-          title="Clear board"
+          title="clear board"
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -1992,18 +2050,18 @@ const Whiteboard = () => {
           />
           <div className="absolute top-[10.5rem] lg:top-[7.4rem] left-3 right-3 z-40 mx-auto max-h-[70%] overflow-y-auto w-auto max-w-[720px] rounded-[1.4rem] border border-border/30 bg-card/82 p-4 shadow-2xl backdrop-blur-2xl">
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <button onClick={() => updateActiveBoard((board) => ({ ...board, wallpaperMode: "dark" }))} className={`rounded-xl px-3 py-2 text-xs ${activeBoard.wallpaperMode === "dark" ? "bg-foreground/10 text-foreground" : "bg-background/40 text-muted-foreground"}`}>Dark board</button>
-              <button onClick={() => updateActiveBoard((board) => ({ ...board, wallpaperMode: "current" }))} className={`rounded-xl px-3 py-2 text-xs ${activeBoard.wallpaperMode === "current" ? "bg-foreground/10 text-foreground" : "bg-background/40 text-muted-foreground"}`}>Current wallpaper</button>
-              <button onClick={() => updateActiveBoard((board) => ({ ...board, wallpaperMode: "wallpaper" }))} className={`rounded-xl px-3 py-2 text-xs ${activeBoard.wallpaperMode === "wallpaper" ? "bg-foreground/10 text-foreground" : "bg-background/40 text-muted-foreground"}`}>Wallpaper library</button>
+              <button onClick={() => updateActiveBoard((board) => ({ ...board, wallpaperMode: "dark" }))} className={`rounded-xl px-3 py-2 text-xs ${activeBoard.wallpaperMode === "dark" ? "bg-foreground/10 text-foreground" : "bg-background/40 text-muted-foreground"}`}>dark board</button>
+              <button onClick={() => updateActiveBoard((board) => ({ ...board, wallpaperMode: "current" }))} className={`rounded-xl px-3 py-2 text-xs ${activeBoard.wallpaperMode === "current" ? "bg-foreground/10 text-foreground" : "bg-background/40 text-muted-foreground"}`}>current wallpaper</button>
+              <button onClick={() => updateActiveBoard((board) => ({ ...board, wallpaperMode: "wallpaper" }))} className={`rounded-xl px-3 py-2 text-xs ${activeBoard.wallpaperMode === "wallpaper" ? "bg-foreground/10 text-foreground" : "bg-background/40 text-muted-foreground"}`}>wallpaper library</button>
               <div className="ml-auto flex items-center gap-2">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/60">Blur</span>
+                <span className="text-[10px] tracking-[0.2em] text-muted-foreground/60">blur</span>
                 <input type="range" min="0" max="24" value={activeBoard.wallpaperBlur} onChange={(event) => updateActiveBoard((board) => ({ ...board, wallpaperBlur: Number(event.target.value) }))} />
               </div>
               <button
                 onClick={() => setBackgroundPanelOpen(false)}
                 className="rounded-xl border border-border/20 px-3 py-2 text-xs text-muted-foreground hover:text-foreground"
               >
-                Close
+                close
               </button>
             </div>
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
@@ -2014,7 +2072,7 @@ const Whiteboard = () => {
                   className={`overflow-hidden rounded-2xl border-2 ${activeBoard.wallpaperKey === wallpaper.key && activeBoard.wallpaperMode === "wallpaper" ? "border-foreground/60" : "border-border/20"}`}
                 >
                   <img src={wallpaper.src} alt={`${wallpaper.label} whiteboard wallpaper`} className="h-20 w-full object-cover" loading="lazy" />
-                  <div className="bg-background/80 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{wallpaper.label}</div>
+                  <div className="bg-background/80 px-2 py-1 text-[10px] lowercase tracking-[0.18em] text-muted-foreground">{wallpaper.label}</div>
                 </button>
               ))}
             </div>
@@ -2024,11 +2082,11 @@ const Whiteboard = () => {
 
       {selectedElement && (
         <div className="absolute top-[10.5rem] lg:top-[7.4rem] left-3 right-3 lg:right-auto z-40 flex flex-wrap items-center gap-2 rounded-[1.25rem] border border-border/30 bg-card/78 px-4 py-3 shadow-2xl backdrop-blur-2xl">
-          <span className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground/60">Selected</span>
+          <span className="text-[10px] tracking-[0.22em] text-muted-foreground/60">selected</span>
           {selectedImage && (
             <>
-              <span className="text-xs text-foreground">Image</span>
-              <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/60">Roundness</span>
+              <span className="text-xs text-foreground">image</span>
+              <span className="text-[10px] tracking-[0.18em] text-muted-foreground/60">corners</span>
               <input
                 type="range"
                 min="0"
@@ -2036,23 +2094,23 @@ const Whiteboard = () => {
                 value={selectedImage.borderRadius || 0}
                 onChange={(event) => updateSelectedElement((element) => ({ ...element, borderRadius: Number(event.target.value) }))}
               />
-              <button onClick={() => updateSelectedElement((element) => ({ ...element, imgWidth: (element.imgWidth || 260) * 1.12, imgHeight: (element.imgHeight || 180) * 1.12 }))} className="rounded-lg border border-border/20 px-2 py-1 text-xs text-foreground">Bigger</button>
-              <button onClick={() => updateSelectedElement((element) => ({ ...element, imgWidth: (element.imgWidth || 260) * 0.88, imgHeight: (element.imgHeight || 180) * 0.88 }))} className="rounded-lg border border-border/20 px-2 py-1 text-xs text-foreground">Smaller</button>
+              <button onClick={() => updateSelectedElement((element) => ({ ...element, imgWidth: (element.imgWidth || 260) * 1.12, imgHeight: (element.imgHeight || 180) * 1.12 }))} className="rounded-lg border border-border/20 px-2 py-1 text-xs text-foreground">bigger</button>
+              <button onClick={() => updateSelectedElement((element) => ({ ...element, imgWidth: (element.imgWidth || 260) * 0.88, imgHeight: (element.imgHeight || 180) * 0.88 }))} className="rounded-lg border border-border/20 px-2 py-1 text-xs text-foreground">smaller</button>
             </>
           )}
           {selectedTextElement && (
             <>
-              <span className="text-xs text-foreground">{selectedTextElement.type === "sticky" ? "Sticky note" : "Text box"}</span>
+              <span className="text-xs text-foreground">{selectedTextElement.type === "sticky" ? "sticky note" : "text"}</span>
               <select value={selectedTextElement.fontFamily || "Sans"} onChange={(event) => updateSelectedElement((element) => ({ ...element, fontFamily: event.target.value as FontFamilyKey }))} className="rounded-lg border border-border/20 bg-background/40 px-2 py-1 text-xs text-foreground outline-none">
-                <option value="Sans">Sans</option>
-                <option value="Serif">Serif</option>
-                <option value="Mono">Mono</option>
+                <option value="Sans">sans</option>
+                <option value="Serif">serif</option>
+                <option value="Mono">mono</option>
               </select>
               <select value={selectedTextElement.fontWeight || "400"} onChange={(event) => updateSelectedElement((element) => ({ ...element, fontWeight: event.target.value as FontWeightKey }))} className="rounded-lg border border-border/20 bg-background/40 px-2 py-1 text-xs text-foreground outline-none">
-                <option value="300">Light</option>
-                <option value="400">Regular</option>
-                <option value="500">Medium</option>
-                <option value="700">Bold</option>
+                <option value="300">light</option>
+                <option value="400">regular</option>
+                <option value="500">medium</option>
+                <option value="700">bold</option>
               </select>
               <button onClick={() => updateSelectedElement((element) => ({ ...element, fontSize: (element.fontSize || 18) + 2 }))} className="rounded-lg border border-border/20 px-2 py-1 text-xs text-foreground">A+</button>
               <button onClick={() => updateSelectedElement((element) => ({ ...element, fontSize: Math.max(10, (element.fontSize || 18) - 2) }))} className="rounded-lg border border-border/20 px-2 py-1 text-xs text-foreground">A-</button>
@@ -2063,12 +2121,12 @@ const Whiteboard = () => {
                   ))}
                 </div>
               )}
-              <button onClick={() => startDraftEditor({ x: selectedTextElement.x || 0, y: selectedTextElement.y || 0 }, selectedTextElement.type === "sticky" ? "sticky" : "text", selectedTextElement)} className="rounded-lg border border-border/20 px-2 py-1 text-xs text-foreground">Edit</button>
+              <button onClick={() => startDraftEditor({ x: selectedTextElement.x || 0, y: selectedTextElement.y || 0 }, selectedTextElement.type === "sticky" ? "sticky" : "text", selectedTextElement)} className="rounded-lg border border-border/20 px-2 py-1 text-xs text-foreground">edit words</button>
             </>
           )}
           {selectedChart && (
             <>
-              <span className="text-xs text-foreground">Sketch series</span>
+              <span className="text-xs text-foreground">sketch series</span>
               <input
                 value={(selectedChart.series || []).join(", ")}
                 onChange={(event) => {
@@ -2082,10 +2140,10 @@ const Whiteboard = () => {
                 placeholder="12, 18, 9, 24"
                 className="w-52 rounded-lg border border-border/20 bg-background/40 px-2 py-1 text-xs text-foreground outline-none"
               />
-              <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/55">Your numbers — no feed attached</span>
+              <span className="text-[10px] tracking-[0.18em] text-muted-foreground/55">your numbers — no feed attached</span>
             </>
           )}
-          <button onClick={deleteSelected} className="rounded-lg border border-destructive/20 px-2 py-1 text-xs text-destructive">Delete</button>
+          <button onClick={deleteSelected} className="rounded-lg border border-destructive/20 px-2 py-1 text-xs text-destructive">delete</button>
         </div>
       )}
 
@@ -2093,17 +2151,17 @@ const Whiteboard = () => {
         <aside style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 4.5rem)" }} className="absolute left-3 right-3 lg:left-auto lg:bottom-auto lg:right-4 lg:top-[15rem] z-40 max-h-[46%] overflow-y-auto w-auto lg:w-72 rounded-[1.4rem] border border-border/30 bg-card/78 p-4 shadow-2xl backdrop-blur-2xl">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground/60">Layers</p>
-              <h2 className="text-sm font-light text-foreground">Topic stack</h2>
+              <p className="text-[10px] tracking-[0.24em] text-muted-foreground/60">layers</p>
+              <h2 className="text-sm font-light text-foreground">topic stack</h2>
             </div>
-            <button onClick={() => setLayerPanelOpen(false)} className="rounded-lg border border-border/20 px-2 py-1 text-xs text-muted-foreground">Hide</button>
+            <button onClick={() => setLayerPanelOpen(false)} className="rounded-lg border border-border/20 px-2 py-1 text-xs text-muted-foreground">hide</button>
           </div>
           <div className="space-y-2">
             {activeBoard.layers.map((layer, index) => (
               <div key={layer.id} className={`rounded-2xl border px-3 py-2 ${activeLayerId === layer.id ? "border-foreground/25 bg-foreground/8" : "border-border/20 bg-background/30"}`}>
                 <div className="flex items-center justify-between gap-2">
                   <button onClick={() => setActiveLayerId(layer.id)} className="text-left">
-                    <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground/60">Topic {index + 1}</div>
+                    <div className="text-xs tracking-[0.18em] text-muted-foreground/60">topic {index + 1}</div>
                     <div className="text-sm text-foreground">{layer.name}</div>
                   </button>
                   <button
@@ -2113,7 +2171,7 @@ const Whiteboard = () => {
                     }))}
                     className={`rounded-lg px-2 py-1 text-[10px] uppercase tracking-[0.18em] ${layer.visible ? "bg-foreground/10 text-foreground" : "bg-background/40 text-muted-foreground"}`}
                   >
-                    {layer.visible ? "On" : "Off"}
+                    {layer.visible ? "shown" : "hidden"}
                   </button>
                 </div>
               </div>
@@ -2122,14 +2180,14 @@ const Whiteboard = () => {
           <div className="mt-3 flex items-center gap-2">
             <button
               onClick={() => {
-                const nextLayer = createLayer(`Topic ${activeBoard.layers.length + 1}`);
+                const nextLayer = createLayer(`topic ${activeBoard.layers.length + 1}`);
                 pushHistory();
                 updateActiveBoard((board) => ({ ...board, layers: [...board.layers, nextLayer] }));
                 setActiveLayerId(nextLayer.id);
               }}
               className="rounded-xl border border-border/20 px-3 py-2 text-xs text-foreground"
             >
-              Add layer
+              add layer
             </button>
             {activeLayer && (
               <input
@@ -2139,7 +2197,8 @@ const Whiteboard = () => {
                   layers: board.layers.map((layer) => layer.id === activeLayer.id ? { ...layer, name: event.target.value } : layer),
                 }))}
                 className="flex-1 rounded-xl border border-border/20 bg-background/40 px-3 py-2 text-xs text-foreground outline-none"
-                placeholder="Layer name"
+                placeholder="layer name"
+                aria-label="layer name"
               />
             )}
           </div>
@@ -2148,28 +2207,32 @@ const Whiteboard = () => {
 
       {!layerPanelOpen && (
         <button onClick={() => setLayerPanelOpen(true)} style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 4.5rem)" }} className="absolute right-4 lg:bottom-auto lg:top-[15rem] z-40 min-h-11 rounded-xl border border-border/30 bg-card/78 px-3 py-2 text-xs text-foreground backdrop-blur-xl">
-          Show layers
+          show layers
         </button>
       )}
 
-      <div style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }} className="absolute left-4 z-40 hidden lg:block rounded-2xl border border-border/25 bg-card/48 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground/55 backdrop-blur-xl">
-        Scroll to pan · Ctrl/⌘ + wheel to zoom · Backspace = undo · Paste text/images onto the board
+      <div style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }} className="absolute left-4 z-40 hidden lg:block rounded-2xl border border-border/25 bg-card/48 px-3 py-2 text-[11px] tracking-wide text-muted-foreground/70 backdrop-blur-xl">
+        scroll to pan · ctrl/⌘ + wheel to zoom · ⌘/ctrl+z undo · backspace deletes the selection · paste text or images onto the board
       </div>
 
       <div style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }} className="absolute right-4 z-40 flex items-center gap-2 rounded-2xl border border-border/25 bg-card/48 px-3 py-2 backdrop-blur-xl">
         <button onClick={() => setZoom((previous) => clamp(previous * 0.85, 0.2, 4))} className="p-1 text-muted-foreground hover:text-foreground"><Minus className="h-3.5 w-3.5" /></button>
         <span className="w-12 text-center text-[10px] uppercase tracking-[0.18em] text-foreground">{Math.round(zoom * 100)}%</span>
         <button onClick={() => setZoom((previous) => clamp(previous * 1.15, 0.2, 4))} className="p-1 text-muted-foreground hover:text-foreground"><Plus className="h-3.5 w-3.5" /></button>
-        <button onClick={() => { setZoom(1); setPanOffset({ x: 0, y: 0 }); }} className="rounded-lg px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground">Reset</button>
+        <button onClick={() => { setZoom(1); setPanOffset({ x: 0, y: 0 }); }} className="rounded-lg px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground">reset view</button>
       </div>
 
       <div ref={containerRef} className="relative z-20 h-full w-full" style={{ cursor: tool === "pan" ? "grab" : tool === "select" ? "default" : "crosshair" }}>
         <canvas
           ref={canvasRef}
           className="h-full w-full"
+          // without this a finger stroke is claimed by the browser as a scroll and the pointer is cancelled mid-line
+          style={{ touchAction: "none" }}
+          aria-label={`${activeBoard?.name ?? "board"} — draw with the selected tool`}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
+          onPointerCancel={() => handlePointerUp()}
           onPointerLeave={() => handlePointerUp()}
         />
         {exportNotice && (
@@ -2184,13 +2247,13 @@ const Whiteboard = () => {
       </div>
 
       {draftEditor && boardScreenPoint && (
-        <div className="absolute z-[70] w-[min(90vw,360px)] rounded-[1.35rem] border border-border/30 bg-card/92 p-4 shadow-2xl backdrop-blur-2xl" style={{ left: boardScreenPoint.x + 14, top: boardScreenPoint.y + 14 }}>
+        <div className="absolute z-[70] w-[min(90vw,360px)] rounded-[1.35rem] border border-border/30 bg-card/92 p-4 shadow-2xl backdrop-blur-2xl" style={{ left: Math.max(8, Math.min(boardScreenPoint.x + 14, Math.max(8, paneSize.w - 376))), top: Math.max(8, Math.min(boardScreenPoint.y + 14, Math.max(8, paneSize.h - 360))) }}>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/60">{draftEditor.kind === "sticky" ? "Sticky note" : "Text box"}</div>
-              <div className="text-sm font-light text-foreground">Full font control</div>
+              <div className="text-[10px] tracking-[0.2em] text-muted-foreground/60">{draftEditor.kind === "sticky" ? "sticky note" : "text"}</div>
+              <div className="text-sm font-light text-foreground">{draftEditor.existingId ? "edit the words" : "type, then place"}</div>
             </div>
-            <button onClick={() => setDraftEditor(null)} className="rounded-lg border border-border/20 px-2 py-1 text-xs text-muted-foreground">Close</button>
+            <button onClick={() => setDraftEditor(null)} className="rounded-lg border border-border/20 px-2 py-1 text-xs text-muted-foreground">close</button>
           </div>
           <Textarea
             autoFocus
@@ -2202,7 +2265,7 @@ const Whiteboard = () => {
                 submitDraftEditor();
               }
             }}
-            placeholder={draftEditor.kind === "sticky" ? "Paste or type notes…" : "Type on the board…"}
+            placeholder={draftEditor.kind === "sticky" ? "paste or type notes…" : "type on the board…"}
             className="min-h-[130px] resize-none rounded-2xl border-border/30 bg-background/50 text-foreground"
             style={{
               fontSize: draftFontSize,
@@ -2213,15 +2276,15 @@ const Whiteboard = () => {
           />
           <div className="mt-3 grid grid-cols-2 gap-2">
             <select value={draftFontFamily} onChange={(event) => setDraftFontFamily(event.target.value as FontFamilyKey)} className="rounded-xl border border-border/20 bg-background/50 px-3 py-2 text-xs text-foreground outline-none">
-              <option value="Sans">Sans</option>
-              <option value="Serif">Serif</option>
-              <option value="Mono">Mono</option>
+              <option value="Sans">sans</option>
+              <option value="Serif">serif</option>
+              <option value="Mono">mono</option>
             </select>
             <select value={draftFontWeight} onChange={(event) => setDraftFontWeight(event.target.value as FontWeightKey)} className="rounded-xl border border-border/20 bg-background/50 px-3 py-2 text-xs text-foreground outline-none">
-              <option value="300">Light</option>
-              <option value="400">Regular</option>
-              <option value="500">Medium</option>
-              <option value="700">Bold</option>
+              <option value="300">light</option>
+              <option value="400">regular</option>
+              <option value="500">medium</option>
+              <option value="700">bold</option>
             </select>
           </div>
           <div className="mt-3 flex items-center gap-2">
@@ -2237,10 +2300,10 @@ const Whiteboard = () => {
             )}
           </div>
           <div className="mt-3 flex items-center justify-between gap-2">
-            <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/55">Cmd/Ctrl + Enter to place</span>
+            <span className="text-[10px] tracking-[0.18em] text-muted-foreground/55">⌘/ctrl + enter places it</span>
             <div className="flex items-center gap-2">
-              <button onClick={() => setDraftEditor(null)} className="rounded-xl border border-border/20 px-3 py-2 text-xs text-muted-foreground">Cancel</button>
-              <button onClick={submitDraftEditor} className="rounded-xl bg-primary px-3 py-2 text-xs text-primary-foreground">Place</button>
+              <button onClick={() => setDraftEditor(null)} className="rounded-xl border border-border/20 px-3 py-2 text-xs text-muted-foreground">cancel</button>
+              <button onClick={submitDraftEditor} className="rounded-xl bg-primary px-3 py-2 text-xs text-primary-foreground">{draftEditor.existingId ? "save" : "place"}</button>
             </div>
           </div>
         </div>
@@ -2249,7 +2312,6 @@ const Whiteboard = () => {
       <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center opacity-[0.028]">
         <div className="text-[11rem] font-extralight tracking-[0.35em] text-foreground">A</div>
       </div>
-      <div className="pointer-events-none absolute right-4 top-5 z-10 text-[9px] uppercase tracking-[0.28em] text-muted-foreground/25">◈ ASHERIN INTELLIGENCE PLATFORM</div>
     </div>
   );
 };

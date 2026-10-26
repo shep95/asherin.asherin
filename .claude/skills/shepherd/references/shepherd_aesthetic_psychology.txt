@@ -1,0 +1,2391 @@
+shepherd | aesthetics, visual psychology & interface design — root-layer research dataset
+version: 1.0 | compiled: 2026-10-25 | format: plain text | language: english
+scope: website, software, app, dashboard, product and professional interface visual design
+
+PURPOSE
+a reusable research dataset, not a universal formula for beauty. every record travels from surface observation to plain-English explanation, perception, cognition, root mechanism, interface rule, example, real-world scenario, tradeoff, and test.
+
+EVIDENCE LEGEND
+quantitative law = constrained measurable relationship; empirical phenomenon = observed research pattern, context varies; explanatory theory = plausible framework with supporting research; gestalt principle = perceptual organization tendency; design heuristic = useful practice, not immutable rule; normative standard = published accessibility criterion; contextual tendency = influenced by culture, user and task.
+source origin note: the user’s shepherd knowledge file explicitly specifies dark/cold/cinematic styling, domain-native interface cognition, aesthetic pattern recognition, interface quality tokens, and mechanism-first decomposition. those are treated here as project preferences and design-process inputs, not universal empirical psychological facts. the zophiel-vadic forecasting file is not a scientifically established source of interface aesthetics and is not used as such.
+
+ROOT MODEL
+stimulus (pixels, words, geometry, motion) -> visual encoding (contrast, shape, grouping) -> attention and interpretation -> emotion / expectation / judgment -> action and error -> measured outcome / feedback. arrows represent a useful analysis model; actual neural processing is recurrent and context-dependent.
+
+PRACTICAL INTERPRETATION
+surface = what a designer notices; plain = explain as to a beginner; layer 1 = sensory/perceptual mechanism; layer 2 = psychological mechanism; layer 3 = deepest useful causal root (not speculative neuroscience); action = design translation; scenario = concrete use case; tension = where naive application fails; verification = what would test the claim.
+
+CONTENTS
+foundations: 3 research records
+perception: 13 research records
+composition: 7 research records
+cognition: 9 research records
+interaction: 6 research records
+color: 3 research records
+typography: 3 research records
+emotion: 4 research records
+ethics: 2 research records
+systems: 5 research records
+research: 3 research records
+total records: 58
+
+================================================================================================
+RECORD 001 | foundations | aesthetic judgment
+================================================================================================
+EVIDENCE CLASSIFICATION:
+empirical theory
+
+LAYER 0 — SURFACE OBSERVATION:
+people judge visual arrangements as pleasing or displeasing.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+beautiful means the arrangement feels rewarding to look at, not merely that it is fashionable.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+visual features are encoded: shapes, contrast, contours, colors and regularities.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+expectations, fluency, novelty, emotion, memory and culture influence evaluation.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+aesthetic response emerges from interaction between stimulus, observer, task and context; no single universal beauty formula.
+
+DESIGN APPLICATION / RULE:
+design to the user’s task and cultural context; compare preferences across representative groups.
+
+MICRO-EXAMPLE:
+the same monochrome dashboard reads elegant to an analyst and cold to a child.
+
+FULL SCENARIO:
+a medical portal looks sleek but patients rate it unfriendly; add legible labels and reassuring explanation without abandoning visual restraint.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+beauty and usability correlate in some settings but are not identical.
+
+EMPIRICAL TEST / QUALITY GATE:
+blind preference test followed by task usability test and subgroup analysis.
+
+SOURCE / BASIS:
+reber 2004; nng visual-design guidance
+
+================================================================================================
+RECORD 002 | foundations | processing fluency
+================================================================================================
+EVIDENCE CLASSIFICATION:
+supported explanatory theory
+
+LAYER 0 — SURFACE OBSERVATION:
+easy-to-process visuals often feel more pleasant.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+when your brain can make sense of something quickly, it often feels better.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+regular patterns and clear figure-ground separation lower visual parsing effort.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+rapid comprehension can produce positive affect, though excessive predictability may bore.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+the experience of processing itself contributes to aesthetic evaluation.
+
+DESIGN APPLICATION / RULE:
+align related items, use familiar symbols, consistent tokens and readable text.
+
+MICRO-EXAMPLE:
+a clearly grouped settings pane feels calmer than arbitrary columns.
+
+FULL SCENARIO:
+two landing pages have identical features; the one with aligned headings and consistent navigation earns higher initial ratings.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+novelty and expertise can reverse simple fluency preferences.
+
+EMPIRICAL TEST / QUALITY GATE:
+hold content constant and compare time to find elements plus appearance ratings.
+
+SOURCE / BASIS:
+reber, schwarz & winkielman 2004
+
+================================================================================================
+RECORD 003 | foundations | aesthetic-usability effect
+================================================================================================
+EVIDENCE CLASSIFICATION:
+replicated usability phenomenon
+
+LAYER 0 — SURFACE OBSERVATION:
+attractive interfaces may be perceived as easier to use.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+people can confuse “looks easy” with “works easily.”
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+visual polish gives early signals before functional experience.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+positive affect colors perceived difficulty and tolerance for minor defects.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+first impressions alter expectations and reported experience; appearance does not repair fundamental accessibility or task failures.
+
+DESIGN APPLICATION / RULE:
+measure perceived usability independently of observed errors and task success.
+
+MICRO-EXAMPLE:
+an attractive banking app feels trustworthy at first, although a hidden transfer action causes errors.
+
+FULL SCENARIO:
+users rate a beautifully styled checkout highly while analytics show cart abandonment.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+do not use attractiveness as evidence of safe or accurate operation.
+
+EMPIRICAL TEST / QUALITY GATE:
+paired visual ratings, task time, error rate, post-task usability score.
+
+SOURCE / BASIS:
+laws of ux; nngroup
+
+================================================================================================
+RECORD 004 | perception | figure-ground organization
+================================================================================================
+EVIDENCE CLASSIFICATION:
+gestalt principle
+
+LAYER 0 — SURFACE OBSERVATION:
+eyes separate a focal object from its backdrop.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+the brain asks: what is the thing, and what is behind it?
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+edges, enclosure, luminance and motion aid segmentation.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+attention operates on identified objects, not arbitrary colored pixels.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+segmentation is an early prerequisite for understanding actionable interface regions.
+
+DESIGN APPLICATION / RULE:
+ensure buttons/cards are distinguishable from background without excessive borders.
+
+MICRO-EXAMPLE:
+a low-contrast input disappears into a dark background.
+
+FULL SCENARIO:
+a login page uses a dark field and slightly lighter sign-in panel; users immediately know where to start.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+blur, glare, low vision or poor contrast can collapse separation.
+
+EMPIRICAL TEST / QUALITY GATE:
+five-second identification test and contrast audit.
+
+SOURCE / BASIS:
+gestalt literature; wcag 2.2
+
+================================================================================================
+RECORD 005 | perception | proximity
+================================================================================================
+EVIDENCE CLASSIFICATION:
+gestalt principle
+
+LAYER 0 — SURFACE OBSERVATION:
+nearby elements seem related.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+things close together look like they belong together.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+spatial distances feed grouping mechanisms.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+the brain infers semantic association from physical closeness.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+spatial grouping is a low-cost substitute for explicit verbal explanation.
+
+DESIGN APPLICATION / RULE:
+put labels nearer their fields than adjacent fields; separate unrelated groups.
+
+MICRO-EXAMPLE:
+a billing label placed nearer the address field is misread.
+
+FULL SCENARIO:
+a dashboard has revenue and expenses; use within-group spacing smaller than between-group spacing.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+very dense layouts may still need lines or headers.
+
+EMPIRICAL TEST / QUALITY GATE:
+ask users to group items without instructions.
+
+SOURCE / BASIS:
+gestalt psychology; nngroup
+
+================================================================================================
+RECORD 006 | perception | similarity
+================================================================================================
+EVIDENCE CLASSIFICATION:
+gestalt principle
+
+LAYER 0 — SURFACE OBSERVATION:
+similar color, size, shape and type signal belonging.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+matching things look like a family.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+shared feature channels bind elements into candidate sets.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+users infer similar behavior from similar appearance.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+visual uniformity supports category inference.
+
+DESIGN APPLICATION / RULE:
+make all links recognizable; reserve different styles for different functions.
+
+MICRO-EXAMPLE:
+only some navigation tabs are underlined, falsely suggesting different functions.
+
+FULL SCENARIO:
+in a calendar, all editable appointments use the same treatment; read-only events differ.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+identical-looking dangerous and harmless actions are risky.
+
+EMPIRICAL TEST / QUALITY GATE:
+sort task: ask users which elements behave alike.
+
+SOURCE / BASIS:
+gestalt psychology
+
+================================================================================================
+RECORD 007 | perception | common region
+================================================================================================
+EVIDENCE CLASSIFICATION:
+gestalt principle
+
+LAYER 0 — SURFACE OBSERVATION:
+elements inside one boundary look grouped.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+a box tells the brain these things belong together.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+enclosure produces a strong boundary cue.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+semantic grouping occurs without repeated headings.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+shared containment establishes a conceptual unit.
+
+DESIGN APPLICATION / RULE:
+use panels for genuinely distinct processes, not a card for every sentence.
+
+MICRO-EXAMPLE:
+one card groups shipping address fields.
+
+FULL SCENARIO:
+a dashboard with 30 nested cards feels fragmented; reduce boundaries to meaningful groupings.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+overboxing increases clutter and harms scan speed.
+
+EMPIRICAL TEST / QUALITY GATE:
+remove borders in an ablation test; compare category recognition.
+
+SOURCE / BASIS:
+gestalt psychology
+
+================================================================================================
+RECORD 008 | perception | uniform connectedness
+================================================================================================
+EVIDENCE CLASSIFICATION:
+gestalt principle
+
+LAYER 0 — SURFACE OBSERVATION:
+visually connected elements appear related.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+a line joining two things says they are linked.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+continuity of a physical connector is a powerful grouping feature.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+users infer relationship or sequence.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+connected geometry encodes structure quickly.
+
+DESIGN APPLICATION / RULE:
+connect steps in timelines; avoid connectors between unrelated concepts.
+
+MICRO-EXAMPLE:
+a progress tracker links completed and upcoming steps.
+
+FULL SCENARIO:
+a deployment interface uses linking lines to show which service depends on which.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+connections can falsely imply causality.
+
+EMPIRICAL TEST / QUALITY GATE:
+ask users to infer dependencies then compare with truth.
+
+SOURCE / BASIS:
+gestalt psychology
+
+================================================================================================
+RECORD 009 | perception | continuity
+================================================================================================
+EVIDENCE CLASSIFICATION:
+gestalt principle
+
+LAYER 0 — SURFACE OBSERVATION:
+smooth paths are perceived as continuing.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+the eye likes following a smooth route.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+edge orientation and continuation favor coherent trajectories.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+readers follow alignment and visual flow.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+continuity reduces fragmented parsing.
+
+DESIGN APPLICATION / RULE:
+align content baselines and maintain consistent reading paths.
+
+MICRO-EXAMPLE:
+a stepped list accidentally directs attention away from the primary task.
+
+FULL SCENARIO:
+a pricing comparison maintains aligned feature rows across plans.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+directional flow depends on script and reading conventions.
+
+EMPIRICAL TEST / QUALITY GATE:
+eye-tracking path and navigation scan task.
+
+SOURCE / BASIS:
+gestalt psychology
+
+================================================================================================
+RECORD 010 | perception | closure
+================================================================================================
+EVIDENCE CLASSIFICATION:
+gestalt principle
+
+LAYER 0 — SURFACE OBSERVATION:
+people perceive missing parts of simple forms as complete.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+your brain fills in gaps.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+edge fragments support holistic shape completion.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+completion can make simplified icons recognizable.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+perception uses inference, not only literal pixel data.
+
+DESIGN APPLICATION / RULE:
+use simple partial marks only when their meaning is recognizable.
+
+MICRO-EXAMPLE:
+an incomplete circular progress ring is read as a circle.
+
+FULL SCENARIO:
+a minimalist icon loses too many strokes; users no longer recognize “download.”
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+closure does not guarantee icon comprehension.
+
+EMPIRICAL TEST / QUALITY GATE:
+icon naming test without labels.
+
+SOURCE / BASIS:
+gestalt psychology
+
+================================================================================================
+RECORD 011 | perception | prägnanz / simplicity
+================================================================================================
+EVIDENCE CLASSIFICATION:
+gestalt organizing principle
+
+LAYER 0 — SURFACE OBSERVATION:
+ambiguous arrangements often resolve into simple stable structures.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+when multiple interpretations exist, the brain often prefers a clean one.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+the visual system seeks coherent object organizations.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+simple patterns are often easier to encode and remember.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+perception favors parsimonious grouping under some conditions.
+
+DESIGN APPLICATION / RULE:
+remove ornamental structural ambiguity while retaining useful distinctions.
+
+MICRO-EXAMPLE:
+a complex chart legend is simplified to consistent series encodings.
+
+FULL SCENARIO:
+the user interprets interlocking boxes as a single object; adjust boundaries to separate actions.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+not a command that every interface must be minimalist.
+
+EMPIRICAL TEST / QUALITY GATE:
+ambiguous-shape interpretation exercise.
+
+SOURCE / BASIS:
+gestalt psychology
+
+================================================================================================
+RECORD 012 | perception | visual salience
+================================================================================================
+EVIDENCE CLASSIFICATION:
+psychophysics and attention
+
+LAYER 0 — SURFACE OBSERVATION:
+distinct contrast, scale or movement draws attention.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+what stands out is noticed first more often.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+bottom-up visual features compete with top-down task goals.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+attention selection prioritizes both signal strength and current relevance.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+salience is relative to surrounding elements, not an intrinsic property of a color.
+
+DESIGN APPLICATION / RULE:
+reserve strong contrasts for actionable priorities; reduce competing accents.
+
+MICRO-EXAMPLE:
+five neon buttons cancel one another’s emphasis.
+
+FULL SCENARIO:
+a critical fraud alert uses distinctive contrast while normal transactions stay quiet.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+high salience can distract from the task; flashing creates accessibility concerns.
+
+EMPIRICAL TEST / QUALITY GATE:
+first fixation / first click / correct priority identification.
+
+SOURCE / BASIS:
+visual attention research; nngroup
+
+================================================================================================
+RECORD 013 | perception | visual hierarchy
+================================================================================================
+EVIDENCE CLASSIFICATION:
+design principle
+
+LAYER 0 — SURFACE OBSERVATION:
+size, position, weight and contrast signal relative importance.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+the page tells your eyes what to read first, second and third.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+features compete to become focal points.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+readers assemble meaning in approximate order of perceived priority.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+information architecture becomes perceptual ordering.
+
+DESIGN APPLICATION / RULE:
+make task title, essential state and primary action visually distinct.
+
+MICRO-EXAMPLE:
+a dashboard headline metric dominates secondary descriptions.
+
+FULL SCENARIO:
+a flight confirmation screen leads with itinerary status, not promotion.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+hierarchy differs for novice vs expert tasks.
+
+EMPIRICAL TEST / QUALITY GATE:
+five-second recall of the most important item.
+
+SOURCE / BASIS:
+nng visual design principles
+
+================================================================================================
+RECORD 014 | perception | signal-to-noise ratio
+================================================================================================
+EVIDENCE CLASSIFICATION:
+information theory analogy
+
+LAYER 0 — SURFACE OBSERVATION:
+irrelevant visual detail competes with useful information.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+more decoration can make the real message harder to see.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+visual channels have finite discriminatory resolution.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+unnecessary elements occupy attention and working memory.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+communication succeeds when task-relevant information can be separated from distractors.
+
+DESIGN APPLICATION / RULE:
+remove redundant borders, badges and duplicate labels.
+
+MICRO-EXAMPLE:
+a risk dashboard uses one clear alert rather than six animations.
+
+FULL SCENARIO:
+a monitoring screen with 70 colored chips hides a genuine outage.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+some density is productive for expert scanning.
+
+EMPIRICAL TEST / QUALITY GATE:
+compare speed and misses across density variants.
+
+SOURCE / BASIS:
+information theory analogy; hci research
+
+================================================================================================
+RECORD 015 | perception | contrast sensitivity
+================================================================================================
+EVIDENCE CLASSIFICATION:
+psychophysics
+
+LAYER 0 — SURFACE OBSERVATION:
+readability depends on luminance difference, size and viewing conditions.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+two colors can be technically different yet look nearly identical.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+vision responds differently to spatial detail and contrast at different sizes.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+low-contrast details require more effort and may be lost.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+perception is constrained by sensory thresholds rather than designer intent.
+
+DESIGN APPLICATION / RULE:
+test small text, thin lines and low-light conditions on real displays.
+
+MICRO-EXAMPLE:
+subtle gray text vanishes in sunlight.
+
+FULL SCENARIO:
+an outdoor logistics app increases contrast and font weight.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+contrast ratio is necessary but not sufficient for all readers.
+
+EMPIRICAL TEST / QUALITY GATE:
+wcag check plus real-device reading under varied conditions.
+
+SOURCE / BASIS:
+wcag 2.2; vision science
+
+================================================================================================
+RECORD 016 | perception | weber fraction / just-noticeable difference
+================================================================================================
+EVIDENCE CLASSIFICATION:
+psychophysical law with limits
+
+LAYER 0 — SURFACE OBSERVATION:
+the detectable change often scales with background stimulus magnitude.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+to notice a change, it may need to be big enough compared with what was already there.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+sensory discrimination depends on relative differences over applicable ranges.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+subtle state changes may not register.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+a system status cue must exceed a perceptual detection threshold for its conditions.
+
+DESIGN APPLICATION / RULE:
+avoid barely changed hover state or success indication.
+
+MICRO-EXAMPLE:
+a selected tab changes by one nearly invisible shade.
+
+FULL SCENARIO:
+a trading interface differentiates active vs inactive states through multiple cues.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+weber-like behavior is modality- and range-dependent.
+
+EMPIRICAL TEST / QUALITY GATE:
+forced-choice detection thresholds for state variants.
+
+SOURCE / BASIS:
+classical psychophysics
+
+================================================================================================
+RECORD 017 | composition | balance and visual weight
+================================================================================================
+EVIDENCE CLASSIFICATION:
+design heuristic
+
+LAYER 0 — SURFACE OBSERVATION:
+elements of different size, brightness and density can feel balanced.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+one large quiet object can balance several small loud ones.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+contrast, area, location and content generate unequal salience.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+observers perceive tension or stability from distribution.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+balance is perceptual equilibrium, not equal pixel counts.
+
+DESIGN APPLICATION / RULE:
+balance dense chart regions against navigation and whitespace.
+
+MICRO-EXAMPLE:
+a large faded chart balances a compact bright control panel.
+
+FULL SCENARIO:
+a hero layout feels lopsided after a high-contrast illustration is added; shift type block and spacing.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+asymmetry may be desirable for movement or emphasis.
+
+EMPIRICAL TEST / QUALITY GATE:
+paired preference survey; completion time control.
+
+SOURCE / BASIS:
+nng visual-design principles
+
+================================================================================================
+RECORD 018 | composition | negative space
+================================================================================================
+EVIDENCE CLASSIFICATION:
+design principle
+
+LAYER 0 — SURFACE OBSERVATION:
+empty areas separate, group and emphasize content.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+blank space is a tool, not unused real estate.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+spacing strengthens segmentation and decreases crowding.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+less competition helps focus and discern hierarchy.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+absence of marks changes relationships between remaining marks.
+
+DESIGN APPLICATION / RULE:
+increase space between conceptual groups before adding new borders.
+
+MICRO-EXAMPLE:
+a payment confirmation has ample blank space around the final amount.
+
+FULL SCENARIO:
+an executive dashboard uses generous outer margins but tight row spacing for comparisons.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+too much space forces scrolling and breaks comparison.
+
+EMPIRICAL TEST / QUALITY GATE:
+findability and scroll-distance assessment.
+
+SOURCE / BASIS:
+nng visual-design principles
+
+================================================================================================
+RECORD 019 | composition | alignment and optical correction
+================================================================================================
+EVIDENCE CLASSIFICATION:
+design heuristic rooted in perception
+
+LAYER 0 — SURFACE OBSERVATION:
+aligned elements seem ordered; mathematically centered shapes may look off-center.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+things should look aligned, not only have identical coordinates.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+human perception weights visible ink and shape mass unevenly.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+misalignment can suggest sloppiness and increase scanning effort.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+geometric equality and perceptual equality are different criteria.
+
+DESIGN APPLICATION / RULE:
+use baseline grids and adjust icons optically when needed.
+
+MICRO-EXAMPLE:
+a play triangle needs slight offset to look centered inside a circle.
+
+FULL SCENARIO:
+a nav bar mixes icons with different visual mass; optical adjustment makes them feel stable.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+optical adjustment is a judgment, not universal formula.
+
+EMPIRICAL TEST / QUALITY GATE:
+pixel overlays plus quick preference test.
+
+SOURCE / BASIS:
+typography and design practice
+
+================================================================================================
+RECORD 020 | composition | scale and proportion
+================================================================================================
+EVIDENCE CLASSIFICATION:
+design heuristic
+
+LAYER 0 — SURFACE OBSERVATION:
+relative size encodes importance and relationships.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+large things appear important relative to small things.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+retinal size affects salience.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+viewers translate differences into visual rank.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+perceived priority often follows relative magnitude.
+
+DESIGN APPLICATION / RULE:
+define a limited type scale and consistent content ratios.
+
+MICRO-EXAMPLE:
+a large total balance is easier to find than tiny secondary metadata.
+
+FULL SCENARIO:
+a weather app enlarges current temperature but keeps units legible.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+size alone can exaggerate significance of weak data.
+
+EMPIRICAL TEST / QUALITY GATE:
+identify top-priority items after a five-second exposure.
+
+SOURCE / BASIS:
+nng visual design principles
+
+================================================================================================
+RECORD 021 | composition | rhythm, repetition and grid
+================================================================================================
+EVIDENCE CLASSIFICATION:
+design system heuristic
+
+LAYER 0 — SURFACE OBSERVATION:
+repeating spacing and component structures establish cadence.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+patterns make a screen feel predictable.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+visual regularities become easier to track.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+consistent structure reduces continual reinterpretation.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+repetition builds a learned visual grammar.
+
+DESIGN APPLICATION / RULE:
+use a spacing scale but bend it when content meaning requires.
+
+MICRO-EXAMPLE:
+cards use uniform title-to-body spacing.
+
+FULL SCENARIO:
+a table’s row height shifts unpredictably across similar entries; normalize unless exceptions carry meaning.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+rigidity can suppress useful distinctions.
+
+EMPIRICAL TEST / QUALITY GATE:
+time to scan and perceived coherence ratings.
+
+SOURCE / BASIS:
+design systems practice
+
+================================================================================================
+RECORD 022 | composition | symmetry versus asymmetry
+================================================================================================
+EVIDENCE CLASSIFICATION:
+context-dependent aesthetic pattern
+
+LAYER 0 — SURFACE OBSERVATION:
+symmetry may create order; asymmetry may create energy and focus.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+matching sides feel stable; deliberate imbalance can feel dynamic.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+bilateral structure is easy to register.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+familiar balance cues influence preference, filtered by content and style.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+no fixed ratio of symmetry universally optimizes attractiveness.
+
+DESIGN APPLICATION / RULE:
+use symmetry for stable comparisons; asymmetry for editorial storytelling.
+
+MICRO-EXAMPLE:
+a settings page aligns symmetrically; a campaign hero uses asymmetric imagery.
+
+FULL SCENARIO:
+a bank app uses experimental offset cards; users read them as unfinished.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+cultural and domain expectations shift preferences.
+
+EMPIRICAL TEST / QUALITY GATE:
+compare perceived trust and findability per context.
+
+SOURCE / BASIS:
+visual psychology; design practice
+
+================================================================================================
+RECORD 023 | composition | golden ratio and rule of thirds
+================================================================================================
+EVIDENCE CLASSIFICATION:
+popular design heuristics, not universal laws
+
+LAYER 0 — SURFACE OBSERVATION:
+special proportions are sometimes used to structure compositions.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+ratios can guide layout, but no magic number makes every page beautiful.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+proportion differences affect visual structure.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+judgment also depends on balance, content and learned conventions.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+mathematical ratios are design options, not demonstrated universal aesthetic optima.
+
+DESIGN APPLICATION / RULE:
+test grid alternatives based on content and readability rather than enforcing 1.618.
+
+MICRO-EXAMPLE:
+a 62/38 hero split works; a 50/50 split may work better for a comparison.
+
+FULL SCENARIO:
+a designer forces all cards into a golden-ratio frame and truncates essential descriptions.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+avoid false-scientific precision.
+
+EMPIRICAL TEST / QUALITY GATE:
+compare variants at equal content and screen size.
+
+SOURCE / BASIS:
+design theory; evidence caution
+
+================================================================================================
+RECORD 024 | cognition | working memory and chunking
+================================================================================================
+EVIDENCE CLASSIFICATION:
+well-established cognitive limitation
+
+LAYER 0 — SURFACE OBSERVATION:
+people can hold only a limited amount of active information.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+don’t make people remember everything between steps.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+information enters visual buffers then selective attention.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+chunking creates larger meaningful units, but capacity depends on task, knowledge and material.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+the active workspace for reasoning is limited and context-sensitive.
+
+DESIGN APPLICATION / RULE:
+keep instructions visible; group related fields; offer review before submit.
+
+MICRO-EXAMPLE:
+group 16 preferences into 4 named sections.
+
+FULL SCENARIO:
+an insurance form shows one step at a time with persistent progress and edit access.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+miller’s 7±2 should not be used as a fixed menu maximum; modern tasks often show fewer chunks.
+
+EMPIRICAL TEST / QUALITY GATE:
+recall burden and task error tests.
+
+SOURCE / BASIS:
+miller 1956; cowan working-memory research
+
+================================================================================================
+RECORD 025 | cognition | cognitive load
+================================================================================================
+EVIDENCE CLASSIFICATION:
+research construct
+
+LAYER 0 — SURFACE OBSERVATION:
+interfaces impose mental effort to understand and operate.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+every unnecessary thing makes the job harder.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+sensory complexity adds competition.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+intrinsic task difficulty and avoidable presentation effort affect performance.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+limited attentional resources must be allocated among task demands.
+
+DESIGN APPLICATION / RULE:
+show relevant information when needed; avoid unnecessary decisions.
+
+MICRO-EXAMPLE:
+prefill known shipping city after postal code entry.
+
+FULL SCENARIO:
+an analytics dashboard reveals advanced filters only when invoked.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+hiding necessary controls can increase total effort.
+
+EMPIRICAL TEST / QUALITY GATE:
+NASA-TLX or validated mental-effort rating plus objective task measures.
+
+SOURCE / BASIS:
+cognitive-load theory; hci
+
+================================================================================================
+RECORD 026 | cognition | hick–hyman choice reaction
+================================================================================================
+EVIDENCE CLASSIFICATION:
+quantitative law under constrained tasks
+
+LAYER 0 — SURFACE OBSERVATION:
+reaction time tends to grow approximately with information in choice alternatives.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+more equally plausible options tend to take longer to pick from.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+alternatives must be visually and semantically distinguished.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+uncertainty about which action maps to which target costs processing time.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+choice reaction depends on response alternatives and their probabilities; real menus also involve search and expertise.
+
+DESIGN APPLICATION / RULE:
+reduce meaningless choices and create informative categories, not arbitrary minimum counts.
+
+MICRO-EXAMPLE:
+12 unrelated tools become 3 named groups.
+
+FULL SCENARIO:
+a new user cannot choose between 9 nearly identical subscription tiers; simplify differentiation.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+in complex real products, more options can improve decision quality if organized.
+
+EMPIRICAL TEST / QUALITY GATE:
+decision latency, accuracy and satisfaction on realistic tasks.
+
+SOURCE / BASIS:
+hick 1952; hyman 1953; laws of ux
+
+================================================================================================
+RECORD 027 | cognition | jakob’s law / learned conventions
+================================================================================================
+EVIDENCE CLASSIFICATION:
+widely used design heuristic
+
+LAYER 0 — SURFACE OBSERVATION:
+users expect familiar patterns from other interfaces.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+people bring habits from apps they already know.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+recognizable cues trigger trained interpretations.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+transfer of prior learning reduces exploration cost.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+expectations are formed from repeated exposure to interface conventions.
+
+DESIGN APPLICATION / RULE:
+keep search, back, navigation and form semantics conventional unless evidence justifies change.
+
+MICRO-EXAMPLE:
+a magnifying glass denotes search.
+
+FULL SCENARIO:
+a banking app swaps search and account controls with unlabeled gestures; findability falls.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+experienced niche users may have very different conventions.
+
+EMPIRICAL TEST / QUALITY GATE:
+first-use success tests across cohorts.
+
+SOURCE / BASIS:
+laws of ux; mental models research
+
+================================================================================================
+RECORD 028 | cognition | recognition rather than recall
+================================================================================================
+EVIDENCE CLASSIFICATION:
+usability principle
+
+LAYER 0 — SURFACE OBSERVATION:
+visible choices are easier than memorizing commands in many contexts.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+seeing the right thing is easier than remembering a hidden thing.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+sensory cues provide retrieval triggers.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+recognition draws on external information; recall requires internal retrieval.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+externalized state reduces memory burden.
+
+DESIGN APPLICATION / RULE:
+show recent files, clear labels and visible selection states.
+
+MICRO-EXAMPLE:
+a filter retains selected checkboxes visibly.
+
+FULL SCENARIO:
+a document editor hides formatting shortcuts with no menu; beginners struggle.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+experts may prefer keyboard recall for speed.
+
+EMPIRICAL TEST / QUALITY GATE:
+novice/expert comparison and recall-demand audit.
+
+SOURCE / BASIS:
+usability heuristics
+
+================================================================================================
+RECORD 029 | cognition | selective attention and inattentional blindness
+================================================================================================
+EVIDENCE CLASSIFICATION:
+supported attention phenomenon
+
+LAYER 0 — SURFACE OBSERVATION:
+users can miss visible objects when focused on another task.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+visible does not always mean noticed.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+task goals bias visual processing.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+irrelevant-to-goal information can be filtered out.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+attention is selective rather than a perfect recording of the visual field.
+
+DESIGN APPLICATION / RULE:
+put critical alerts at the moment they matter, within the task’s focus.
+
+MICRO-EXAMPLE:
+an error beside a field is noticed more than a distant page banner.
+
+FULL SCENARIO:
+during checkout, a customer misses a tiny price change in the footer.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+avoid using attention capture as coercion.
+
+EMPIRICAL TEST / QUALITY GATE:
+notice-rate during realistic tasks.
+
+SOURCE / BASIS:
+attention research
+
+================================================================================================
+RECORD 030 | cognition | von restorff / isolation effect
+================================================================================================
+EVIDENCE CLASSIFICATION:
+memory effect with context dependence
+
+LAYER 0 — SURFACE OBSERVATION:
+a distinctive item among similar items can be remembered better.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+one different object stands out in a set.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+distinct features receive attention.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+distinctiveness provides a retrieval cue.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+relative uniqueness can increase encoding or recall.
+
+DESIGN APPLICATION / RULE:
+reserve a visual accent for truly primary or exceptional content.
+
+MICRO-EXAMPLE:
+one warning chip stands out among neutral state chips.
+
+FULL SCENARIO:
+three “recommended” pricing tiers all use the same bright accent, destroying differentiation.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+too much isolation can distract and mislead.
+
+EMPIRICAL TEST / QUALITY GATE:
+delayed recall and first-choice tests.
+
+SOURCE / BASIS:
+von restorff effect literature
+
+================================================================================================
+RECORD 031 | cognition | serial position
+================================================================================================
+EVIDENCE CLASSIFICATION:
+memory phenomenon
+
+LAYER 0 — SURFACE OBSERVATION:
+first and last items may have recall advantages in sequential lists.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+beginning and ending positions often stick better.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+order shapes exposure and recency.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+memory benefits differ by delay and task.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+list position affects encoding and retrieval.
+
+DESIGN APPLICATION / RULE:
+place critical alternatives visibly; do not bury important option only on memory assumptions.
+
+MICRO-EXAMPLE:
+a short onboarding sequence starts with goal and ends with next action.
+
+FULL SCENARIO:
+a settings wizard buries permission consequences in the middle; users forget them.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+web scanning is not identical to laboratory serial recall.
+
+EMPIRICAL TEST / QUALITY GATE:
+delayed recall by item position.
+
+SOURCE / BASIS:
+memory psychology
+
+================================================================================================
+RECORD 032 | cognition | mental models and conceptual fit
+================================================================================================
+EVIDENCE CLASSIFICATION:
+cognitive science / hci
+
+LAYER 0 — SURFACE OBSERVATION:
+people infer how a system works from previous experience and presented clues.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+users make a little story in their head of what each control does.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+labels and visual structure create cues.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+users predict actions and outcomes using conceptual representations.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+usable systems align perceived and actual causal relationships.
+
+DESIGN APPLICATION / RULE:
+show how state changes; use labels from the user’s domain.
+
+MICRO-EXAMPLE:
+“archive” must not silently delete.
+
+FULL SCENARIO:
+an ops dashboard labels a server “paused”; users expect workloads to halt, not delete.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+mental models vary by prior experience.
+
+EMPIRICAL TEST / QUALITY GATE:
+ask “what happens if you click this?” before interaction.
+
+SOURCE / BASIS:
+norman design principles; hci
+
+================================================================================================
+RECORD 033 | interaction | fitts’s law
+================================================================================================
+EVIDENCE CLASSIFICATION:
+quantitative human-performance law
+
+LAYER 0 — SURFACE OBSERVATION:
+pointing time depends on target distance and effective size.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+big nearby buttons are easier and quicker to hit.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+motor control faces a speed–accuracy tradeoff.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+targets require movement and correction.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+effective target geometry constrains motor performance.
+
+DESIGN APPLICATION / RULE:
+make important controls reachable, sufficiently large and separated.
+
+MICRO-EXAMPLE:
+a 44px tap area around a 20px icon.
+
+FULL SCENARIO:
+mobile checkout enlarges “pay now” and separates “cancel” so users do not mis-tap.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+not an excuse to make every control huge; devices and accessibility vary.
+
+EMPIRICAL TEST / QUALITY GATE:
+selection time and mis-tap rate on real input devices.
+
+SOURCE / BASIS:
+fitts 1954; hci; wcag
+
+================================================================================================
+RECORD 034 | interaction | affordances and signifiers
+================================================================================================
+EVIDENCE CLASSIFICATION:
+interaction-design concepts
+
+LAYER 0 — SURFACE OBSERVATION:
+controls should signal what actions are possible.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+a thing should look usable in the way it is usable.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+shape, labels, icons and state hints are perceived.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+users infer actions from learned signifiers.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+perceived affordance bridges visual appearance and action expectation.
+
+DESIGN APPLICATION / RULE:
+use visible button, link, drag-handle and editable-field treatments.
+
+MICRO-EXAMPLE:
+underlined text appears tappable.
+
+FULL SCENARIO:
+a card looks clickable but only the tiny title responds; enlarge clickable region or change cue.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+flat style need not erase signifiers.
+
+EMPIRICAL TEST / QUALITY GATE:
+click prediction task and false-affordance inventory.
+
+SOURCE / BASIS:
+norman design of everyday things
+
+================================================================================================
+RECORD 035 | interaction | feedback and action–result mapping
+================================================================================================
+EVIDENCE CLASSIFICATION:
+hci principle
+
+LAYER 0 — SURFACE OBSERVATION:
+interfaces should communicate that an action registered and what happened.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+when you press something, you need to know it worked.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+changes in state are perceptible cues.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+timely feedback closes the expectation loop.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+control depends on observable consequence and error correction.
+
+DESIGN APPLICATION / RULE:
+show pending, success and error distinctly; preserve reversibility where possible.
+
+MICRO-EXAMPLE:
+saving draft displays saved timestamp.
+
+FULL SCENARIO:
+a payment button is tapped twice because nothing changes; show processing state and prevent duplicate charge.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+spinners alone cannot prove success.
+
+EMPIRICAL TEST / QUALITY GATE:
+time to detect result, duplicate-action rate.
+
+SOURCE / BASIS:
+hci feedback principles
+
+================================================================================================
+RECORD 036 | interaction | response time and perceived speed
+================================================================================================
+EVIDENCE CLASSIFICATION:
+hci performance finding
+
+LAYER 0 — SURFACE OBSERVATION:
+latency influences perceived quality and continuity of attention.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+slow interfaces feel broken even if they look beautiful.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+delay interrupts expectation of feedback.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+people wonder whether action succeeded and may switch tasks.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+temporal coupling between action and consequence shapes perceived responsiveness.
+
+DESIGN APPLICATION / RULE:
+optimistic updates only if honest and reversible; show progress and cancellation for long work.
+
+MICRO-EXAMPLE:
+button visually depresses immediately while upload reports progress.
+
+FULL SCENARIO:
+an AI interface takes 20 seconds with no indication; show real progress stages when known.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+single fixed speed thresholds are context- and task-dependent.
+
+EMPIRICAL TEST / QUALITY GATE:
+p50/p95 input latency plus user confidence measures.
+
+SOURCE / BASIS:
+hci response-time research
+
+================================================================================================
+RECORD 037 | interaction | motion as state communication
+================================================================================================
+EVIDENCE CLASSIFICATION:
+design heuristic grounded in perception
+
+LAYER 0 — SURFACE OBSERVATION:
+transitions can reveal what changed and where things moved.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+animation should explain movement, not show off.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+motion attracts attention and signals continuity.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+users infer spatial and causal relationships from transitions.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+temporal correspondence helps map before and after states.
+
+DESIGN APPLICATION / RULE:
+animate expansion and relocation subtly; support reduced-motion preferences.
+
+MICRO-EXAMPLE:
+a drawer slides from the side where it belongs.
+
+FULL SCENARIO:
+a deleted item fades then the list closes the gap so the outcome is clear.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+excessive motion causes delay, distraction or vestibular discomfort.
+
+EMPIRICAL TEST / QUALITY GATE:
+state comprehension with motion on/off; reduced-motion audit.
+
+SOURCE / BASIS:
+motion design; wcag 2.2
+
+================================================================================================
+RECORD 038 | interaction | error prevention and reversibility
+================================================================================================
+EVIDENCE CLASSIFICATION:
+usability and safety principle
+
+LAYER 0 — SURFACE OBSERVATION:
+critical mistakes should be hard to make and easy to recover from.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+don’t punish a misclick with irreversible harm.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+visual distinction identifies risky controls.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+confirmation, undo and constraints affect choice.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+human action is fallible; resilient interfaces account for error.
+
+DESIGN APPLICATION / RULE:
+prefer undo to constant dialogs when safe; confirm destructive irreversible actions.
+
+MICRO-EXAMPLE:
+delete uses explicit label and undo snackbar.
+
+FULL SCENARIO:
+an admin portal places “remove all users” near “save changes”; separate and gate the destructive option.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+too many confirmation dialogs cause habituation.
+
+EMPIRICAL TEST / QUALITY GATE:
+critical error rate and recovery success.
+
+SOURCE / BASIS:
+human factors; usability heuristics
+
+================================================================================================
+RECORD 039 | color | hue associations and context
+================================================================================================
+EVIDENCE CLASSIFICATION:
+contextual psychological tendency
+
+LAYER 0 — SURFACE OBSERVATION:
+colors carry learned and sometimes biologically influenced associations.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+red can feel urgent, but meanings change with culture and task.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+wavelength-dependent cone responses become color categories.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+associations depend on language, branding, culture and context.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+color meaning is interpreted, not hard-coded into a wavelength.
+
+DESIGN APPLICATION / RULE:
+use semantic tokens consistently, with text/icons in addition to color.
+
+MICRO-EXAMPLE:
+red means loss in many financial UIs but carries positive meanings in other contexts.
+
+FULL SCENARIO:
+an international app assumes green always means profit; regional conventions are tested.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+avoid “blue creates trust for everyone” universals.
+
+EMPIRICAL TEST / QUALITY GATE:
+cross-cultural comprehension test and color-vision simulation.
+
+SOURCE / BASIS:
+color perception research; wcag
+
+================================================================================================
+RECORD 040 | color | luminance, contrast and dark mode
+================================================================================================
+EVIDENCE CLASSIFICATION:
+visual accessibility principle
+
+LAYER 0 — SURFACE OBSERVATION:
+dark and light themes alter contrast, glare and apparent density.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+black backgrounds aren’t automatically more comfortable.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+pupil size, luminance adaptation, displays and ambient light matter.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+reading comfort varies with typography and conditions.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+perceptual experience is a joint product of content and environment.
+
+DESIGN APPLICATION / RULE:
+tune gray steps, text weight and surface contrast; offer choice where practical.
+
+MICRO-EXAMPLE:
+thin gray text on charcoal looks elegant but may be hard to read.
+
+FULL SCENARIO:
+an overnight monitoring dashboard uses dark surfaces yet maintains clear chart labels.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+dark mode can worsen legibility for some people.
+
+EMPIRICAL TEST / QUALITY GATE:
+readability tests in dim and bright environments.
+
+SOURCE / BASIS:
+visual ergonomics; wcag
+
+================================================================================================
+RECORD 041 | color | chromatic saturation and accent economy
+================================================================================================
+EVIDENCE CLASSIFICATION:
+design heuristic
+
+LAYER 0 — SURFACE OBSERVATION:
+high saturation increases relative conspicuity when rare.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+one bright color matters more than a dozen competing bright colors.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+chroma contrasts against muted neighbors.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+the accent becomes a learned priority signal.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+scarcity reinforces the information meaning of an accent.
+
+DESIGN APPLICATION / RULE:
+reserve accent for selected, active, trustworthy or essential states as domain dictates.
+
+MICRO-EXAMPLE:
+one cyan confirm button among gray controls.
+
+FULL SCENARIO:
+a security console colors every row neon green, hiding active incidents.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+monochrome can also be misleading without textual state.
+
+EMPIRICAL TEST / QUALITY GATE:
+first-noticed action and alert detection rate.
+
+SOURCE / BASIS:
+visual hierarchy practice
+
+================================================================================================
+RECORD 042 | typography | legibility versus readability
+================================================================================================
+EVIDENCE CLASSIFICATION:
+typographic and perceptual distinction
+
+LAYER 0 — SURFACE OBSERVATION:
+legibility is recognizing glyphs; readability is sustained comprehension.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+recognizing each letter is not the same as comfortably reading a paragraph.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+stroke geometry, size, spacing and rendering shape letter recognition.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+line length, hierarchy, vocabulary and layout affect comprehension.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+visual decoding and semantic understanding are different processes.
+
+DESIGN APPLICATION / RULE:
+use comfortable line lengths and distinguishable glyphs; adjust for device and audience.
+
+MICRO-EXAMPLE:
+uppercase micro-labels may scan well but long uppercase paragraphs tire readers.
+
+FULL SCENARIO:
+a legal portal uses 11px light-weight text for contracts; raise size and line spacing.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+no single font is universally most readable.
+
+EMPIRICAL TEST / QUALITY GATE:
+word recognition and comprehension under realistic conditions.
+
+SOURCE / BASIS:
+typography research; wcag
+
+================================================================================================
+RECORD 043 | typography | typographic hierarchy
+================================================================================================
+EVIDENCE CLASSIFICATION:
+design principle
+
+LAYER 0 — SURFACE OBSERVATION:
+type size, weight, style and position communicate content structure.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+the shape of text tells you which words are headings.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+font contrast produces grouping cues.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+readers create document outline before reading detail.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+typographic hierarchy externalizes information organization.
+
+DESIGN APPLICATION / RULE:
+define title, section, body, label, caption roles; preserve enough contrast.
+
+MICRO-EXAMPLE:
+a warning uses readable heading then concise explanation.
+
+FULL SCENARIO:
+a settings screen styles every line alike; add consistent section headers.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+too many type variants create noise.
+
+EMPIRICAL TEST / QUALITY GATE:
+outline reconstruction test and screen-reader heading audit.
+
+SOURCE / BASIS:
+nng visual-design principles
+
+================================================================================================
+RECORD 044 | typography | tone and perceived personality
+================================================================================================
+EVIDENCE CLASSIFICATION:
+contextual aesthetic association
+
+LAYER 0 — SURFACE OBSERVATION:
+typefaces can imply seriousness, playfulness, heritage or technical precision.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+letters have a visual voice.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+shape and spacing provide perceptual cues.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+learned brand/category associations influence interpretation.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+meaning is partly culturally learned from repeated exposure.
+
+DESIGN APPLICATION / RULE:
+choose type based on domain and audience, then test appropriateness.
+
+MICRO-EXAMPLE:
+monospace suggests technical instrumentation for developer tools.
+
+FULL SCENARIO:
+a healthcare system adopts decorative script labels and users struggle to identify instructions.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+brand semantics are not universal personality diagnostics.
+
+EMPIRICAL TEST / QUALITY GATE:
+tone-matching and comprehension study.
+
+SOURCE / BASIS:
+typographic design practice
+
+================================================================================================
+RECORD 045 | emotion | trust and credibility cues
+================================================================================================
+EVIDENCE CLASSIFICATION:
+contextual behavioral phenomenon
+
+LAYER 0 — SURFACE OBSERVATION:
+consistency and clarity can signal competence; evidence must justify real trust.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+professional appearance may make people feel safe, even when it proves nothing.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+polish and alignment form immediate impressions.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+users use surface cues as heuristics when knowledge is incomplete.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+trust judgments under uncertainty combine signals, history and verifiable evidence.
+
+DESIGN APPLICATION / RULE:
+pair polished visuals with transparent policies, source provenance and honest status.
+
+MICRO-EXAMPLE:
+a finance app shows the date and source of exchange rates.
+
+FULL SCENARIO:
+a fake “verified” badge boosts perceived trust but damages integrity and safety.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+do not manufacture authority via visual deception.
+
+EMPIRICAL TEST / QUALITY GATE:
+measure initial trust versus informed trust and error recognition.
+
+SOURCE / BASIS:
+credibility research; ethical design
+
+================================================================================================
+RECORD 046 | emotion | luxury, restraint and perceived craftsmanship
+================================================================================================
+EVIDENCE CLASSIFICATION:
+context-dependent design heuristic
+
+LAYER 0 — SURFACE OBSERVATION:
+material quality is often inferred from consistency, intentional spacing and detail.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+expensive-looking often means nothing feels accidental.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+subtle alignment, coherent material cues and limited variation are noticeable.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+users may interpret refinement as investment and expertise.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+perceived quality is an inference, heavily mediated by category and culture.
+
+DESIGN APPLICATION / RULE:
+favor consistency, typography detail and purposeful transitions rather than excessive gold/black.
+
+MICRO-EXAMPLE:
+a premium photo app has precise gutters and quiet typography.
+
+FULL SCENARIO:
+a luxury checkout removes labels for purity, causing errors; restore clarity without clutter.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+minimalism does not equal premium in every market.
+
+EMPIRICAL TEST / QUALITY GATE:
+semantic differential ratings alongside task success.
+
+SOURCE / BASIS:
+design psychology and brand practice
+
+================================================================================================
+RECORD 047 | emotion | valence, arousal and emotional pacing
+================================================================================================
+EVIDENCE CLASSIFICATION:
+affective framework
+
+LAYER 0 — SURFACE OBSERVATION:
+interfaces can feel calming, urgent, playful or tense.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+design changes not just what you see, but how intense it feels.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+motion, contrast and density influence perceptual activation.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+context and expectations shape emotion interpretation.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+emotional response emerges from stimulus, meaning and situation, not color alone.
+
+DESIGN APPLICATION / RULE:
+match arousal to use case: calm in reading, urgent only for genuine incidents.
+
+MICRO-EXAMPLE:
+muted monitoring view becomes high-contrast only on critical failure.
+
+FULL SCENARIO:
+a meditation app uses flashing streak counters; it undermines the intended calm.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+self-reports are context-sensitive; not diagnoses.
+
+EMPIRICAL TEST / QUALITY GATE:
+affect ratings and task metrics over time.
+
+SOURCE / BASIS:
+affect research; product design
+
+================================================================================================
+RECORD 048 | emotion | peak-end effect
+================================================================================================
+EVIDENCE CLASSIFICATION:
+memory judgment tendency
+
+LAYER 0 — SURFACE OBSERVATION:
+memory of an experience may overweight intense and final moments.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+people may remember the hardest moment and how it ended.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+salient emotional episodes receive extra encoding.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+retrospective evaluation does not average all moments equally.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+memory reconstructs experience using selective information.
+
+DESIGN APPLICATION / RULE:
+make error recovery supportive and completion states informative.
+
+MICRO-EXAMPLE:
+a smooth booking ends with a clear confirmation and itinerary.
+
+FULL SCENARIO:
+a checkout looks excellent but ends in an ambiguous spinner; retrospective confidence falls.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+not a substitute for fixing the whole journey.
+
+EMPIRICAL TEST / QUALITY GATE:
+journey ratings at every step vs delayed memory ratings.
+
+SOURCE / BASIS:
+kahneman peak-end research; laws of ux
+
+================================================================================================
+RECORD 049 | ethics | accessibility as an aesthetic constraint
+================================================================================================
+EVIDENCE CLASSIFICATION:
+normative standard and inclusive design
+
+LAYER 0 — SURFACE OBSERVATION:
+inclusive interfaces must work across perceptual and motor differences.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+if beauty makes content inaccessible, the design is incomplete.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+people vary in vision, hearing, movement and sensory tolerance.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+context and ability affect what signals can be perceived and acted on.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+a valid design must fit a diverse human capability distribution.
+
+DESIGN APPLICATION / RULE:
+follow WCAG 2.2 where applicable; keyboard, focus, text, contrast and alternatives.
+
+MICRO-EXAMPLE:
+use visible focus ring and non-color status icon.
+
+FULL SCENARIO:
+a polished chart uses red/green alone; add symbols, labels and pattern encoding.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+formal compliance alone does not guarantee accessibility.
+
+EMPIRICAL TEST / QUALITY GATE:
+WCAG audit plus users with assistive technology.
+
+SOURCE / BASIS:
+w3c wcag 2.2
+
+================================================================================================
+RECORD 050 | ethics | dark patterns and coercive attention
+================================================================================================
+EVIDENCE CLASSIFICATION:
+ethical risk
+
+LAYER 0 — SURFACE OBSERVATION:
+aesthetics can steer decisions in deceptive ways.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+making something beautiful does not justify tricking people.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+salience, obstruction and framing shift what users notice.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+asymmetric friction changes behavior without informed preference.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+choice architecture can undermine consent or autonomy.
+
+DESIGN APPLICATION / RULE:
+give comparable prominence to accept and decline where meaningful.
+
+MICRO-EXAMPLE:
+cancel subscription should not be hidden behind misleading labels.
+
+FULL SCENARIO:
+a cookie banner makes accept bright and decline nearly invisible; redesign for informed control.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+measured conversion can be an unethical success metric.
+
+EMPIRICAL TEST / QUALITY GATE:
+comprehension, regret, cancellation and informed-choice measures.
+
+SOURCE / BASIS:
+consumer protection; ethical ux
+
+================================================================================================
+RECORD 051 | systems | design tokens and consistency
+================================================================================================
+EVIDENCE CLASSIFICATION:
+engineering/design practice
+
+LAYER 0 — SURFACE OBSERVATION:
+repeatable variables encode color, space, type, radius and motion decisions.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+one source of truth prevents screens from drifting apart.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+repetition stabilizes visual expectations.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+users learn meaning from repeated patterns.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+consistent representation lowers interpretive uncertainty and maintenance cost.
+
+DESIGN APPLICATION / RULE:
+define semantic tokens rather than hardcoded one-off values.
+
+MICRO-EXAMPLE:
+status-danger is a semantic token across dialog and toast.
+
+FULL SCENARIO:
+a product adds 20 slightly different grays; centralize surface/foreground roles.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+tokens do not solve poorly chosen component semantics.
+
+EMPIRICAL TEST / QUALITY GATE:
+visual regression, contrast checks, component audits.
+
+SOURCE / BASIS:
+design systems practice
+
+================================================================================================
+RECORD 052 | systems | domain-native density and tempo
+================================================================================================
+EVIDENCE CLASSIFICATION:
+situated design principle
+
+LAYER 0 — SURFACE OBSERVATION:
+interface density should match expert activity and error cost.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+a pilot, accountant and child need different amounts of information.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+display density changes visual search cost.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+expertise changes chunking and desired interaction speed.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+the optimal display depends on task, training, stakes and environment.
+
+DESIGN APPLICATION / RULE:
+start with actual domain tasks and object inventory, not trendy component examples.
+
+MICRO-EXAMPLE:
+an ops screen favors dense log lines; a counseling intake screen favors gentle pacing.
+
+FULL SCENARIO:
+a trader dashboard gets huge empty cards with hidden data; remove wasted space for experts.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+density is not inherently bad or good.
+
+EMPIRICAL TEST / QUALITY GATE:
+observe field workflows and compare expert throughput.
+
+SOURCE / BASIS:
+shepherd domain-native interface cognition; hci
+
+================================================================================================
+RECORD 053 | systems | responsive hierarchy
+================================================================================================
+EVIDENCE CLASSIFICATION:
+layout engineering
+
+LAYER 0 — SURFACE OBSERVATION:
+reflow must preserve what matters when viewport changes.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+small screens need different organization, not just smaller boxes.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+restricted visual field changes scan and motor constraints.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+information can disappear from working context when rearranged badly.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+responsive design is preservation of task semantics under spatial constraints.
+
+DESIGN APPLICATION / RULE:
+prioritize task objects; avoid hiding critical data behind unknown gestures.
+
+MICRO-EXAMPLE:
+table becomes stacked rows with clear column labels.
+
+FULL SCENARIO:
+a desktop fraud review panel collapses on mobile but loses risk reason; retain the essential reason.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+breakpoints depend on content failure, not arbitrary device labels.
+
+EMPIRICAL TEST / QUALITY GATE:
+task completion across widths, orientation, zoom and text scaling.
+
+SOURCE / BASIS:
+responsive design practice; wcag
+
+================================================================================================
+RECORD 054 | systems | progressive disclosure versus discoverability
+================================================================================================
+EVIDENCE CLASSIFICATION:
+tradeoff heuristic
+
+LAYER 0 — SURFACE OBSERVATION:
+optional complexity can be delayed until relevant.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+show the simple path first, but don’t hide what users need.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+fewer immediate elements reduce competition.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+progressive complexity lowers beginner load but may increase expert navigation.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+optimization is over total task cost, not instantaneous visual cleanliness.
+
+DESIGN APPLICATION / RULE:
+expose primary actions and make advanced functions predictable and searchable.
+
+MICRO-EXAMPLE:
+advanced filters live behind an explicit “advanced filters” control.
+
+FULL SCENARIO:
+an accounting app hides tax overrides several menus deep; power users lose time.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+progressive disclosure can become functionality concealment.
+
+EMPIRICAL TEST / QUALITY GATE:
+novice and expert benchmark across task frequency.
+
+SOURCE / BASIS:
+hci practice
+
+================================================================================================
+RECORD 055 | systems | cross-principle conflicts and optimization
+================================================================================================
+EVIDENCE CLASSIFICATION:
+systems reasoning
+
+LAYER 0 — SURFACE OBSERVATION:
+design principles can push in opposite directions.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+there isn’t one rule that wins every time.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+more contrast helps noticing but may increase clutter.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+more choices increase thought but may improve suitability; motion helps orientation but may distress.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+design is a constrained multi-objective optimization problem.
+
+DESIGN APPLICATION / RULE:
+state priorities explicitly: safety > comprehension > task effectiveness > expressive polish when stakes warrant.
+
+MICRO-EXAMPLE:
+large touch targets vs dense data table require deliberate compromise.
+
+FULL SCENARIO:
+a health warning screen needs hierarchy and readability more than decorative minimalism.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+never assign numerical objective weights without validation.
+
+EMPIRICAL TEST / QUALITY GATE:
+define weighted task outcomes, test constraints, check harms by cohort.
+
+SOURCE / BASIS:
+human factors; systems design
+
+================================================================================================
+RECORD 056 | research | experimental causality and confounds
+================================================================================================
+EVIDENCE CLASSIFICATION:
+research method
+
+LAYER 0 — SURFACE OBSERVATION:
+a visual change should be tested without simultaneously changing everything else.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+if you change color, layout and wording together, you won’t know what caused results.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+different visual treatments change attention patterns.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+task difficulty, content and participant differences confound preference.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+causal inference requires controlled comparisons and representative sampling.
+
+DESIGN APPLICATION / RULE:
+use within-subject or randomized A/B designs where appropriate; preregister primary metrics.
+
+MICRO-EXAMPLE:
+test padding variants with identical copy and behavior.
+
+FULL SCENARIO:
+a bright button improves clicks but the variant also moved it; isolate factors.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+laboratory preferences may not predict long-term usage.
+
+EMPIRICAL TEST / QUALITY GATE:
+random assignment, effect sizes, confidence intervals, subgroup outcomes.
+
+SOURCE / BASIS:
+experimental design
+
+================================================================================================
+RECORD 057 | research | eye tracking versus meaning
+================================================================================================
+EVIDENCE CLASSIFICATION:
+measurement caveat
+
+LAYER 0 — SURFACE OBSERVATION:
+gaze location measures looking, not necessarily understanding or liking.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+eyes on an element do not prove the message landed.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+eye movements reflect task and salience.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+fixations may reflect confusion, interest or comprehension.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+an observable proxy is not the construct itself.
+
+DESIGN APPLICATION / RULE:
+triangulate gaze with task outcomes, interview and comprehension.
+
+MICRO-EXAMPLE:
+long fixation on a pricing table may signal confusion.
+
+FULL SCENARIO:
+a heat map glows over a warning; users still misunderstand what to do.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+avoid interpreting every heatmap as attention quality.
+
+EMPIRICAL TEST / QUALITY GATE:
+triangulation with response accuracy.
+
+SOURCE / BASIS:
+eye tracking methodology
+
+================================================================================================
+RECORD 058 | research | iterative measurement and calibration
+================================================================================================
+EVIDENCE CLASSIFICATION:
+evidence-based design process
+
+LAYER 0 — SURFACE OBSERVATION:
+evaluate visual hypotheses and update based on measured outcomes.
+
+LAYER 0B — EXPLAIN LIKE I AM NEW:
+make a guess, test it, keep what actually works.
+
+LAYER 1 — SENSORY AND PERCEPTUAL MECHANISM:
+the display produces measurable perceptual behavior.
+
+LAYER 2 — HUMAN COGNITIVE / EMOTIONAL INTERPRETATION:
+learning depends on closing feedback loop with data.
+
+LAYER 3 — ROOT MECHANISM / BOUNDARY OF CLAIM:
+aesthetic quality is a testable multi-dimensional hypothesis, not a single score.
+
+DESIGN APPLICATION / RULE:
+record hypotheses, exposure conditions, results, exceptions, and adverse outcomes.
+
+MICRO-EXAMPLE:
+a spacing change improves search speed but worsens density satisfaction among experts.
+
+FULL SCENARIO:
+a launch team optimizes click-through and ignores increased destructive misclicks.
+
+COUNTEREXAMPLE / LIMITS / CONFLICTING PRINCIPLES:
+metrics can be gamed; quality requires balanced measures.
+
+EMPIRICAL TEST / QUALITY GATE:
+task success, speed, error, accessibility, comprehension, satisfaction and retention.
+
+SOURCE / BASIS:
+research methods; shepherd audit approach
+
+================================================================================================
+CROSS-DOMAIN SCENARIOS — MULTI-PRINCIPLE DECOMPOSITIONS
+================================================================================================
+
+SCENARIO 01 — nighttime cybersecurity operations dashboard
+  surface: dark polished grid, dozens of threat rows, one critical alert.
+  perception: restrained gray surfaces and strong alert contrast increase foreground segmentation; uniform table rhythm allows scanning.
+  cognition: experienced operators chunk logs and prioritize anomalous states; unfamiliar decorative icons raise interpretation cost.
+  root: the design must maximize correct detection and triage under cognitive and time pressure, not just produce a cinematic mood.
+  actions: stable table columns, meaningful semantic colors, readable typography, visible timestamps, keyboard navigation, persistent action feedback.
+  failure: all alerts use intense neon, creating equal salience and alarm fatigue.
+  test: detection miss rate, triage time, false positives, contrast, task switching.
+
+SCENARIO 02 — calm premium financial application
+  surface: quiet typography, dark layered background, generous padding, single accent.
+  perception: consistent boundaries, spacing and type hierarchy create an orderly figure-ground arrangement.
+  cognition: polish shapes first impressions, but monetary trust requires auditability and understandable actions.
+  root: perceived quality is an inference from cues; actual correctness is determined by operations and evidence.
+  actions: show balances with timestamp, reversible edits, clear fee disclosure, explicit transaction states.
+  failure: minimalist unlabeled transfer controls create errors despite visual praise.
+  test: transfer success, fee understanding, reversibility, trust calibration.
+
+SCENARIO 03 — medical appointment booking
+  surface: available times, doctor card, confirm button, accessibility labels.
+  perception: show selectable states and unambiguous groups rather than purely color distinctions.
+  cognition: anxiety and working-memory burden favor visible context and clear next steps.
+  root: visual systems must support reliable decision-making under variable stress and ability.
+  actions: separate date/time selection, retain doctor and clinic info, show cancellation terms, make confirmation unmistakable.
+  failure: tiny low-contrast chips and hidden clinic address increase booking errors.
+  test: correct slot chosen, cancellation-policy comprehension, screen-reader workflow, error recovery.
+
+SCENARIO 04 — creative studio portfolio
+  surface: large expressive imagery, asymmetrical layout, custom display type.
+  perception: intentionally broken symmetry directs gaze, while type hierarchy holds navigation together.
+  cognition: controlled surprise signals creative identity; unfamiliar navigation increases search effort.
+  root: novelty is valuable when it serves identity without blocking task completion.
+  actions: expressive hero with conventional project list and obvious contact.
+  failure: scroll-jacked animations reduce control and prevent content access.
+  test: portfolio recall, project findability, reduced motion, contact completion.
+
+SCENARIO 05 — dense enterprise analytics
+  surface: nested charts, filters, metrics and tables.
+  perception: alignment, common region and selective contrast reduce visual searching across dense information.
+  cognition: professional users possess learned chunks and need comparative context.
+  root: total cognitive work is not monotonically lower with fewer visible elements.
+  actions: user-customizable density, sticky column headers, semantic grouping, keyboard filters.
+  failure: spacious cards cause enormous scrolling and break side-by-side comparison.
+  test: throughput, wrong comparisons, filter time, subjective mental effort.
+
+SCENARIO 06 — mobile emergency response
+  surface: one urgent action, short instructions, high contrast and clear location status.
+  perception: large motor targets, clear figure-ground and persistent feedback make urgent controls visible.
+  cognition: stress narrows attention and can increase errors.
+  root: the interface is a human-in-the-loop safety mechanism under extreme conditions.
+  actions: prioritize emergency action, prevent accidental destructive changes, readable offline/error status.
+  failure: animated branding delays access or a tiny cancel target sits beside confirm.
+  test: real-device accessibility, task time, erroneous taps, degraded network behavior.
+
+================================================================================================
+PROJECT-SPECIFIC VISUAL DESIGN DEFAULT (NOT SCIENTIFIC LAW)
+================================================================================================
+the shepherd source recommends a dark, cold, cinematic aesthetic: layered near-black surfaces, a restrained accent at trust states, thin lowercase typography, intentional negative space, architecture-like spatial organization. this is an expressive design direction, not a mandate for all interfaces. the usability constraints above can override it when text contrast, discoverability, safety, task density or a user’s preferences require.
+
+IMPLEMENTATION AUDIT CHECKLIST
+01. can the user identify the primary action within five seconds?
+02. can users distinguish background, surface and interactive states?
+03. are related objects closer to each other than unrelated objects?
+04. do similar components reliably behave the same?
+05. are fonts and contrast readable under actual device and lighting conditions?
+06. is focus visible to keyboard users?
+07. are color differences supplemented with labels, shape or text?
+08. do pointing targets accommodate real motor use and spacing?
+09. does every click produce honest, timely state feedback?
+10. can dangerous actions be prevented or reversed?
+11. does motion convey change rather than distract?
+12. does mobile preserve critical task meaning?
+13. does visual polish correlate with measured usability, rather than hide failure?
+14. are taste, cultural assumptions and actual user populations separated?
+15. are hypotheses measured with task accuracy as well as subjective preference?
+
+QUANTITATIVE REFERENCE NOTES
+fitts: movement time MT = a + b*log2(1 + D/W), where D is distance, W effective target width and a,b are empirically fitted; valid under experimental conditions. do not invent a,b.
+hick–hyman: reaction time RT ≈ a + b*log2(N+1) for N approximately equally probable stimulus–response choices under suitable conditions; general products depart from laboratory assumptions.
+weber: delta-I / I ≈ k over suitable perceptual ranges; not a universal cross-color contrast rule.
+wcag 2.2 aa text contrast: 4.5:1 for standard text, 3:1 for large text (with exceptions); non-text UI component contrast 3:1 where the relevant success criterion applies. wcag 2.2 aa pointer target criterion generally 24x24 CSS px or exceptions including spacing. these are conformance thresholds, not all-purpose optimal target sizes.
+miller 7±2 is not a universal menu design count; working-memory capacity depends on chunking and task. exact luxury ratios and claims that particular colors produce the same emotion in everyone are not established universal laws.
+
+SOURCE DIRECTORY / VERIFICATION LINKS
+w3c wcag 2.2 normative standard: https://www.w3.org/TR/WCAG22/
+w3c what is new in wcag 2.2: https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/
+nielsen norman group visual design principles: https://media.nngroup.com/media/articles/attachments/Principles_Visual_Design-A4.pdf
+jon yablonski laws of ux second edition index: https://www.oreilly.com/library/view/laws-of-ux/9781098146955/
+reber, schwarz, winkielman, processing fluency and aesthetic pleasure: https://pubmed.ncbi.nlm.nih.gov/15582859/
+ux principle index — secondary reference: https://uxprinciples.design/laws
+
+EVIDENCE AND VERSION LIMITATIONS
+this is a structured synthesis for research and implementation, not a systematic review, meta-analysis, or proof that each principle transfers without change. source labels identify starting points; they do not imply that every micro-example was directly tested in the cited source. design scenarios are constructed examples. project-specific instructions are labeled as preferences, not independent scientific evidence. test with users from the actual domain, and update findings when they conflict with observation.
+end of dataset.

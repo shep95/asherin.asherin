@@ -1,10 +1,11 @@
-// Guardian Vault item store.
+// guardian vault item store.
 //
-// Storage discipline: the row carries a kind, a label, an optional domain and
-// an opaque ciphertext. Everything sensitive (username, password, note body,
-// card number, TOTP seed, token) lives inside the ciphertext, sealed with the
-// account DEK before it leaves the browser. The server never sees plaintext,
-// and no secret ever reaches a Connect trace.
+// storage discipline: the row carries a kind, a label, an optional domain and
+// an opaque ciphertext. everything sensitive (username, password, note body,
+// card number, totp seed, token) lives inside the ciphertext, sealed with the
+// device data key (`getLocalDek` in @/lib/local/keys) before the row is written
+// to this device's indexeddb. no secret ever reaches a connect trace or the
+// device trail.
 
 import { supabase } from "@/integrations/supabase/client";
 import { encryptText, decryptText } from "@/lib/encryption";
@@ -46,11 +47,11 @@ export interface VaultItem extends Omit<VaultRow, "payload_cipher"> {
 }
 
 export const KIND_LABEL: Record<VaultKind, string> = {
-  login: "Login",
-  note: "Secure note",
-  card: "Card",
-  totp: "Authenticator",
-  token: "API token",
+  login: "login",
+  note: "secure note",
+  card: "card",
+  totp: "authenticator",
+  token: "api token",
 };
 
 /** Normalise a host from a URL or bare domain. Never throws. */
@@ -96,7 +97,7 @@ export interface VaultDraft {
 
 export async function createVaultItem(userId: string, draft: VaultDraft): Promise<string> {
   const label = draft.label.trim().slice(0, 120);
-  if (!label) throw new Error("A label is required");
+  if (!label) throw new Error("a label is required");
 
   const cipher = await encryptText(JSON.stringify(draft.secret), userId);
   const { data, error } = await supabase
@@ -122,7 +123,7 @@ export async function updateVaultItem(
   opts: { markRotated?: boolean } = {},
 ): Promise<void> {
   const label = draft.label.trim().slice(0, 120);
-  if (!label) throw new Error("A label is required");
+  if (!label) throw new Error("a label is required");
 
   const cipher = await encryptText(JSON.stringify(draft.secret), userId);
   const patch: Record<string, unknown> = {

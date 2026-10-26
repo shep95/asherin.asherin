@@ -1,18 +1,17 @@
-import { useEffect } from "react";
 import ArticleShell from "@/components/seo/ArticleShell";
 import {
   ArticleJsonLd,
   BreadcrumbJsonLd,
   FaqJsonLd,
 } from "@/components/seo/SeoJsonLd";
-import { applySeoHead } from "@/lib/seoHead";
 
 /**
  * /blog/bulwark-counter-surveillance
  *
- * Product briefing for BULWARK — counter-surveillance: Bluetooth stalker
- * detection, Wi-Fi sentinel reports, account-compromise forensics, and
- * device legibility probing.
+ * archived research note for "BULWARK" — counter-surveillance: bluetooth
+ * follower detection, wi-fi sentinel reports, account-compromise
+ * forensics, device legibility probing. retired; the device half lives
+ * on in asherin.defender.
  */
 
 const URL = "https://asherin.com/blog/bulwark-counter-surveillance";
@@ -29,15 +28,6 @@ const Box = ({ children }: { children: React.ReactNode }) => (
 );
 
 const BulwarkCounterSurveillance = () => {
-  useEffect(() => {
-    applySeoHead({
-      title: TITLE,
-      description:
-        "BULWARK briefing: persistent-follower Bluetooth detection, Wi-Fi sentinel network audits, account-compromise forensics with origin and VPN assessment, and device legibility probing inside Asherin.",
-      path: "/blog/bulwark-counter-surveillance",
-    });
-  }, []);
-
   return (
     <>
       <ArticleJsonLd
@@ -46,7 +36,6 @@ const BulwarkCounterSurveillance = () => {
         headline={TITLE}
         description={DEK}
         datePublished={PUBLISHED}
-        author="Asherin R&D"
         keywords={[
           "counter surveillance app",
           "bluetooth stalker detection",
@@ -61,7 +50,7 @@ const BulwarkCounterSurveillance = () => {
         id="bulwark-counter-surveillance-crumbs"
         items={[
           { name: "Asherin", url: "/" },
-          { name: "Journal", url: "/blog" },
+          { name: "blog", url: "/blog" },
           { name: "BULWARK", url: "/blog/bulwark-counter-surveillance" },
         ]}
       />
@@ -82,18 +71,28 @@ const BulwarkCounterSurveillance = () => {
           },
           {
             q: "Does BULWARK need special hardware?",
-            a: "No. It runs on the browser and companion app APIs already available on your devices, and gets stronger the more of your own devices are enrolled, because each one becomes an independent observer.",
+            a: "the design ran on browser and companion-app apis and grew stronger with every device enrolled as an independent observer. the companion app and the relay between devices were never built.",
           },
         ]}
       />
 
       <ArticleShell
-        eyebrow="Archived Research · Counter-Surveillance"
+        eyebrow="archived · research note"
         title="Counter-surveillance starts with limits"
         dek={DEK}
         publishedLabel="Aug 6 2026"
         readTime="11 min"
       >
+        <p>
+          <strong>status.</strong> archived research note. bulwark is
+          retired; the deep link collapses onto chat. the part of it a
+          browser can honestly do, measuring the device it runs on, lives
+          in <a href="/dashboard/asherin-defender">asherin.defender</a>. the
+          multi-device observers, the notification pipeline and the account
+          forensics below needed a server and a companion app, and the local
+          edition has neither.
+        </p>
+
         <h2>1. The inversion</h2>
         <p>
           Surveillance works because devices broadcast. Phones, earbuds,
@@ -212,12 +211,11 @@ const BulwarkCounterSurveillance = () => {
 
         <h2>7. Notification pipeline</h2>
         <p>
-          Findings are useless in a tab you are not looking at. BULWARK
-          alerts route through a unified pipeline: email for the record,
-          and push notifications to laptop and phone for immediacy.
-          Severity gates the channel, an IoT hygiene note stays in the
-          report, a persistent-follower escalation pushes to every enrolled
-          device.
+          Findings are useless in a tab you are not looking at. the design
+          routed alerts through one pipeline: email for the record, push to
+          laptop and phone for immediacy, severity gating the channel. a
+          closed tab cannot send mail or push, so in the local edition this
+          stays a design.
         </p>
 
         <h2>8. Operating posture</h2>
@@ -241,7 +239,7 @@ const BulwarkCounterSurveillance = () => {
         <h3>Does it store the identifiers of strangers?</h3>
         <p>
           A privacy-preserving implementation scopes observations to the
-          signed-in owner, ages them out, and avoids any cross-user device
+          device's own owner, ages them out, and avoids any cross-user device
           directory. This note does not claim that a public device registry
           exists.
         </p>

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Loader2, RefreshCw, AlertTriangle, Play, ChevronRight, Trash2, Download,
+  Loader2, RefreshCw, Play, ChevronRight, Trash2, Download,
   Link2, ShieldQuestion, Users, Power,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import OrganOffline from "../OrganOffline";
+import { describeFailure, isLocalOnlyError } from "../offline";
 
 /**
  * CONTACT VAULT — automated correspondent intelligence.
@@ -41,13 +43,10 @@ type CrossLink = { label: string; kind: string; viaA: string; viaB: string; extr
 
 async function callVault<T = any>(action: string, extra: Record<string, unknown> = {}): Promise<T> {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error("Sign in first.");
+  if (!session) throw new Error("no local identity on this device.");
   const { data, error } = await supabase.functions.invoke("mesh-vault", { body: { action, ...extra } });
-  if (error) {
-    let detail = error.message;
-    try { detail = (await (error as any).context?.text?.()) ?? detail; } catch { /* keep */ }
-    throw new Error(detail);
-  }
+  // the shim's error is rethrown whole so its code survives to isLocalOnlyError.
+  if (error) throw error;
   if ((data as any)?.error) throw new Error((data as any).message || (data as any).error);
   return data as T;
 }
@@ -177,7 +176,11 @@ const ContactVaultPane = () => {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [crossLinks, setCrossLinks] = useState<CrossLink[]>([]);
   const [status, setStatus] = useState<any>(null);
-  const [err, setErr] = useState<string | null>(null);
+  const [err, setErr] = useState<unknown>(null);
+  // the vault organ answered "no device handler": autopilot, the standing
+  // watch and every scan button are held so nothing loops against a dead
+  // function or toasts a failure every minute.
+  const offline = isLocalOnlyError(err);
   const [busy, setBusy] = useState<string | null>(null);
   const [open, setOpen] = useState<{ row: Row; doc: any } | null>(null);
   const [hint, setHint] = useState("");
@@ -201,7 +204,7 @@ const ContactVaultPane = () => {
       setStatus(st);
       return st as any;
     } catch (e) {
-      setErr((e as Error).message);
+      setErr(e ?? new Error("the vault organ did not answer"));
       setRows([]);
       return null;
     }
@@ -241,9 +244,9 @@ const ContactVaultPane = () => {
           const msg = (e as Error).message;
           // No grant yet is the normal cold-start state, not a failure.
           setAutoNote(
-            /tier_required|Tier 2|Sign in/i.test(msg)
-              ? "Connect a Google account with Read access to start the automatic sweep."
-              : msg.slice(0, 180),
+            /tier_required|Tier 2|identity/i.test(msg)
+              ? "a google account with read access would start the automatic sweep. none can be connected on this device yet."
+              : describeFailure(e, "vault organ"),
           );
           return;
         }
@@ -326,7 +329,7 @@ const ContactVaultPane = () => {
   useEffect(() => { drainRef.current = autoDrain; }, [autoDrain]);
 
   useEffect(() => {
-    if (!autopilot) return;
+    if (!autopilot || err) return;
     let cancelled = false;
 
     const sweep = async () => {
@@ -356,12 +359,12 @@ const ContactVaultPane = () => {
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [autopilot, load]);
+  }, [autopilot, err, load]);
 
   const run = async (key: string, fn: () => Promise<void>) => {
     setBusy(key);
     try { await fn(); }
-    catch (e) { toast.error((e as Error).message.slice(0, 220)); }
+    catch (e) { toast.error(describeFailure(e, "vault organ")); }
     finally { setBusy(null); }
   };
 
@@ -427,14 +430,13 @@ const ContactVaultPane = () => {
   return (
     <div className="space-y-4">
       <Shell>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h4 className="text-xs font-light tracking-wide text-foreground">Contact Vault</h4>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h4 className="text-xs font-light tracking-wide text-foreground">correspondent dossiers</h4>
             <p className="text-[11px] font-extralight text-muted-foreground/70 mt-1 max-w-xl">
-              The moment a Google account is connected, every correspondent and every card in
-              your address book — names, addresses, phone numbers — becomes a standing dossier,
-              built one entity at a time and expanded along three bounded hops. Metadata in,
-              sourced intelligence out; no message bodies are stored.
+              with a google account connected, every correspondent and every card in your address book —
+              names, addresses, phone numbers — becomes a standing dossier, built one entity at a time and
+              expanded along three bounded hops. metadata in, sourced intelligence out; no message bodies are stored.
             </p>
           </div>
           <div className="flex items-center gap-1">
@@ -442,20 +444,19 @@ const ContactVaultPane = () => {
               variant="ghost" size="sm"
               className={`text-xs font-extralight ${autopilot ? "text-foreground" : "text-muted-foreground/60"}`}
               aria-pressed={autopilot}
+              disabled={offline}
               onClick={() => setAutopilot((v) => !v)}
             >
-              <Power className="h-3.5 w-3.5 mr-1.5" /> Autopilot {autopilot ? "on" : "off"}
+              <Power className="h-3.5 w-3.5 mr-1.5" aria-hidden /> autopilot {autopilot ? "on" : "off"}
             </Button>
             <Button variant="ghost" size="sm" className="text-xs font-extralight" onClick={() => void load()}>
-              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" aria-hidden /> read again
             </Button>
           </div>
         </div>
 
-        {err && (
-          <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs font-extralight text-destructive">
-            <AlertTriangle className="h-3.5 w-3.5" /> {err}
-          </div>
+        {err !== null && (
+          <OrganOffline error={err} organ="vault organ" onRetry={() => void load()} />
         )}
 
         {autoNote && !err && (
@@ -470,15 +471,15 @@ const ContactVaultPane = () => {
 
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           {[
-            ["Hop 1", status?.hops?.["1"] ?? 0],
-            ["Hop 2", status?.hops?.["2"] ?? 0],
-            ["Ready", status?.census?.ready ?? 0],
-            ["Queued", queued],
-            ["Failed", status?.census?.failed ?? 0],
+            ["hop 1", status?.hops?.["1"] ?? 0],
+            ["hop 2", status?.hops?.["2"] ?? 0],
+            ["ready", status?.census?.ready ?? 0],
+            ["queued", queued],
+            ["failed", status?.census?.failed ?? 0],
           ].map(([l, v]) => (
             <div key={String(l)} className="rounded-xl border border-border/20 bg-background/30 px-3 py-2">
-              <div className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-extralight">{l}</div>
-              <div className="text-sm font-light text-foreground mt-0.5">{String(v)}</div>
+              <div className="text-[10px] tracking-widest text-muted-foreground/60 font-extralight">{l}</div>
+              <div className="text-sm font-light text-foreground mt-0.5">{err !== null ? "—" : String(v)}</div>
             </div>
           ))}
         </div>
@@ -486,12 +487,13 @@ const ContactVaultPane = () => {
         <div className="flex flex-wrap items-center gap-2">
           <Input
             value={hint} onChange={(e) => setHint(e.target.value)}
-            placeholder="Jurisdiction hint (optional) — e.g. Cape Coral Florida"
+            placeholder="jurisdiction hint (optional) — e.g. cape coral florida"
             className="h-8 max-w-xs text-xs font-extralight"
+            disabled={offline}
           />
           <Button
             size="sm" variant="outline" className="text-xs font-extralight"
-            disabled={busy === "enq" || autoDrain}
+            disabled={busy === "enq" || autoDrain || offline}
             onClick={() => run("enq", async () => {
               const r = await callVault<any>("vault_enqueue", { days: 365, max: 25, contacts_max: 40 });
               toast.success(
@@ -500,20 +502,20 @@ const ContactVaultPane = () => {
               await load();
             })}
           >
-            {busy === "enq" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Users className="h-3.5 w-3.5 mr-1.5" />}
-            Scan mail + contacts
+            {busy === "enq" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin motion-reduce:animate-none" aria-hidden /> : <Users className="h-3.5 w-3.5 mr-1.5" aria-hidden />}
+            scan mail + contacts
           </Button>
           <Button
             size="sm" variant="outline" className="text-xs font-extralight"
-            disabled={autoDrain || queued === 0}
+            disabled={autoDrain || queued === 0 || offline}
             onClick={() => setAutoDrain(true)}
           >
-            {autoDrain ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Play className="h-3.5 w-3.5 mr-1.5" />}
-            {autoDrain ? "Sweeping…" : `Build dossiers (${queued})`}
+            {autoDrain ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin motion-reduce:animate-none" aria-hidden /> : <Play className="h-3.5 w-3.5 mr-1.5" aria-hidden />}
+            {autoDrain ? "sweeping…" : `build dossiers (${queued})`}
           </Button>
           {autoDrain && (
             <Button size="sm" variant="ghost" className="text-xs font-extralight" onClick={() => setAutoDrain(false)}>
-              Stop
+              stop
             </Button>
           )}
         </div>
@@ -539,12 +541,15 @@ const ContactVaultPane = () => {
 
       {/* Index */}
       <Shell>
-        {rows === null && <div className="h-24 rounded-xl bg-foreground/[0.03] animate-pulse" aria-live="polite" />}
-        {rows !== null && rows.length === 0 && !err && (
+        {rows === null && <div className="h-24 rounded-xl bg-foreground/[0.03] animate-pulse motion-reduce:animate-none" aria-live="polite" />}
+        {rows !== null && rows.length === 0 && err === null && (
           <div className="text-xs font-extralight text-muted-foreground/70">
-            The vault is empty. Run <span className="text-foreground">Scan mail + contacts</span> to
-            rank the humans in your mail and address book, then build their dossiers.
+            the vault is empty. <span className="text-foreground">scan mail + contacts</span> ranks the humans in your
+            mail and address book, then their dossiers are built.
           </div>
+        )}
+        {rows !== null && rows.length === 0 && err !== null && (
+          <div className="text-xs font-extralight text-muted-foreground/70">no dossier index could be read.</div>
         )}
 
         {rows !== null && rows.length > 0 && (

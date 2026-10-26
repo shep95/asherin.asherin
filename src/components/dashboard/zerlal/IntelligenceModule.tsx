@@ -236,9 +236,16 @@ const IntelligenceModule = ({ screen }: IntelligenceModuleProps) => {
             <Icon className="h-5 w-5 text-foreground/40" />
           </div>
           <div>
-            <h2 className="text-sm font-light tracking-[0.1em] text-foreground/80 uppercase">{data.title}</h2>
+            <h2 className="text-sm font-light tracking-[0.1em] text-foreground/80 lowercase">{data.title}</h2>
             <p className="text-[10px] text-muted-foreground/35 mt-0.5 max-w-xl">{data.subtitle}</p>
           </div>
+        </div>
+
+        <div className="rounded-xl border border-border/[0.08] bg-foreground/[0.015] p-3">
+          <p className="text-[10px] text-muted-foreground/45 leading-relaxed lowercase">
+            this module ran on the asherin kernel. the local edition keeps the descriptions below for reference, but none of them
+            execute on this device — each needed a server organ (indexes, feeds, remote scanners) that a browser tab cannot stand in for.
+          </p>
         </div>
 
         <div className="space-y-3">
@@ -248,10 +255,8 @@ const IntelligenceModule = ({ screen }: IntelligenceModuleProps) => {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="text-[11px] text-foreground/60">{f.name}</h3>
-                    <span className={`text-[7px] px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
-                      f.status === "active" ? "bg-emerald-500/10 text-emerald-400" : "bg-foreground/[0.03] text-muted-foreground/30"
-                    }`}>
-                      {f.status === "active" ? "Active" : "Coming Soon"}
+                    <span className="text-[7px] px-1.5 py-0.5 rounded-full tracking-wider bg-foreground/[0.03] text-muted-foreground/30 lowercase">
+                      kernel
                     </span>
                   </div>
                   <p className="text-[9px] text-muted-foreground/35 mt-1 leading-relaxed">{f.desc}</p>

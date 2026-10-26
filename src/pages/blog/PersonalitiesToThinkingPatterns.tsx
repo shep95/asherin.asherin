@@ -64,7 +64,7 @@ const Flow = ({
         </div>
       ))}
     </div>
-    <figcaption className="mt-3 text-[10px] font-extralight tracking-[0.2em] uppercase text-muted-foreground/50">
+    <figcaption className="mt-3 text-[10px] font-extralight tracking-[0.12em] lowercase text-muted-foreground/50">
       {caption}
     </figcaption>
   </figure>
@@ -97,7 +97,7 @@ const PersonalitiesToThinkingPatterns = () => (
       id="personalities-are-not-thinking-patterns"
       items={[
         { name: "Asherin", url: "/" },
-        { name: "Blog", url: "/blog" },
+        { name: "blog", url: "/blog" },
         { name: TITLE, url: URL },
       ]}
     />
@@ -314,7 +314,7 @@ const PersonalitiesToThinkingPatterns = () => (
     />
 
     <RelatedLinks
-      heading="continue the chain"
+      heading="read next"
       links={[
         {
           to: "/blog/code-narrative-quantum-collapse",
@@ -332,7 +332,7 @@ const PersonalitiesToThinkingPatterns = () => (
           to: "/software",
           label: "asherin software",
           description:
-            "the consumer stack these patterns run inside, tier by tier.",
+            "the rooms these patterns run inside, on your own device.",
         },
         {
           to: "/founder",

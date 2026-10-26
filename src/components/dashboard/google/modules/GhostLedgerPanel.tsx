@@ -13,7 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Ghost, RefreshCw, ShieldAlert, AlertTriangle, Link2, Mail, MessageSquare } from "lucide-react";
+import { Ghost, RefreshCw, ShieldAlert, Link2, Mail, MessageSquare } from "lucide-react";
+import OrganOffline from "../OrganOffline";
 
 interface Correspondent {
   host: string;
@@ -71,7 +72,7 @@ const originLabel: Record<Correspondent["origin"], string> = {
 export default function GhostLedgerPanel() {
   const [data, setData] = useState<LedgerResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [channel, setChannel] = useState<Channel>("all");
   const [windowDays, setWindowDays] = useState<number>(90);
   const [focus, setFocus] = useState("");
@@ -99,7 +100,7 @@ export default function GhostLedgerPanel() {
       setData(res as LedgerResponse);
     } catch (e: unknown) {
       if (!alive.current) return;
-      setError(e instanceof Error ? e.message : "Ghost ledger sweep failed");
+      setError(e ?? new Error("the ghost ledger sweep did not answer"));
     } finally {
       if (alive.current) setLoading(false);
     }
@@ -111,15 +112,15 @@ export default function GhostLedgerPanel() {
     <div className="flex h-full flex-col gap-4 p-4">
       <header className="flex flex-wrap items-center gap-3">
         <Ghost className="h-4 w-4 text-muted-foreground" aria-hidden />
-        <div className="mr-auto">
-          <h2 className="text-sm font-medium tracking-tight">GHOSTMAIL — Ledger through the Asherin Engine</h2>
+        <div className="mr-auto min-w-0">
+          <h2 className="text-sm font-light tracking-tight">ghostmail — the ledger through the engine</h2>
           <p className="text-xs text-muted-foreground">
-            Your correspondence nominates the hosts. The Asherin Engine probes them. No message body is read.
+            your correspondence nominates the hosts. the engine probes them. no message body is read.
           </p>
         </div>
         <Button size="sm" variant="outline" onClick={run} disabled={loading}>
-          <RefreshCw className={`mr-2 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} aria-hidden />
-          {loading ? "Sweeping" : "Run sweep"}
+          <RefreshCw className={`mr-2 h-3.5 w-3.5 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden />
+          {loading ? "sweeping" : "run sweep"}
         </Button>
       </header>
 
@@ -133,7 +134,7 @@ export default function GhostLedgerPanel() {
             className="h-7 px-3 text-xs"
           >
             {c === "gmail" ? <Mail className="mr-1.5 h-3 w-3" aria-hidden /> : c === "sms" ? <MessageSquare className="mr-1.5 h-3 w-3" aria-hidden /> : null}
-            {c === "all" ? "All channels" : c === "gmail" ? "Email" : "Phone"}
+            {c === "all" ? "all channels" : c === "gmail" ? "email" : "phone"}
           </Button>
         ))}
         <span className="mx-1 h-4 w-px bg-border" aria-hidden />
@@ -152,14 +153,14 @@ export default function GhostLedgerPanel() {
           value={focus}
           onChange={(e) => setFocus(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") run(); }}
-          placeholder="Narrow to an address, number or phrase"
-          className="h-7 w-64 text-xs"
-          aria-label="Narrow the sweep"
+          placeholder="narrow to an address, number or phrase"
+          className="h-7 w-full max-w-64 text-xs"
+          aria-label="narrow the sweep"
         />
       </div>
 
       {data && !data.empty && (
-        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground">
           {data.scanned} signals · {data.windowDays}d · {data.hostsProbed}/{data.hostsConsidered} hosts probed
           {data.partial ? " · not exhaustive" : ""} · {data.elapsedMs}ms
         </p>
@@ -173,21 +174,19 @@ export default function GhostLedgerPanel() {
             </div>
           )}
 
-          {!loading && error && (
-            <div className="p-6 text-center text-sm">
-              <AlertTriangle className="mx-auto mb-2 h-4 w-4 text-destructive" aria-hidden />
-              <p className="text-destructive">{error}</p>
-              <Button size="sm" variant="outline" className="mt-3" onClick={run}>Retry</Button>
+          {!loading && error !== null && (
+            <div className="p-3">
+              <OrganOffline error={error} organ="ghost engine" onRetry={run} />
             </div>
           )}
 
-          {!loading && !error && !data && (
+          {!loading && error === null && !data && (
             <div className="p-8 text-center text-sm text-muted-foreground">
-              Run a sweep to fuse the ledger with the Asherin Engine.
+              run a sweep to fuse the ledger with the engine.
             </div>
           )}
 
-          {!loading && !error && data?.empty && (
+          {!loading && error === null && data?.empty && (
             <div className="p-8 text-center text-sm text-muted-foreground">{data.message}</div>
           )}
 
@@ -242,8 +241,8 @@ export default function GhostLedgerPanel() {
 
       {data?.index?.anomalies?.length ? (
         <section className="rounded-md border border-border/40 p-3">
-          <h3 className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-            Ghost anomalies across the probed set
+          <h3 className="mb-2 font-mono text-[10px] tracking-[0.18em] text-muted-foreground">
+            ghost anomalies across the probed set
           </h3>
           <ul className="space-y-1 text-xs">
             {data.index.anomalies.slice(0, 6).map((a, i) => (

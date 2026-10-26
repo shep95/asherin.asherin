@@ -24,6 +24,8 @@ import {
   Route, Square, Circle, Loader2, Trash2, Download, RefreshCw,
   AlertTriangle, Gauge, Clock, MapPin, Activity, WifiOff, Radar,
 } from "lucide-react";
+import OrganOffline from "../OrganOffline";
+import { describeFailure, isLocalOnlyError } from "../offline";
 
 interface StreetLeg {
   name: string; seconds: number; metres: number;
@@ -75,6 +77,11 @@ export default function TripRecorderTab() {
   const [rec, setRec] = useState<RecorderState>(tripRecorder.getState());
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  // the recorder writes fixes to this device but opens, closes and analyses
+  // the trip on the rideshare organ. with no organ the arm control is held,
+  // and the reason is on the panel.
+  const offline = isLocalOnlyError(loadError);
   const [label, setLabel] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -99,11 +106,12 @@ export default function TripRecorderTab() {
   };
 
   const load = useCallback(async () => {
+    setLoadError(null);
     const { data, error } = await supabase.functions.invoke("rideshare-guardian", {
       body: { action: "trip.list" },
     });
     if (!mounted.current) return;
-    if (error) toast.error("Could not load recorded trips.");
+    if (error) setLoadError(error);
     else setTrips((data?.trips ?? []) as Trip[]);
     setLoading(false);
   }, []);
@@ -112,7 +120,7 @@ export default function TripRecorderTab() {
     void (async () => {
       // A reload mid-ride must resume, not orphan the recording.
       const resumed = await tripRecorder.restore();
-      if (resumed) toast.info("Resumed the trip that was already recording on this device.");
+      if (resumed) toast.info("resumed the trip that was already recording on this device.");
       await load();
     })();
   }, [load]);
@@ -121,7 +129,7 @@ export default function TripRecorderTab() {
     setBusy("start");
     await tripRecorder.start({ label: label.trim() || undefined });
     setBusy(null);
-    if (tripRecorder.getState().status === "recording") toast.success("Recording. Keep this tab open.");
+    if (tripRecorder.getState().status === "recording") toast.success("recording. keep this tab open.");
   };
 
   const stop = async () => {
@@ -130,7 +138,7 @@ export default function TripRecorderTab() {
     setBusy(null);
     setLabel("");
     await load();
-    if (id) { setOpen(id); toast.success("Trip closed and analysed."); }
+    if (id) { setOpen(id); toast.success("trip closed and analysed."); }
   };
 
   const reanalyse = async (id: string) => {
@@ -139,8 +147,8 @@ export default function TripRecorderTab() {
       body: { action: "trip.analyze", trip_id: id },
     });
     setBusy(null);
-    if (error) toast.error("Analysis failed. The raw trace is still stored.");
-    else { toast.success("Re-analysed against current road data."); await load(); }
+    if (error) toast.error(describeFailure(error, "rideshare organ"), { description: "the raw trace is still stored." });
+    else { toast.success("re-analysed against current road data."); await load(); }
   };
 
   const remove = async (id: string) => {
@@ -156,7 +164,7 @@ export default function TripRecorderTab() {
       body: { action: "trip.track", trip_id: t.id, format: "gpx" },
     });
     setBusy(null);
-    if (error) { toast.error("Export failed."); return; }
+    if (error) { toast.error(describeFailure(error, "rideshare organ")); return; }
     const text = typeof data === "string" ? data : new TextDecoder().decode(data as ArrayBuffer);
     const url = URL.createObjectURL(new Blob([text], { type: "application/gpx+xml" }));
     const a = document.createElement("a");
@@ -174,15 +182,22 @@ export default function TripRecorderTab() {
       <div className="space-y-5 px-5 py-4">
         {/* ── LIVE RECORDER ─────────────────────────────────────────────── */}
         <section className="rounded-lg border border-border/25 bg-card/20 p-4">
-          <h3 className="mb-1 text-xs font-light uppercase tracking-[0.18em] text-foreground">
-            Ride recorder
+          <h3 className="mb-1 text-xs font-light tracking-[0.18em] text-foreground">
+            ride recorder
           </h3>
           <p className="mb-3 text-xs text-muted-foreground">
-            Records your own position trace for the length of the ride, then reconstructs
+            records your own position trace for the length of the ride, then reconstructs
             the streets taken, the time on each, the speed against posted limits, and any
-            harsh braking or out-and-back movement. This is your record — it is not
+            harsh braking or out-and-back movement. this is your record — it is not
             supplied by, and does not depend on, the rideshare operator.
           </p>
+          {offline && (
+            <p className="mb-3 flex items-start gap-2 rounded border border-border/30 bg-muted/10 px-3 py-2 text-xs text-muted-foreground" role="status">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+              fixes are held on this device, but the trip itself is opened, closed and analysed by the rideshare organ,
+              which has no device answer. recording is held until one exists.
+            </p>
+          )}
 
           {/* ── AUTOMATIC CAPTURE ───────────────────────────────────────── */}
           <div className="mb-4 rounded border border-border/25 bg-muted/10 px-3 py-3">
@@ -190,14 +205,14 @@ export default function TripRecorderTab() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <Radar className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                  <span className="text-xs font-light uppercase tracking-[0.16em] text-foreground">
-                    Automatic capture
+                  <span className="text-xs font-light tracking-[0.16em] text-foreground">
+                    automatic capture
                   </span>
                 </div>
                 <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                  Recording arms itself when the phone sustains vehicle speed for 45 seconds and
-                  covers 350 m, and closes after five minutes stationary. You never have to press
-                  anything. A trip you start by hand is never closed automatically.
+                  recording arms itself when the phone sustains vehicle speed for 45 seconds and
+                  covers 350 m, and closes after five minutes stationary. a trip you start by hand
+                  is never closed automatically.
                 </p>
                 <p className="mt-1.5 text-[11px] text-muted-foreground" aria-live="polite">
                   {auto.note}
@@ -212,14 +227,15 @@ export default function TripRecorderTab() {
                     className="mt-2 h-7 text-[11px]"
                     onClick={() => void autoTrip.requestPermission()}
                   >
-                    Grant location access
+                    grant location access
                   </Button>
                 )}
               </div>
               <Switch
                 checked={auto.enabled}
+                disabled={offline}
                 onCheckedChange={(v) => void toggleAuto(v)}
-                aria-label="Automatic trip capture"
+                aria-label="automatic trip capture"
               />
             </div>
           </div>
@@ -227,31 +243,32 @@ export default function TripRecorderTab() {
           {rec.status !== "recording" && rec.status !== "stopping" ? (
             <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
               <div>
-                <Label htmlFor="trip-label" className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                  Label (optional)
+                <Label htmlFor="trip-label" className="text-[11px] tracking-wider text-muted-foreground">
+                  label (optional)
                 </Label>
                 <Input
                   id="trip-label"
-                  placeholder="Airport run, night shift home…"
+                  placeholder="airport run, night shift home…"
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
                   maxLength={120}
+                  disabled={offline}
                 />
               </div>
-              <Button onClick={start} disabled={busy === "start"}>
+              <Button onClick={start} disabled={busy === "start" || offline}>
                 {busy === "start"
-                  ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  : <Circle className="mr-1.5 h-3.5 w-3.5 fill-current" />}
-                Start recording
+                  ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden />
+                  : <Circle className="mr-1.5 h-3.5 w-3.5 fill-current" aria-hidden />}
+                start recording
               </Button>
             </div>
           ) : (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <Stat icon={Clock} label="Elapsed" value={dur(liveSeconds)} />
-                <Stat icon={Route} label="Distance" value={miles(rec.liveDistanceM)} />
-                <Stat icon={Gauge} label="Peak" value={mph(rec.liveMaxMps)} />
-                <Stat icon={Activity} label="Fixes" value={String(rec.fixes)} />
+                <Stat icon={Clock} label="elapsed" value={dur(liveSeconds)} />
+                <Stat icon={Route} label="distance" value={miles(rec.liveDistanceM)} />
+                <Stat icon={Gauge} label="peak" value={mph(rec.liveMaxMps)} />
+                <Stat icon={Activity} label="fixes" value={String(rec.fixes)} />
               </div>
 
               <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
@@ -263,7 +280,7 @@ export default function TripRecorderTab() {
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-foreground/40 motion-reduce:animate-none" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-foreground/80" />
                   </span>
-                  Recording
+                  recording
                 </span>
                 {rec.pendingUpload > 0 && (
                   <span className="inline-flex items-center gap-1">
@@ -279,27 +296,27 @@ export default function TripRecorderTab() {
               {rec.stalled && (
                 <p className="flex items-start gap-2 rounded border border-border/30 bg-muted/20 px-3 py-2 text-xs text-muted-foreground" role="status">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  No new fix for a while. This stretch will be recorded as a coverage gap —
+                  no new fix for a while. this stretch will be recorded as a coverage gap —
                   nothing will be claimed about it either way.
                 </p>
               )}
               {rec.error && (
-                <p className="text-xs text-muted-foreground" role="status">{rec.error}</p>
+                <p className="text-xs text-muted-foreground" role="status">{describeFailure(rec.error, "rideshare organ")}</p>
               )}
 
               <Button variant="outline" onClick={stop} disabled={busy === "stop"}>
                 {busy === "stop"
-                  ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  : <Square className="mr-1.5 h-3.5 w-3.5" />}
-                End trip and analyse
+                  ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden />
+                  : <Square className="mr-1.5 h-3.5 w-3.5" aria-hidden />}
+                end trip and analyse
               </Button>
             </div>
           )}
 
           {rec.status === "error" && rec.error && (
             <p className="mt-3 flex items-start gap-2 text-xs text-muted-foreground" role="alert">
-              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              {rec.error}
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+              {describeFailure(rec.error, "rideshare organ")}
             </p>
           )}
         </section>
@@ -307,11 +324,11 @@ export default function TripRecorderTab() {
         {/* ── HISTORY ───────────────────────────────────────────────────── */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-light uppercase tracking-[0.18em] text-foreground">
-              Recorded trips
+            <h3 className="text-xs font-light tracking-[0.18em] text-foreground">
+              recorded trips
             </h3>
-            <Button size="sm" variant="ghost" onClick={() => void load()} aria-label="Refresh trips">
-              <RefreshCw className="h-3.5 w-3.5" />
+            <Button size="sm" variant="ghost" onClick={() => void load()} aria-label="read trips again">
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden />
             </Button>
           </div>
 
@@ -319,9 +336,11 @@ export default function TripRecorderTab() {
             <div className="space-y-2">
               {[0, 1].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
             </div>
+          ) : loadError !== null ? (
+            <OrganOffline error={loadError} organ="rideshare organ" onRetry={() => void load()} />
           ) : trips.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border/30 px-4 py-6 text-center text-xs text-muted-foreground">
-              No trips recorded yet. Start the recorder when you get in the car;
+              no trips recorded yet. start the recorder when you get in the car;
               end it when you are dropped off.
             </p>
           ) : (

@@ -7,7 +7,7 @@ const B32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 /** Decode a base32 (RFC 4648, no padding required) secret. Throws on junk. */
 export function base32Decode(input: string): Uint8Array {
   const clean = input.replace(/[\s-]/g, "").replace(/=+$/, "").toUpperCase();
-  if (!clean || /[^A-Z2-7]/.test(clean)) throw new Error("Secret is not valid base32");
+  if (!clean || /[^A-Z2-7]/.test(clean)) throw new Error("secret is not valid base32");
   let bits = 0;
   let value = 0;
   const out: number[] = [];
@@ -19,7 +19,7 @@ export function base32Decode(input: string): Uint8Array {
       out.push((value >>> bits) & 0xff);
     }
   }
-  if (out.length === 0) throw new Error("Secret is too short");
+  if (out.length === 0) throw new Error("secret is too short");
   return new Uint8Array(out);
 }
 

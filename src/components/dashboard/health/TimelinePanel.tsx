@@ -22,7 +22,7 @@ const KIND_LABEL: Record<TimelineKind, string> = {
   pain: "pain",
   symptom: "symptom",
   surgery: "surgery",
-  "body-solve": "body model",
+  "body-solve": "body model (earlier edition)",
   observation: "observation",
   snapshot: "snapshot",
   session: "session",
@@ -246,7 +246,7 @@ export default function TimelinePanel({ record, persist }: HealthPanelProps) {
             straight-line projections of trends already in your record — never a prediction, only a modelled continuation. bands widen with distance.
           </p>
           {trajectories.length === 0 && (
-            <p className="text-[10px] font-light text-foreground/35">not enough in your record yet to project a trajectory — this needs repeated labs, wearable series, or multiple body solves.</p>
+            <p className="text-[10px] font-light text-foreground/35">not enough in your record yet to project a trajectory — this needs the same lab repeated three times with dates, or an imported wearable series.</p>
           )}
           {trajectories.map((t) => {
             const chartData = [

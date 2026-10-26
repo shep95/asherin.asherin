@@ -2,9 +2,10 @@
  * ArticleShell — the frame every long-form record is read in.
  *
  * header, breadcrumb, title, dek, byline, the status column, then one
- * measured column of prose. faq JSON-LD from a child FaqJsonLd portals into
- * #asherin-article-faq-root so the questions are on the page, not only in
- * the head. no decoration: hairlines, layered black, thin lowercase type.
+ * measured column of prose (~74 characters a line). #asherin-article-faq-root
+ * is a slot an article may portal visible faq copy into; FaqJsonLd itself
+ * only writes to <head>. no decoration: hairlines, layered black, thin
+ * lowercase type. the status column comes from blogCatalog by pathname.
  */
 import { type ReactNode, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -30,7 +31,7 @@ const ArticleShell = ({
   dek,
   publishedLabel,
   readTime,
-  backTo = { to: "/blog", label: "notes" },
+  backTo = { to: "/blog", label: "blog" },
   image,
   children,
 }: Props) => {
@@ -84,7 +85,7 @@ const ArticleShell = ({
               <h1 className="arrive arrive-3 mt-6 max-w-3xl text-3xl font-extralight lowercase leading-[1.08] tracking-[-0.02em] sm:text-5xl">
                 {title}
               </h1>
-              <p className="journal-muted arrive arrive-4 mt-7 max-w-2xl text-base font-light leading-[1.8] sm:text-lg">{dek}</p>
+              <p className="journal-muted arrive arrive-4 mt-7 max-w-xl text-base font-light leading-[1.8] sm:text-lg">{dek}</p>
               <p className="journal-muted arrive arrive-4 mt-7 text-[11px] font-light lowercase">asher newton</p>
             </div>
             <aside
@@ -106,12 +107,12 @@ const ArticleShell = ({
 
           {image && <div className="mt-12 overflow-hidden border-b journal-rule pb-12">{image}</div>}
 
-          <div className="journal-body mx-auto mt-14 max-w-[44rem] space-y-6 text-[1.02rem] font-light leading-[1.85] [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:space-y-2 [&_code]:font-mono [&_code]:text-sm">
+          <div className="journal-body mx-auto mt-14 max-w-[38rem] space-y-6 text-[1.02rem] font-light leading-[1.85] [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:space-y-2 [&_code]:font-mono [&_code]:text-sm">
             {children}
           </div>
 
-          <div id="asherin-article-faq-root" className="mx-auto max-w-[44rem]" />
-          <div className="mx-auto mt-20 max-w-[44rem] border-t journal-rule pt-8">
+          <div id="asherin-article-faq-root" className="mx-auto max-w-[38rem]" />
+          <div className="mx-auto mt-20 max-w-[38rem] border-t journal-rule pt-8">
             <Link
               to={backTo.to}
               className="journal-muted text-[12px] font-light lowercase transition-colors duration-[var(--dur-quick)] ease-quiet hover:text-foreground"

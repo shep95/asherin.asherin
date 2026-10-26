@@ -1,25 +1,24 @@
-import { useEffect } from "react";
 import ArticleShell from "@/components/seo/ArticleShell";
 import {
   ArticleJsonLd,
   BreadcrumbJsonLd,
   FaqJsonLd,
 } from "@/components/seo/SeoJsonLd";
-import { applySeoHead } from "@/lib/seoHead";
 
 /**
  * /blog/asherin-maps-find-my
  *
- * Product briefing for Asherin Maps — satellite-first mapping with live
- * DOT camera layers, OSRM Fast Lane routing, resizable layer tree,
- * opt-in device self-reporting, and Bluetooth BLE recovery rings.
+ * archived design note for "Asherin Maps" — satellite-first mapping with
+ * DOT camera layers, OSRM routing, a device roster and bluetooth recovery
+ * rings. only the routing shipped (asherin.search's location panel,
+ * src/lib/asher/directions.ts); the globe is asherin.adam.
  */
 
 const URL = "https://asherin.com/blog/asherin-maps-find-my";
 const TITLE =
-  "Asherin Maps, satellite-first mapping, live traffic cameras, Fast Lane routing & Bluetooth recovery";
+  "asherin maps, an archived design for a satellite-first map";
 const DEK =
-  "Asherin Maps replaces the property-map panel with a satellite-default mapping surface: a resizable layer tree, 2,700+ live DOT traffic cameras, OSRM Fast Lane routing, self-reporting device telemetry from the browsers you sign in on, and Bluetooth recovery rings for hardware that cannot report.";
+  "an archived design note: a satellite-default map with a layer tree, public DOT camera feeds, OSRM routing, self-reported device telemetry and bluetooth recovery rings. only the routing shipped, inside asherin.search; the globe is asherin.adam. nothing here locates a phone.";
 const PUBLISHED = "2026-08-04T00:00:00.000Z";
 
 const Box = ({ children }: { children: React.ReactNode }) => (
@@ -29,15 +28,6 @@ const Box = ({ children }: { children: React.ReactNode }) => (
 );
 
 const AsherinMapsFindMy = () => {
-  useEffect(() => {
-    applySeoHead({
-      title: TITLE,
-      description:
-        "Asherin Maps briefing: satellite-default imagery, resizable layer tree, 2,700+ live DOT traffic cameras, OSRM Fast Lane routing, self-reported battery and location from the browsers you sign in on, and Bluetooth recovery rings.",
-      path: "/blog/asherin-maps-find-my",
-    });
-  }, []);
-
   return (
     <>
       <ArticleJsonLd
@@ -46,7 +36,6 @@ const AsherinMapsFindMy = () => {
         headline={TITLE}
         description={DEK}
         datePublished={PUBLISHED}
-        author="Asherin R&D"
         keywords={[
           "Asherin Maps",
           "satellite mapping dashboard",
@@ -62,7 +51,7 @@ const AsherinMapsFindMy = () => {
         id="asherin-maps-find-my-crumbs"
         items={[
           { name: "Asherin", url: "/" },
-          { name: "Journal", url: "/blog" },
+          { name: "blog", url: "/blog" },
           { name: "Asherin Maps", url: "/blog/asherin-maps-find-my" },
         ]}
       />
@@ -71,30 +60,42 @@ const AsherinMapsFindMy = () => {
         items={[
           {
             q: "What is Asherin Maps?",
-            a: "The map surface of the Asherin dashboard. It defaults to satellite imagery, supports a layer tree, displays available public roadway camera feeds, and computes routes when the routing service responds.",
+            a: "an archived design for a satellite-first map surface. what shipped: osrm routing inside asherin.search's location panel, and the live globe asherin.adam. the camera layer, device roster and recovery rings were not built.",
           },
           {
-            q: "Where do the traffic cameras come from?",
-            a: "Public state and municipal Department of Transportation camera feeds, over 2,700 of them, published by the agencies themselves. They are plotted as map layers and opened in place, with no private or residential camera access.",
+            q: "Where would the traffic cameras have come from?",
+            a: "public state and municipal department of transportation feeds, published by the agencies themselves, plotted as a layer and opened in place. the layer was designed, not built; no private or residential camera was ever in scope.",
           },
           {
-            q: "How does Bluetooth recovery locate a lost device?",
-            a: "Devices report their own position and battery only from a browser where you signed in and granted permission, there is no remote locating of a phone that never reported. For Bluetooth hardware that cannot self-report, Asherin fuses the last-seen RSSI observations from your own reporting browsers into a probability ring showing where it was last within range.",
+            q: "How would Bluetooth recovery have located a lost device?",
+            a: "a device would report its own position only from a browser where you granted permission; there is no remote locating of a phone that never reported. for hardware that cannot self-report, the design fused last-seen RSSI observations from your own browsers into a probability ring. the roster needed a server to relay between browsers, which the local edition does not have, so it was not built.",
           },
           {
-            q: "Can the assistant drive the map?",
-            a: "Yes. The map exposes tool functions to the Asherin assistant, so a natural-language instruction can move the view, drop markers, draw a route, or locate a device without touching the controls.",
+            q: "Can shepherd drive the map?",
+            a: "the location panel in asherin.search opens from a place-shaped query and computes a route when osrm answers. the full tool surface this design described, markers, layers, device lookup, was not built.",
           },
         ]}
       />
 
       <ArticleShell
-        eyebrow="Product Briefing · Asherin Maps"
-        title="Asherin Maps, satellite-first, camera-aware, assistant-driven"
+        eyebrow="archived · design note"
+        title="asherin maps, an archived design for a satellite-first map"
         dek={DEK}
         publishedLabel="Aug 4 2026"
         readTime="10 min"
       >
+        <p>
+          <strong>status.</strong> archived design note. of what follows, the
+          routing shipped: asherin.search opens a location panel for a
+          place-shaped query and asks a public osrm engine for driving,
+          cycling and walking routes, reporting a degraded state when the
+          graph does not answer. the live globe is{" "}
+          <a href="/dashboard/asherin-adam">asherin.adam</a>. the camera
+          layer, the device roster and the recovery rings needed a server to
+          relay between your browsers, and the local edition has no server,
+          so they were not built. nothing here locates a phone.
+        </p>
+
         <h2>1. Satellite by default</h2>
         <p>
           A street-line basemap is a diagram; satellite imagery is
@@ -161,15 +162,15 @@ const AsherinMapsFindMy = () => {
 
         <h2>5. Device roster, the browsers that report in</h2>
         <p>
-          A compatible device joins the roster when you open Asherin on it,
-          sign in, and grant available permissions in that browser. It then
-          reports its own position and battery on an interval, and the map
-          renders each reporter with its last-report timestamp so a stale
-          position is visibly stale rather than quietly wrong. This is
-          self-reporting, not remote locating: Google publishes no Find Hub
-          or device-location API to third parties, so a phone that has never
-          opened Asherin and granted permission cannot be placed on this map
-          at all.
+          as designed, a device would join the roster when you opened
+          asherin on it and granted permission in that browser, then report
+          its own position and battery on an interval, each reporter drawn
+          with its last-report timestamp so a stale position is visibly
+          stale. this is self-reporting, not remote locating: Google
+          publishes no Find Hub or device-location API to third parties, so
+          a phone that never opened asherin and granted permission could not
+          be placed on this map at all. relaying reports between browsers
+          needs a server, which is why the roster was not built.
         </p>
 
         <h2>6. Bluetooth recovery, hardware that cannot speak</h2>
@@ -199,12 +200,11 @@ const AsherinMapsFindMy = () => {
 
         <h2>7. Assistant control</h2>
         <p>
-          The map registers tool functions with the Asherin assistant, so
-          the natural-language path and the manual path reach the same
-          state machine. Ask it to centre on a location, drop a marker,
-          draw the fastest route between two points, or locate a device,
-          and it calls the function directly rather than describing what
-          you should click.
+          the design registered tool functions with shepherd so the
+          natural-language path and the manual path reached the same state
+          machine: centre on a location, drop a marker, draw the fastest
+          route, locate a device. what shipped is narrower: a place-shaped
+          query in asherin.search opens the location panel.
         </p>
 
         <h2>8. Performance posture</h2>
@@ -221,18 +221,21 @@ const AsherinMapsFindMy = () => {
         <h2>9. FAQ</h2>
         <h3>Is Asherin Maps included?</h3>
         <p>
-          Yes. Every room ships with the app, and the app runs on your own
-          device. There are no tiers.
+          as a room, no. the routing lives inside asherin.search and the
+          globe is asherin.adam; both ship with the app, which runs on your
+          own device. there are no tiers and no account.
         </p>
-        <h3>Is any of the camera access private or unauthorised?</h3>
+        <h3>Was any of the camera access private or unauthorised?</h3>
         <p>
-          No. Every feed is a publicly published transport-agency roadway
-          camera served from the agency's own endpoint.
+          No. the design only ever named publicly published transport-agency
+          roadway cameras served from the agency's own endpoint, and the
+          layer was not built.
         </p>
         <h3>What if a device has not reported in hours?</h3>
         <p>
-          It renders dimmed with its last-report age shown. The map never
-          presents a stale coordinate as a live one.
+          the design rendered it dimmed with its last-report age shown, so a
+          stale coordinate never read as a live one. the roster was not
+          built.
         </p>
       </ArticleShell>
     </>

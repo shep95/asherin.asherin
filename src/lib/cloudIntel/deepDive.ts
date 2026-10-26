@@ -856,12 +856,12 @@ export function deepDive(
                 `These two causes are indistinguishable from the response alone and must be separated by checking the granted scopes.`,
               ]
             : [
-                `No account is linked, so no query was issued against this surface.`,
-                `Every downstream module that would consume this surface is therefore reasoning without it.`,
+                `no google account is connected, so no query was issued against this surface.`,
+                `every downstream module that would consume this surface is therefore reasoning without it.`,
               ],
           action: spec.connected
-            ? `Verify the granted scope for this surface, then re-run the sweep.`
-            : `Link an account to begin collecting ${spec.unitPlural}.`,
+            ? `verify the granted scope for this surface, then re-run the sweep.`
+            : `no connect path exists on this device yet — see the station overview for what it would take.`,
           connected: spec.connected,
         }),
       ],

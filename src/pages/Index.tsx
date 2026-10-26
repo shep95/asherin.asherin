@@ -13,10 +13,10 @@ import { streamChat } from "@/lib/ai";
  * Homepage narrative (LANDING-KEEP-GO-REPLACE)
  * ------------------------------------------------------------------
  * A stranger lands here with no context. Five screens, in order:
- *   1. what this is           — headline + one true sentence + create account
+ *   1. what this is           — headline + one true sentence + open the workspace
  *   2. one live question      — a real call to the sourced chat path, not a mock
  *   3. what stays private     — only claims the server can actually honour
- *   4. close                  — create account, one quiet origin line
+ *   4. close                  — open the workspace, one quiet origin line
  *
  * Everything removed from this file was either costume (HUD ticker, NODE /
  * ASHERIN-01, "intelligence OS"), unverifiable (named testimonials, ranks,
@@ -56,16 +56,16 @@ const Index = () => {
     // page-specific structured data is added here, and only to the head.
     const faqs = [
       {
-        q: "what does an asherin account include?",
-        a: "Shepherd, the ai, with sources beside the answer, asherin.cyber, asherin.eye, asherin.defender, asherin.arvision, asherin.pages, a private vault, and memory that persists between sessions.",
+        q: "what does asherin include?",
+        a: "shepherd, the ai, with sources beside the answer, and the rooms behind the chat: asherin.search, asherin.adam, asherin.cyber, asherin.knowledge, asherin.data, asherin.health, pages, design, agents, the vault and guardian vault — all on this device.",
       },
       {
         q: "can i leave?",
-        a: "Yes. Your data can be exported or deleted at any time from the dashboard.",
+        a: "yes. export everything or wipe this device at any time from settings → privacy & data.",
       },
       {
         q: "is my work used to train asherin?",
-        a: "No. Your conversations and files are account-scoped and encrypted at rest. They are not sold and are not used as training data.",
+        a: "no. your conversations and files stay on this device, encrypted at rest. they are not sold and are not used as training data.",
       },
     ];
 
@@ -78,7 +78,7 @@ const Index = () => {
           name: "Asherin",
           url: "https://asherin.com",
            description:
-             "asherin is a sourced research workspace with shepherd, its ai: chat, asherin.cyber, asherin.eye, asherin.defender, asherin.arvision, asherin.pages. honest about what it does not know.",
+             "asherin is a sourced research workspace with shepherd, its ai: chat, asherin.cyber, asherin.adam, asherin.defender, asherin.arvision, asherin.pages. honest about what it does not know.",
         },
       },
       {
@@ -181,7 +181,7 @@ const Index = () => {
           </div>
 
           <p className="arrive arrive-4 arrive-slow mt-24 max-w-2xl text-[12px] font-light lowercase leading-relaxed text-foreground/35">
-            rooms behind the chat · asherin.cyber · asherin.eye · asherin.defender · asherin.arvision · asherin.pages
+            rooms behind the chat · asherin.cyber · asherin.adam · asherin.defender · asherin.arvision · asherin.pages
           </p>
         </div>
       </Section>
@@ -231,7 +231,7 @@ const Index = () => {
               <h2 className="text-2xl font-extralight lowercase leading-tight text-foreground sm:text-3xl">ask one question.</h2>
               <p className="mt-4 max-w-xl text-sm font-light leading-[1.8] text-foreground/55">
                 shepherd, the ai inside asherin, answers here on the same path the workspace uses, with the model key
-                you connected on this device. no key yet? open the workspace and add one under settings → ai keys.
+                you connected on this device. no key yet? open the workspace and add one under settings → intelligence.
               </p>
 
               <form onSubmit={handleAsk} className="mt-10 flex items-end gap-4 border-b border-foreground/20 pb-3 transition-colors duration-[var(--dur-settle)] ease-quiet focus-within:border-foreground/60">

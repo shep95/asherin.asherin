@@ -46,8 +46,16 @@ describe("scorePosture", () => {
     const score = scorePosture(buildPosture(ids.map((id) => f(id, "pass"))));
     expect(score.score).toBe(1000);
     expect(score.pass).toBe(4);
+    expect(score.measured).toBe(4);
     expect(score.unmeasured).toBe(PROTECTION_COUNT - 4);
     expect(score.coverage).toBeLessThan(100);
+  });
+
+  it("gives no score at all when nothing was measured, instead of a quiet zero-or-thousand", () => {
+    const score = scorePosture(buildPosture([]));
+    expect(score.measured).toBe(0);
+    expect(score.coverage).toBe(0);
+    expect(score.score).toBe(0);
   });
 
   it("a fail pulls the score below a warn", () => {
@@ -72,5 +80,7 @@ describe("triage and export", () => {
     expect(parsed.findings).toHaveLength(PROTECTION_COUNT);
     expect(parsed.register_size).toBe(PROTECTION_COUNT);
     expect(parsed.findings[0].state).toBe("fail");
+    expect(parsed.signed).toBe(false);
+    expect(parsed.measured_by).toEqual({ device: "test" });
   });
 });
