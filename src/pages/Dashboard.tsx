@@ -1,3 +1,4 @@
+import "./Dashboard.css";
 import { applySeoHead } from "@/lib/seoHead";
 import { isAdminEmail } from "@/lib/adminEmail";
 import { getWallpaperSrc } from "@/lib/wallpapers";
@@ -49,8 +50,6 @@ const NotebooksView = lazyWithRetry(() => import("@/components/dashboard/Noteboo
 
 const WhiteboardView = lazyWithRetry(() => import("@/components/whiteboard/Whiteboard"));
 const DocumentStudioView = lazyWithRetry(() => import("@/components/dashboard/DocumentStudioView"));
-
-
 
 const BugReportsView = lazyWithRetry(() => import("@/components/dashboard/BugReportsView"));
 
@@ -2367,18 +2366,8 @@ const Dashboard = () => {
         </Suspense>
       )}
 
-      {asherEmbed && (
-        <style>{`
-          /* Asher embed: lock dashboard to chat conversations only */
-          [data-dashboard-sidebar-nav] { display: none !important; }
-          [data-dashboard-mode-switcher] { display: none !important; }
-          [data-dashboard-view-switcher] { display: none !important; }
-          [data-dashboard-app-launcher] { display: none !important; }
-        `}</style>
-      )}
 
-
-      <div className="relative z-10 flex h-dvh">
+      <div data-asher-embed={asherEmbed ? "true" : undefined} className="relative z-10 flex h-dvh">
         {!focusMode &&
           (dashboardUi === "v2" ? (
             <DashboardSidebarV2
@@ -2567,16 +2556,7 @@ const Dashboard = () => {
           />
         </Suspense>
       )}
-      <style>{`
-        @keyframes wpFadeIn {
-          from { opacity: 0; transform: scale(1.015); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        @keyframes wpLightStreak {
-          from { transform: translateX(-50%) skewX(-8deg); }
-          to { transform: translateX(calc(100vw + 50%)) skewX(-8deg); }
-        }
-      `}</style>
+
     </div>
   );
 };

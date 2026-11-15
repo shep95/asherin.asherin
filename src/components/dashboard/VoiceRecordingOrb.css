@@ -1,0 +1,24 @@
+@keyframes voiceOrbRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes voiceOrbPulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+@keyframes voiceOrbMorph {
+  0%, 100% { rx: var(--orb-radius-small); ry: var(--orb-radius-large); }
+  50% { rx: var(--orb-radius-large); ry: var(--orb-radius-small); }
+}
+@keyframes voiceOrbDrift1 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(3px, -2px) rotate(15deg); }
+}
+@keyframes voiceOrbDrift2 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(-2px, 3px) rotate(-10deg); }
+}
+@keyframes voiceOrbDrift3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(2px, 2px) scale(1.15); }
+}

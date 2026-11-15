@@ -1,3 +1,4 @@
+import "./VoiceRecordingOrb.css";
 import { useEffect, useRef, useState } from "react";
 
 interface VoiceRecordingOrbProps {
@@ -47,7 +48,7 @@ const VoiceRecordingOrb = ({
     <button
       onClick={onClick}
       className="relative shrink-0 flex items-center justify-center group cursor-pointer"
-      style={{ width: s + 8, height: s + 8 }}
+      style={{ width: s + 8, height: s + 8, "--orb-radius-small": `${half - 2}px`, "--orb-radius-large": `${half - 1}px` } as React.CSSProperties}
       title={seconds != null ? `Recording… ${seconds}s — click to stop` : "Recording — click to stop"}
     >
       {/* Ambient glow beneath */}
@@ -183,32 +184,7 @@ const VoiceRecordingOrb = ({
         </span>
       )}
 
-      <style>{`
-        @keyframes voiceOrbRotate {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes voiceOrbPulse {
-          0%, 100% { transform: scale(1); opacity: 0.6; }
-          50% { transform: scale(1.15); opacity: 1; }
-        }
-        @keyframes voiceOrbMorph {
-          0%, 100% { rx: ${half - 2}; ry: ${half - 1}; }
-          50% { rx: ${half - 1}; ry: ${half - 2}; }
-        }
-        @keyframes voiceOrbDrift1 {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          50% { transform: translate(3px, -2px) rotate(15deg); }
-        }
-        @keyframes voiceOrbDrift2 {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          50% { transform: translate(-2px, 3px) rotate(-10deg); }
-        }
-        @keyframes voiceOrbDrift3 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(2px, 2px) scale(1.15); }
-        }
-      `}</style>
+
     </button>
   );
 };

@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import RootErrorBoundary, { attemptChunkRecovery } from "./components/RootErrorBoundary";
 import "./index.css";
+import "sonner/dist/styles.css";
 import { initDorkGuard } from "./lib/dorkGuard";
 import { bootLoopGuard } from "./lib/bootLoopGuard";
 import { migrateLegacyStorageKeys } from "./lib/storageKeyMigration";

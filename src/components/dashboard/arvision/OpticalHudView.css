@@ -1,0 +1,230 @@
+.arv-root { position:absolute; inset:0; width:100%; height:100%; min-width:0; min-height:0; overflow:hidden; background:#000; color-scheme:dark; container-type:size; container-name:arv; }
+
+.arv-root {
+  --bg: hsl(var(--background));
+  --ink: hsl(var(--foreground));
+  --mute: hsl(var(--muted-foreground));
+  --line: hsl(var(--border));
+  /* --accent is inherited from the app theme as a raw hsl triple and used as hsl(var(--accent)).
+     it must never be redefined here: "--accent: hsl(var(--accent))" on the same element is a
+     cycle, the property becomes invalid, and every accent button renders transparent. */
+  --accent-ink: hsl(var(--accent-foreground));
+  --ok: hsl(var(--accent));
+  --warn: hsl(var(--accent));
+  --r: 1rem;
+}
+.arv-root, .arv-root * { box-sizing: border-box; }
+.arv-root * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+.arv-root *::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+.arv-root {
+  margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 300; letter-spacing: -.01em; color-scheme: dark; overflow: hidden;
+}
+#stage { position: absolute; inset: 0; background: #000; }
+#cam, #hud { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+#cam.mirror { transform: scaleX(-1); }
+#hud { pointer-events: none; }
+.glass {
+  background: hsl(var(--card) / .62);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: 0 18px 50px -24px rgba(0,0,0,.9);
+}
+.misb {
+  position: absolute; top: 16px; left: 16px; z-index: 8;
+  padding: 12px 16px; pointer-events: auto; min-width: 0; max-width: min(280px, calc(100% - 80px));
+  font: 300 12px/1.5 inherit; color: var(--ink);
+}
+.misb b { color: hsl(var(--accent)); font-weight: 500; }
+.misb .m { color: var(--mute); font-size: 11px; }
+.compass {
+  position: absolute; top: 16px; right: 16px; z-index: 8;
+  width: clamp(48px, 12cqi, 56px); height: clamp(48px, 12cqi, 56px); border-radius: 14px; padding: 0; cursor: pointer;
+  background: hsl(var(--card) / .62);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--line);
+}
+.compass svg { width: 100%; height: 100%; }
+.compass svg text { fill: hsl(var(--accent)); }
+.compass svg polygon { fill: hsl(var(--foreground)); }
+.compass svg rect { fill: hsl(var(--accent)); }
+.compass svg circle { stroke: hsl(var(--border)); }
+.compass.dim { opacity: .45; }
+.layers {
+  position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 8;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+  width: max-content; max-width: min(640px, calc(100% - 400px)); pointer-events: auto;
+}
+.tog {
+  border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; cursor: pointer;
+  color: var(--mute); font: 400 12px/1 inherit; background: hsl(var(--card) / .55);
+  backdrop-filter: blur(20px); transition: color .15s ease, background .15s ease, border-color .15s ease;
+}
+.tog:hover { color: var(--ink); border-color: hsl(var(--accent) / .4); }
+.tog.on { background: hsl(var(--accent)); color: var(--accent-ink); border-color: transparent; }
+.sheet {
+  position: absolute; right: 16px; top: 116px; bottom: 110px; z-index: 8;
+  width: min(280px, 32cqi, calc(100% - 24px)); padding: 16px; overflow: auto; pointer-events: auto;
+}
+.sheet .fold { display:flex; align-items:center; justify-content:space-between; width:100%; border:0; background:transparent; color: var(--mute); font: 400 13px/1.2 inherit; letter-spacing: .02em; text-transform: lowercase; cursor:pointer; padding:0 0 8px; text-align:left; }
+.sheet.folded { height: 48px; overflow: hidden; top: auto; }
+.sheet h2 { margin: 0 0 10px; font: 400 13px/1.2 inherit; letter-spacing: .02em; text-transform: lowercase; color: var(--mute); }
+.sheet .row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.sheet .k { color: var(--mute); }
+.sheet .v { text-align: right; }
+.sheet .list { margin-top: 10px; font-size: 12px; color: var(--mute); line-height: 1.5; }
+.talk {
+  position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+  z-index: 9; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  padding: 10px 12px; width: min(980px, calc(100% - 16px)); max-width: calc(100% - 16px); justify-content: center;
+}
+.talk button {
+  border: 1px solid transparent; border-radius: 999px; padding: 10px 16px; cursor: pointer;
+  background: hsl(var(--accent)); color: var(--accent-ink); font: 500 13px/1 inherit;
+  transition: opacity .15s ease;
+}
+.talk button:hover { opacity: .88; }
+.talk button.ghost { background: hsl(var(--muted) / .6); color: var(--ink); border-color: var(--line); }
+#gate {
+  position: absolute; inset: 0; z-index: 20; display: grid; place-items: center;
+  background: hsl(var(--background) / .78); backdrop-filter: blur(18px);
+}
+#gate[hidden] { display: none; }
+#gate .card { padding: 28px 32px; max-width: min(420px, calc(100% - 24px)); width: min(420px, calc(100% - 24px)); text-align: center; }
+#gate p { color: var(--mute); font-size: 14px; line-height: 1.6; }
+#gate button {
+  border: 0; border-radius: 999px; padding: 12px 20px; cursor: pointer;
+  background: hsl(var(--accent)); color: var(--accent-ink); font: 500 14px inherit;
+}
+#note {
+  position: absolute; left: 16px; bottom: 110px; z-index: 8;
+  padding: 10px 14px; font-size: 12px; color: var(--mute); max-width: min(320px, calc(100% - 24px));
+  pointer-events: none;
+}
+#inbox {
+  position: absolute; left: 16px; top: 116px; bottom: 110px; z-index: 10;
+  width: min(280px, 34cqi, calc(100% - 24px)); padding: 14px; overflow: auto; pointer-events: auto;
+}
+#inbox[hidden] { display: none; }
+#inbox h2 { margin: 0 0 10px; font: 400 13px/1.2 inherit; letter-spacing: .02em; text-transform: lowercase; color: var(--mute); }
+#inbox .shot { width: 100%; border-radius: 10px; margin: 0 0 10px; border: 1px solid var(--line); display: block; }
+#inbox .meta { font-size: 11px; color: var(--mute); margin: -6px 0 12px; }
+/* tablet — keep the desktop frame, tighten every gutter and panel */
+@container arv (max-width: 1100px) {
+  .misb { top: 12px; left: 12px; padding: 10px 12px; font-size: 11px; max-width: min(240px, calc(100% - 72px)); }
+  .compass { top: 12px; right: 12px; }
+  .layers {
+    top: 12px; left: 268px; right: clamp(64px, 12cqi, 108px); transform: none;
+    width: auto; max-width: none; gap: 6px;
+    flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  .tog { flex: 0 0 auto; }
+  .tog { padding: 7px 10px; font-size: 11px; }
+  .sheet { right: 12px; top: 104px; bottom: 104px; width: min(248px, 34cqi); padding: 12px; }
+  #inbox { left: 12px; top: 104px; bottom: 104px; width: min(248px, 34cqi); padding: 12px; }
+  #note { left: 12px; bottom: 100px; max-width: min(260px, calc(100% - 20px)); }
+  .talk { bottom: 14px; padding: 8px 10px; gap: 6px; }
+  .talk button { padding: 9px 13px; font-size: 12px; }
+}
+
+/* phone — stack the chrome: reading panels, then layer strip, then talk bar */
+@container arv (max-width: 780px) {
+  .misb {
+    top: 8px; left: 8px; right: clamp(52px, 16cqi, 76px);
+    width: auto; max-width: none; padding: 8px 10px; font: 300 11px/1.45 inherit;
+  }
+  .misb .m { font-size: 10px; }
+  .compass { top: 8px; right: 8px; width: clamp(38px, 13cqi, 48px); height: clamp(38px, 13cqi, 48px); }
+
+  .layers {
+    top: auto; bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+    left: 8px; right: 8px; transform: none; width: auto; max-width: none;
+    flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto;
+    -webkit-overflow-scrolling: touch; padding-bottom: 2px; gap: 6px;
+  }
+  .tog { flex: 0 0 auto; padding: 7px 11px; font-size: 11px; }
+
+  .sheet, #inbox {
+    left: 8px; right: 8px; width: auto; max-width: none;
+    top: auto; bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+    max-height: min(38cqh, 300px); padding: 12px; overflow: auto;
+  }
+  .sheet .row { font-size: 11px; padding: 5px 0; }
+
+  #note {
+    left: 8px; right: 8px; max-width: none;
+    bottom: calc(108px + env(safe-area-inset-bottom, 0px)); padding: 8px 10px; font-size: 11px;
+  }
+
+  .talk {
+    left: 8px; right: 8px; bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    transform: none; width: auto; max-width: none;
+    flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto;
+    -webkit-overflow-scrolling: touch; padding: 8px; gap: 6px;
+  }
+  .talk button { flex: 0 0 auto; padding: 9px 13px; font-size: 12px; }
+  #gate .card { padding: 20px 18px; }
+  #gate p { font-size: 13px; }
+}
+
+/* short / landscape phone — nothing may eat the frame */
+@container arv (max-height: 560px) {
+  .compass { width: 40px; height: 40px; }
+  .sheet, #inbox { max-height: 46cqh; padding: 10px; }
+  .talk { padding: 6px 8px; gap: 6px; }
+  .talk button { padding: 8px 12px; }
+}
+
+/* spectral filter — the second view of the same frame.
+   the primary view fills the stage. the other one lives in the rounded box in
+   the bottom left corner and can be tapped to take the stage. both carry the
+   same overlay, so nothing is lost in the swap. */
+.arv-root { --pipW: clamp(112px, 21cqi, 188px); }
+#spec { position: absolute; inset: 0; width: 100%; height: 100%; }
+#spec[hidden] { display: none; }
+#pip {
+  position: absolute; left: 16px; bottom: 108px; z-index: 9;
+  width: var(--pipW); padding: 0; overflow: hidden; cursor: pointer;
+  border-radius: 18px; border: 1px solid var(--line);
+  background: hsl(var(--card) / .62);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 18px 50px -24px rgba(0,0,0,.9);
+  display: block; text-align: left;
+}
+#pip:hover { border-color: hsl(var(--accent) / .45); }
+#pip[hidden] { display: none; }
+#pip .pipwrap { position: relative; width: 100%; background: #000; overflow: hidden; }
+#pip canvas { display: block; width: 100%; height: 100%; }
+#pip .piplab {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  padding: 6px 9px; font: 400 10px/1.2 inherit; letter-spacing: .04em;
+  color: var(--mute); text-transform: lowercase;
+}
+#pip .piplab b { color: var(--ink); font-weight: 400; }
+#pip .piplab span { color: hsl(var(--accent)); }
+#specsw {
+  position: absolute; left: 16px; bottom: 74px; z-index: 9;
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px;
+  border-radius: 999px; border: 1px solid var(--line);
+  background: hsl(var(--card) / .62);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+}
+#specsw button {
+  border: 0; border-radius: 999px; padding: 5px 10px; cursor: pointer;
+  background: transparent; color: var(--mute); font: 400 11px/1 inherit;
+  text-transform: lowercase; transition: background .15s ease, color .15s ease;
+}
+#specsw button.on { background: hsl(var(--accent)); color: var(--accent-ink); }
+#note { bottom: calc(126px + var(--pipW) * 0.62); }
+
+@container arv (max-width: 780px) {
+  #pip { left: 8px; bottom: calc(104px + env(safe-area-inset-bottom, 0px)); border-radius: 14px; }
+  #specsw { left: 8px; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+  #note { bottom: calc(120px + var(--pipW) * 0.62 + env(safe-area-inset-bottom, 0px)); }
+}
+@container arv (max-height: 560px) {
+  .arv-root { --pipW: clamp(92px, 16cqi, 132px); }
+}
