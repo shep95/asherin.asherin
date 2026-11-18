@@ -1,8 +1,9 @@
 import type { Plugin } from "vite";
 
 /** Keep dependency-owned styles compatible with a CSP that rejects inline tags.
- * Sonner ships its stylesheet separately. Scroll locking generates measured CSS,
- * so use a constructed stylesheet rather than an inline <style> element.
+ * Sonner ships its stylesheet separately. Radix ScrollArea's viewport rules live
+ * in src/index.css. Scroll locking generates measured CSS, so use a constructed
+ * stylesheet rather than an inline <style> element.
  */
 export function cspStylesPlugin(): Plugin {
   return {
@@ -15,6 +16,12 @@ export function cspStylesPlugin(): Plugin {
         const inline = /\b\w+\(`:where\(html\[dir=[\s\S]*?`\);/;
         if (!inline.test(code)) this.error("Sonner CSS injection changed; review CSP compatibility before publishing.");
         return code.replace(inline, "");
+      }
+      if (file.endsWith("/@radix-ui/react-scroll-area/dist/index.mjs")) {
+        // The viewport's scrollbar-hiding rules ship in src/index.css instead.
+        const inline = /jsx\(\s*"style",\s*\{\s*dangerouslySetInnerHTML:\s*\{\s*__html: `\[data-radix-scroll-area-viewport\][^`]*`\s*\},\s*nonce\s*\}\s*\)/;
+        if (!inline.test(code)) this.error("Radix ScrollArea CSS injection changed; review CSP compatibility before publishing.");
+        return code.replace(inline, "null");
       }
       if (file.endsWith("/react-style-singleton/dist/es2015/singleton.js")) {
         return `

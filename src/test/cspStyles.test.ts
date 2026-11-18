@@ -20,6 +20,28 @@ describe("strict style CSP", () => {
     expect(() => transform("changed upstream layout", path)).toThrow("review CSP compatibility");
   });
 
+  it("removes Radix ScrollArea's inline viewport style and keeps the rules in the app stylesheet", () => {
+    const path = resolve("node_modules/@radix-ui/react-scroll-area/dist/index.mjs");
+    const code = readFileSync(path, "utf8");
+    const result = transform(code, path);
+    expect(result).toBeDefined();
+    expect(result).not.toContain("dangerouslySetInnerHTML");
+    expect(readFileSync(resolve("src/index.css"), "utf8")).toContain("[data-radix-scroll-area-viewport]::-webkit-scrollbar");
+    expect(() => transform("changed upstream layout", path)).toThrow("review CSP compatibility");
+  });
+
+  it("serves an https-only CSP on public pages and keeps local runtimes to the workspace", () => {
+    const config = JSON.parse(readFileSync(resolve("vercel.json"), "utf8"));
+    const csp = (source: string) =>
+      config.headers.find((group: { source: string }) => group.source === source)
+        .headers.find((header: { key: string }) => header.key === "Content-Security-Policy").value as string;
+    expect(csp("/(.*)")).not.toContain("http://");
+    expect(csp("/(.*)")).not.toContain("ws://");
+    expect(csp("/(.*)")).toContain("upgrade-insecure-requests");
+    expect(csp("/(dashboard|whiteboard|auth)(.*)")).toContain("http://localhost:*");
+    expect(readFileSync(resolve("index.html"), "utf8")).not.toContain('http-equiv="Content-Security-Policy"');
+  });
+
   it("keeps measured scroll-lock styles mounted until their last consumer exits", () => {
     const code = transform("", "/node_modules/react-style-singleton/dist/es2015/singleton.js");
     expect(code).toBeDefined();

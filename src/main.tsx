@@ -28,9 +28,12 @@ initDorkGuard();
 initScrollPerf();
 
 // Offline shell: the service worker caches the wasm the vedic room needs.
-if ("serviceWorker" in navigator) {
+// Only the first-party worker at /sw.js, only in a secure context, scoped to
+// the origin root, and always revalidated so a fixed worker replaces a bad
+// one on the next visit instead of waiting out the HTTP cache.
+if ("serviceWorker" in navigator && window.isSecureContext) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
+    navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch(() => {});
   });
 }
 

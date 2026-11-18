@@ -13,6 +13,7 @@ import { lazyWithRetry as lazy } from "@/lib/lazyWithRetry";
 import ProtectedRoute from "./components/ProtectedRoute";
 import CommandPalette from "./components/CommandPalette";
 import RouteSessionTracker from "./components/RouteSessionTracker";
+import CspScopeGuard from "./components/CspScopeGuard";
 import VisitLedgerTracker from "./components/VisitLedgerTracker";
 import AutoTripMount from "./components/AutoTripMount";
 import SentinelDaemon from "./components/dashboard/SentinelDaemon";
@@ -189,6 +190,7 @@ const AppShell = () => {
             <Sonner />
             <CommandPalette />
             <RouteSessionTracker />
+            <CspScopeGuard />
             <VisitLedgerTracker />
             <AutoTripMount />
             <SentinelDaemon />

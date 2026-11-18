@@ -1182,3 +1182,14 @@ html[data-scrolling] .zophiel-aurora-pulse {
 @media (prefers-reduced-motion: reduce) {
   .eagle-alert { animation: none; }
 }
+
+/* Radix ScrollArea injects these as an inline <style>, which the CSP blocks;
+   scripts/cspStylesPlugin.ts removes that tag and the rules live here. */
+[data-radix-scroll-area-viewport] {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+[data-radix-scroll-area-viewport]::-webkit-scrollbar {
+  display: none;
+}

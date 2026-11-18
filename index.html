@@ -7,18 +7,11 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
     />
     <!--
-      Content-Security-Policy, meta layer. The served header (vercel.json) is
-      the enforced copy; this one covers any host that serves the folder as
-      plain static files. No inline scripts exist; script-src is self plus the one cdn the eye, arvision, ide and sentinel rooms load their engines from.
-      connect-src allows any https host (the rooms read public apis, and a
-      device key can point at any model provider) plus the local model
-      runtimes over http and websockets; plain http to the internet stays
-      blocked.
+      Content-Security-Policy lives only in the response headers (vercel.json).
+      The public pages get an https-only policy and the workspace adds the
+      local model runtimes on localhost; a meta copy here would apply to both
+      and either loosen the public pages or cut the workspace off from them.
     -->
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdn.jsdelivr.net; style-src 'self' https://cdn.jsdelivr.net; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' blob: data: https: wss: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com; object-src 'none'; base-uri 'self'; form-action 'self';"
-    />
     <meta
       http-equiv="Permissions-Policy"
       content="camera=(self), microphone=(self), geolocation=(self), usb=(), serial=(), midi=(), magnetometer=(self), gyroscope=(self), accelerometer=(self), interest-cohort=()"
