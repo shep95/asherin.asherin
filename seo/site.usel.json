@@ -1,0 +1,454 @@
+{
+  "usel": 1,
+  "site_name": "asherin",
+  "base_url": "https://asherin.com",
+  "default_locale": "en",
+  "market_targets": "all",
+  "engines": [
+    "all"
+  ],
+  "sitemap": false,
+  "robots": {
+    "manage": false,
+    "allow_search": true,
+    "block_ai_training": true,
+    "disallow": []
+  },
+  "pages": [
+    {
+      "id": "home",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "asherin-acatalepsy",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/asherin.acatalepsy"
+        }
+      }
+    },
+    {
+      "id": "asherin-analytics",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/asherin.analytics"
+        }
+      }
+    },
+    {
+      "id": "software",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/software"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "for",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/for"
+        }
+      }
+    },
+    {
+      "id": "for-research",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/for/research"
+        }
+      }
+    },
+    {
+      "id": "for-journalists",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/for/journalists"
+        }
+      }
+    },
+    {
+      "id": "for-companies",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/for/companies"
+        }
+      }
+    },
+    {
+      "id": "for-investigators",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/for/investigators"
+        }
+      }
+    },
+    {
+      "id": "for-analysts",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/for/analysts"
+        }
+      }
+    },
+    {
+      "id": "founder",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/founder"
+        }
+      },
+      "lastmod": "2026-09-18"
+    },
+    {
+      "id": "forums",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/forums"
+        }
+      },
+      "lastmod": "2026-09-27"
+    },
+    {
+      "id": "privacy",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/privacy"
+        }
+      }
+    },
+    {
+      "id": "terms",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/terms"
+        }
+      }
+    },
+    {
+      "id": "security-policy",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/security-policy"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-what-is-ai-osint",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/what-is-ai-osint"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-sovereign-ai-platforms",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/sovereign-ai-platforms"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-ai-without-restrictions",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/ai-without-restrictions"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-elite-corporations-algorithms-vs-axrlen",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/elite-corporations-algorithms-vs-axrlen"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-ai-vulnerability-scanning-explained",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/ai-vulnerability-scanning-explained"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-vulnerability-chaining-explained",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/vulnerability-chaining-explained"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-how-ai-predictive-forecasting-works",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/how-ai-predictive-forecasting-works"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-how-aureon-uses-c-seo-research",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/how-aureon-uses-c-seo-research"
+        }
+      },
+      "lastmod": "2026-06-19"
+    },
+    {
+      "id": "blog-how-we-make-aureon-sound-human",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/how-we-make-aureon-sound-human"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-ai-stack-for-indian-startups",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/ai-stack-for-indian-startups"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-code-narrative-quantum-collapse",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/code-narrative-quantum-collapse"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-the-truth-and-reality-of-wars",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/the-truth-and-reality-of-wars"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-zaxin-tactical-ble-intelligence",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/zaxin-tactical-ble-intelligence"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-asherin-engine-deep-time",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/asherin-engine-deep-time"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-cloud-intelligence-suite",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/cloud-intelligence-suite"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-asherin-maps-find-my",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/asherin-maps-find-my"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-transit-guardian",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/transit-guardian"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-autonomous-intelligence-loop",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/autonomous-intelligence-loop"
+        }
+      },
+      "lastmod": "2026-10-25"
+    },
+    {
+      "id": "blog-aureon-legal-advisor-multi-jurisdictional",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/aureon-legal-advisor-multi-jurisdictional"
+        }
+      },
+      "lastmod": "2026-07-08"
+    },
+    {
+      "id": "blog-personalities-are-not-thinking-patterns",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/personalities-are-not-thinking-patterns"
+        }
+      },
+      "lastmod": "2026-08-12"
+    },
+    {
+      "id": "blog-asher-fold-memory",
+      "public": true,
+      "index": true,
+      "render": false,
+      "locales": {
+        "en": {
+          "path": "/blog/asher-fold-memory"
+        }
+      },
+      "lastmod": "2026-10-25"
+    }
+  ],
+  "indexnow_key": "43571192ccb7097bdfda717ea958d3d6"
+}
